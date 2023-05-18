@@ -1,6 +1,6 @@
 import { Notify } from "https://deno.land/x/async@v2.0.2/notify.ts";
 import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
-import { log } from "./lib/log.ts";
+import { log } from "./lib/utils.ts";
 import {
   ClientToRelayMessage,
   RelayToClientMessage,
@@ -35,38 +35,38 @@ export class Relay {
   readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
 
   constructor(config: RelayConfig) {
-    this.#ws = this.connect();
     this.url = config.url as RelayUrl;
     this.name = config.name ?? config.url;
     this.read = config.read ?? true;
     this.write = config.write ?? true;
     this.on = config.on ?? {};
+    this.#ws = this.connect();
   }
 
   connect(): WebSocket {
     const ws = new WebSocket(this.url);
 
     ws.onopen = (event) => {
-      log.info("connection opened", this.name);
+      log.info("Connection opened", this.name);
       this.on.open?.call(this, event);
       this.#notifier.notify();
     };
 
     ws.onclose = (event) => {
-      log.info("connection closed", this.name);
+      log.info("Connection closed", this.name);
       (event.code === 1000 ? log.debug : log.error)(event);
       this.on.close?.call(this, event);
       this.#notifier.notify();
     };
 
     ws.onerror = (event) => {
-      log.error("connection error", this.name);
+      log.error("Connection error", this.name);
       this.on.error?.call(this, event);
     };
 
     ws.onmessage = (ev: MessageEvent<string>) => {
-      log.debug(ev.data);
       const msg = JSON.parse(ev.data) as RelayToClientMessage;
+      log.debug(msg);
       try {
         switch (msg[0]) {
           case "EVENT": {
@@ -88,7 +88,7 @@ export class Relay {
             break;
           }
           default:
-            log.warning("Unknown message type:", msg[0]);
+            log.warn("Unknown message type:", msg[0]);
         }
       } catch (err) {
         log.error(err);
@@ -145,7 +145,7 @@ export class Relay {
   #subscription(id: SubscriptionId) {
     const sub = this.#subscriptions.get(id);
     if (!sub) {
-      log.warning("Unknown subscription", id);
+      log.warn("Unknown subscription", id);
       this.send(["CLOSE", id]);
     }
     return sub;
