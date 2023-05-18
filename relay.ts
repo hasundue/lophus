@@ -146,7 +146,7 @@ export interface SubscribeOptions {
 export interface Subscription {
   readonly filter: Filter;
   readonly options: SubscribeOptions;
-  readonly stream: ReadableStream<NostrEvent>;
+  readonly events: ReadableStream<NostrEvent>;
 }
 
 class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {

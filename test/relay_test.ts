@@ -10,6 +10,6 @@ const sub = relay.subscribe({
   since: now(),
 });
 
-for await (const event of sub.stream) {
+for await (const event of sub.events) {
   console.log(event);
 }
