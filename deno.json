@@ -2,5 +2,6 @@
   "tasks": {
     "cache": "git ls-files | grep .ts | xargs deno cache",
     "dev": "deno run --watch main.ts"
-  }
+  },
+  "lock": false,
 }

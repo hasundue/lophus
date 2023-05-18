@@ -1,8 +1,8 @@
-import * as log from "https://deno.land/std@0.187.0/log/mod.ts";
-import { Mutex } from "https://deno.land/x/async@v2.0.2/mod.ts";
+import { log } from "./lib/log.ts";
+import { Notify } from "https://deno.land/x/async@v2.0.2/notify.ts";
 import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { RelayUrl } from "./lib/types.ts";
-import { Brand, now } from "./lib/utils.ts";
+import { Brand, noop, now } from "./lib/utils.ts";
 
 export interface RelayConfig {
   name?: string;
@@ -28,113 +28,116 @@ export interface Subscription {
   readonly stream: ReadableStream<NostrEvent>;
 }
 
-class SubscriptionProvider implements Subscription {
+class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
   readonly id: SubscriptionId;
   #relays: Set<Relay>;
   #recieved: Set<NostrEvent["id"]>;
-  #writable: WritableStream<NostrEvent>;
-  #readable: ReadableStream<NostrEvent>;
 
   constructor(
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
     ...relays: Relay[]
   ) {
-    this.id =
-      (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
-    this.#relays = new Set(relays);
-    this.#recieved = new Set();
-
-    this.#writable = new WritableStream<NostrEvent>({
-      write: (event) =>
-        new Promise((resolve, reject) => {
-          if (this.#recieved.has(event.id)) {
-            reject();
-          }
+    super({
+      transform: (event, controller) => {
+        if (!this.#recieved.has(event.id)) {
           this.#recieved.add(event.id);
-          resolve();
-        }),
-    });
-
-    this.#readable = new ReadableStream<NostrEvent>({
-      pull: () => {
-        this.#relays.forEach((relay) => relay.ensure(this.#start));
+          controller.enqueue(event);
+        }
+      },
+      flush: () => {
+        log.debug("Subscription closed by relay", this.id);
+        this.#relays.forEach((relay) => relay.ensureOpen(this.#request));
       },
     });
 
-    this.#readable.pipeTo(this.#writable);
+    this.id =
+      (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
+
+    this.#relays = new Set(relays);
+    this.#recieved = new Set();
+
+    this.#relays.forEach((relay) => this.#request(relay));
   }
 
-  #start(relay: Relay) {
+  #request(relay: Relay) {
     relay.send(["REQ", this.id, this.filter]);
   }
 
+  #close() {
+    this.#relays.forEach((relay) => {
+      relay.send(["CLOSE", this.id]);
+      relay.unsubscribe(this.id);
+    });
+  }
+
   async write(event: NostrEvent) {
-    await this.#writable.getWriter().write(event);
+    await this.writable.getWriter().write(event);
   }
 
   get stream() {
-    return this.#readable;
+    return this.readable;
   }
 }
 
 export class Relay {
-  readonly #ws: WebSocket;
-  #mutex: Mutex;
-  #subscriptions: Map<SubscriptionId, SubscriptionProvider> = new Map();
+  #ws: WebSocket;
+  readonly name: string;
+  readonly #notifier = new Notify();
+  readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
 
   constructor(public readonly config: RelayConfig) {
-    const name = config.name ?? config.url;
+    this.name = this.config.name ?? this.config.url;
+    this.#ws = this.connect();
+  }
 
-    this.#ws = new WebSocket(config.url);
+  connect(): WebSocket {
+    const ws = new WebSocket(this.config.url);
 
-    this.#ws.onopen = (event) => {
-      log.info("connection opened", name);
-      config.on?.open?.call(this, event);
+    ws.onopen = (event) => {
+      log.info("connection opened", this.name);
+      this.config.on?.open?.call(this, event);
+      this.#notifier.notify();
     };
 
-    this.#ws.onclose = (event) => {
-      log.info("connection closed", name);
+    ws.onclose = (event) => {
+      log.info("connection closed", this.name);
       (event.code === 1000 ? log.debug : log.error)(event);
-      this.config?.on?.close?.call(this, event);
+      this.config.on?.close?.call(this, event);
+      this.#notifier.notify();
     };
 
-    this.#ws.onerror = (event) => {
-      log.error("connection error", name);
+    ws.onerror = (event) => {
+      log.error("connection error", this.name);
       this.config.on?.error?.call(this, event);
     };
 
-    this.#ws.onmessage = (ev: MessageEvent<RelayToClientMessage>) => {
+    ws.onmessage = (ev: MessageEvent<RelayToClientMessage>) => {
+      log.debug("Message recieved", ev.data);
       try {
         switch (ev.data[0]) {
           case "EVENT": {
-            log.debug("event recieved", ev.data);
-
             const [_, id, event] = ev.data;
             if (this.config.on?.event) this.config.on.event(id, event);
 
             const sub = this.#subscriptions.get(id);
             if (!sub) {
-              log.warning("unknown subscription", event);
+              log.warning("Unknown subscription", event);
               break;
             }
             sub.write(event); // async
             break;
           }
           case "EOSE": {
-            log.debug("Received eose:", ev.data);
-
             const [_, id] = ev.data;
             this.config.on?.eose?.call(this, id);
 
-            if (config.close_on_eose) {
+            if (this.config.close_on_eose) {
               this.close();
             }
             break;
           }
           case "NOTICE": {
-            log.debug("Received notice:", ev.data);
-
             const [_, message] = ev.data;
             this.config.on?.notice?.call(this, message);
 
@@ -145,34 +148,53 @@ export class Relay {
         if (e instanceof TypeError) {
           console.error(
             "Received malformed message from relay:",
-            config.url,
+            this.config.url,
             ev.data,
           );
         } else throw e;
       }
-
-      this.connect();
     };
-  }
-
-  connect() {
-    this.#ws.open();
+    return ws;
   }
 
   close() {
   }
 
-  ensure(callback: (relay: Relay) => void) {
+  async ensureOpen(onopen: (relay: Relay) => void = noop) {
+    switch (this.#ws.readyState) {
+      case WebSocket.CONNECTING:
+        await this.#notifier.notified();
+        onopen(this);
+        /* falls through */
+
+      case WebSocket.OPEN:
+        return;
+
+      case WebSocket.CLOSING:
+        await this.#notifier.notified();
+        /* falls through */
+
+      case WebSocket.CLOSED:
+        this.#ws = this.connect();
+        await this.#notifier.notified();
+        onopen(this);
+    }
   }
 
-  send(message: ClientToRelayMessage) {
+  async send(message: ClientToRelayMessage) {
+    await this.ensureOpen();
     this.#ws.send(JSON.stringify(message));
+    log.debug("Sent", message, this.name);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
-    const sub = new SubscriptionProvider(filter, options);
+    const sub = new SubscriptionProvider(filter, options, this);
     this.#subscriptions.set(sub.id, sub);
     return sub;
+  }
+
+  unsubscribe(id: SubscriptionId) {
+    this.#subscriptions.delete(id);
   }
 }
 
@@ -212,7 +234,7 @@ export class RelayPool {
   }
 
   private async reconnect(relay: Relay) {
-    await relay.connect();
+    await relay.reconnect();
     // Restart all subscriptions to the relay.
     if (relay.read) {
       this.subs.forEach((sub) => sub.restart(relay));
