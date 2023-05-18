@@ -8,7 +8,7 @@ import {
   SubscriptionId,
   WebSocketEventListner,
   WebSocketUrl,
-} from "./lib/types.ts";
+} from "./types.ts";
 
 export interface RelayConfig {
   name?: string;

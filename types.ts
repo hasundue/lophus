@@ -1,4 +1,4 @@
-import { Brand } from "./utils.ts";
+import { Brand } from "./lib/utils.ts";
 import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 
 //
