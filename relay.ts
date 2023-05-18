@@ -1,6 +1,6 @@
 import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { Notify } from "./lib/async.ts";
-import { Expand, log } from "./lib/utils.ts";
+import { anyof, Expand, log, noop } from "./lib/utils.ts";
 import type {
   ClientToRelayMessage,
   RelayToClientMessage,
@@ -9,6 +9,8 @@ import type {
   WebSocketEventListner,
   WebSocketUrl,
 } from "./types.ts";
+
+const { debug, error, info, warn } = log;
 
 export interface RelayConfig {
   name?: string;
@@ -52,26 +54,26 @@ export class Relay {
     const ws = new WebSocket(this.url);
 
     ws.onopen = (event) => {
-      log.info("Connection opened", this.name);
+      info("Connection opened", this.name);
       this.on.open?.call(this, event);
       this.#notifier.notify();
     };
 
     ws.onclose = (event) => {
-      log.info("Connection closed", this.name);
-      (event.code === 1000 ? log.debug : log.error)(event);
+      info("Connection closed", this.name);
+      (event.code === 1000 ? debug : error)(event);
       this.on.close?.call(this, event);
       this.#notifier.notify();
     };
 
     ws.onerror = (event) => {
-      log.error("Connection error", this.name);
+      error("Connection error", this.name);
       this.on.error?.call(this, event);
     };
 
     ws.onmessage = (ev: MessageEvent<string>) => {
       const msg = JSON.parse(ev.data) as RelayToClientMessage;
-      log.debug(msg);
+      debug(msg);
       try {
         switch (msg[0]) {
           case "EVENT": {
@@ -93,10 +95,10 @@ export class Relay {
             break;
           }
           default:
-            log.warn("Unknown message type:", msg[0]);
+            warn("Unknown message type:", msg[0]);
         }
       } catch (err) {
-        log.error(err);
+        error(err);
       }
     };
 
@@ -114,15 +116,19 @@ export class Relay {
     return (async () => {
       switch (this.#ws.readyState) {
         case WebSocket.CONNECTING:
+          debug("CONNECTING", this.name);
           await this.#notifier.notified();
           /* falls through */
         case WebSocket.OPEN:
+          debug("OPEN", this.name);
           return;
 
         case WebSocket.CLOSING:
+          debug("CLOSING", this.name);
           await this.#notifier.notified();
           /* falls through */
         case WebSocket.CLOSED:
+          debug("CLOSED", this.name);
           this.#ws = this.connect();
           await this.#notifier.notified();
           return;
@@ -130,11 +136,17 @@ export class Relay {
     })();
   }
 
+  async ensureReady(onReady: (relay: this) => void = noop) {
+    await this.ready;
+    debug("Ready", this.name);
+    onReady(this);
+  }
+
   async send(message: ClientToRelayMessage) {
     await this.ready;
     const str = JSON.stringify(message);
     this.#ws.send(str);
-    log.debug(str);
+    debug(message);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
@@ -153,7 +165,7 @@ export class Relay {
   #subscription(id: SubscriptionId) {
     const sub = this.#subscriptions.get(id);
     if (!sub) {
-      log.warn("Unknown subscription", id);
+      warn("Unknown subscription", id);
       this.send(["CLOSE", id]);
     }
     return sub;
@@ -174,8 +186,13 @@ export interface Subscription {
   readonly events: ReadableStream<NostrEvent>;
 }
 
-class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
+class SubscriptionProvider {
   readonly id: SubscriptionId;
+
+  readonly #readable: ReadableStream<NostrEvent>;
+  readonly #writable: WritableStream<NostrEvent>;
+  readonly #notifier = new Notify();
+  #controller?: ReadableStreamDefaultController<NostrEvent>;
   #relays: Set<Relay>;
   #recieved: Set<NostrEvent["id"]>;
 
@@ -184,15 +201,34 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
     public readonly options: SubscribeOptions,
     ...relays: Relay[]
   ) {
-    super({
-      transform: (event, controller) => {
-        if (!this.#recieved.has(event.id)) {
-          this.#recieved.add(event.id);
-          controller.enqueue(event);
+    this.#readable = new ReadableStream<NostrEvent>({
+      start: (controller) => {
+        this.#controller = controller;
+        this.#notifier.notify();
+      },
+      pull: async () => {
+        debug("Pull", this.id);
+        await anyof(this.#relays, async (relay) => {
+          await relay.ensureReady(this.request);
+        });
+      },
+      cancel: () => {
+        debug("Close", this.id);
+        this.close();
+      },
+    });
+
+    this.#writable = new WritableStream<NostrEvent>({
+      start: async () => {
+        if (!this.#controller) {
+          await this.#notifier.notified();
         }
       },
-      flush: () => {
-        log.debug("Subscription closed", this.id);
+      write: (event) => {
+        if (!this.#recieved.has(event.id)) {
+          this.#recieved.add(event.id);
+          this.#controller!.enqueue(event);
+        }
       },
     });
 
@@ -217,16 +253,16 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
   }
 
   async write(event: NostrEvent) {
-    const writer = this.writable.getWriter();
+    const writer = this.#writable.getWriter();
 
     await writer.ready;
-    await writer.write(event).catch(log.error);
+    await writer.write(event).catch(error);
 
     await writer.ready;
     writer.releaseLock();
   }
 
   get events() {
-    return this.readable;
+    return this.#readable;
   }
 }
