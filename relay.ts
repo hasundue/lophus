@@ -1,4 +1,5 @@
 import * as log from "https://deno.land/std@0.187.0/log/mod.ts";
+import { Mutex } from "https://deno.land/x/async@v2.0.2/mod.ts";
 import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { RelayUrl } from "./lib/types.ts";
 import { Brand, now } from "./lib/utils.ts";
@@ -17,11 +18,9 @@ export type RelayToClientEventListener = Partial<
   & RelayToClientMessageListener
 >;
 
-type SubscribeOptions = {
+interface SubscribeOptions {
   id?: string;
-  verb?: "REQ" | "COUNT";
-  skipVerification?: boolean;
-};
+}
 
 export interface Subscription {
   readonly filter: Filter;
@@ -29,104 +28,115 @@ export interface Subscription {
   readonly stream: ReadableStream<NostrEvent>;
 }
 
-class SubscriptionProvider extends TransformStream<NostrEvent> {
+class SubscriptionProvider implements Subscription {
   readonly id: SubscriptionId;
+  #relays: Set<Relay>;
+  #recieved: Set<NostrEvent["id"]>;
+  #writable: WritableStream<NostrEvent>;
+  #readable: ReadableStream<NostrEvent>;
 
   constructor(
-    private readonly ws: WebSocket,
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
+    ...relays: Relay[]
   ) {
-    super({
-      transform: (event, controller) => {
-        controller.enqueue(event);
-      },
-    });
     this.id =
       (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
+    this.#relays = new Set(relays);
+    this.#recieved = new Set();
 
-    this.start();
+    this.#writable = new WritableStream<NostrEvent>({
+      write: (event) =>
+        new Promise((resolve, reject) => {
+          if (this.#recieved.has(event.id)) {
+            reject();
+          }
+          this.#recieved.add(event.id);
+          resolve();
+        }),
+    });
+
+    this.#readable = new ReadableStream<NostrEvent>({
+      pull: () => {
+        this.#relays.forEach((relay) => relay.ensure(this.#start));
+      },
+    });
+
+    this.#readable.pipeTo(this.#writable);
   }
 
-  start() {
-    this.ws.send(JSON.stringify(["REQ", this.options.id, this.filter]));
+  #start(relay: Relay) {
+    relay.send(["REQ", this.id, this.filter]);
   }
 
-  /**
-   * A helper method to deliver an event to the subscription.
-   * It just wraps `this.writable.getWriter().write`.
-   */
-  deliver(event: NostrEvent) {
-    this.writable.getWriter().write(event);
+  async write(event: NostrEvent) {
+    await this.#writable.getWriter().write(event);
+  }
+
+  get stream() {
+    return this.#readable;
   }
 }
 
 export class Relay {
-  private readonly ws: WebSocket;
-  private readonly on: RelayToClientEventListener;
-  private subscriptions: Map<SubscriptionId, SubscriptionProvider> = new Map();
+  readonly #ws: WebSocket;
+  #mutex: Mutex;
+  #subscriptions: Map<SubscriptionId, SubscriptionProvider> = new Map();
 
   constructor(public readonly config: RelayConfig) {
     const name = config.name ?? config.url;
 
-    this.ws = new WebSocket(config.url);
-    this.on = config.on ?? {};
+    this.#ws = new WebSocket(config.url);
 
-    this.ws.onopen = (event) => {
-      log.info(`connected to ${name}`);
-      config.on?.open?.call(this.ws, event);
+    this.#ws.onopen = (event) => {
+      log.info("connection opened", name);
+      config.on?.open?.call(this, event);
     };
 
-    this.ws.onclose = (event) => {
-      log.info(`disconnected from ${name}`);
+    this.#ws.onclose = (event) => {
+      log.info("connection closed", name);
       (event.code === 1000 ? log.debug : log.error)(event);
-
-      this.on.close?.call(this.ws, event);
-
-      // We reconnect to write-only relays on demand.
-      if (config.read) {
-        log.info("reconnecting...");
-        this.connect();
-      }
+      this.config?.on?.close?.call(this, event);
     };
 
-    this.ws.onerror = (event) => {
-      log.error("connection error:", name);
-      this.on.error?.call(this.ws, event);
+    this.#ws.onerror = (event) => {
+      log.error("connection error", name);
+      this.config.on?.error?.call(this, event);
     };
 
-    this.ws.onmessage = (ev: MessageEvent<RelayToClientMessage>) => {
+    this.#ws.onmessage = (ev: MessageEvent<RelayToClientMessage>) => {
       try {
         switch (ev.data[0]) {
           case "EVENT": {
-            log.debug("Received event:", ev.data);
+            log.debug("event recieved", ev.data);
 
             const [_, id, event] = ev.data;
-            if (this.on.event) this.on.event(id, event);
+            if (this.config.on?.event) this.config.on.event(id, event);
 
-            const sub = this.subscriptions.get(id);
+            const sub = this.#subscriptions.get(id);
             if (!sub) {
-              log.warning("Received event for unknown subscription:", event);
-              // TODO: stop the subscription
+              log.warning("unknown subscription", event);
               break;
             }
-            sub.deliver(event);
+            sub.write(event); // async
             break;
           }
           case "EOSE": {
             log.debug("Received eose:", ev.data);
 
             const [_, id] = ev.data;
-            if (this.on.eose) this.on.eose(id);
+            this.config.on?.eose?.call(this, id);
 
-            if (config.close_on_eose) this.ws.close();
+            if (config.close_on_eose) {
+              this.close();
+            }
             break;
           }
           case "NOTICE": {
             log.debug("Received notice:", ev.data);
 
             const [_, message] = ev.data;
-            if (this.on.notice) this.on.notice(message);
+            this.config.on?.notice?.call(this, message);
 
             break;
           }
@@ -140,28 +150,29 @@ export class Relay {
           );
         } else throw e;
       }
+
+      this.connect();
     };
   }
 
-  subscribe(filter: Filter, options: SubscribeOptions = {}) {
-    const sub = new SubscriptionProvider(this.ws, filter, options);
-    this.subscriptions.set(id, sub);
-    return sub;
+  connect() {
+    this.#ws.open();
   }
 
-  async connect() {
-    await this.connected.lock(async (state) => {
-      if (await state.get()) {
-        console.warn("Already connected to", this.url);
-        return;
-      }
-      this.relay.connect();
-      this.notify.notified();
+  close() {
+  }
 
-      await state.set(true);
-    });
-    console.log(`Connected to ${this.relay.url}.`);
-    // this.subs.forEach((sub) => sub.start());
+  ensure(callback: (relay: Relay) => void) {
+  }
+
+  send(message: ClientToRelayMessage) {
+    this.#ws.send(JSON.stringify(message));
+  }
+
+  subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
+    const sub = new SubscriptionProvider(filter, options);
+    this.#subscriptions.set(sub.id, sub);
+    return sub;
   }
 }
 
@@ -178,13 +189,14 @@ type RelayToClientMessageListener = {
 };
 
 type RelayToClientMessage =
-  | EventMessage
-  | EoseMessage
-  | NoticeMessage;
+  | ["EVENT", SubscriptionId, NostrEvent]
+  | ["EOSE", SubscriptionId, ...Filter[]]
+  | ["NOTICE", string];
 
-type EventMessage = ["EVENT", SubscriptionId, NostrEvent];
-type EoseMessage = ["EOSE", SubscriptionId, ...Filter[]];
-type NoticeMessage = ["NOTICE", string];
+type ClientToRelayMessage =
+  | ["EVENT", NostrEvent]
+  | ["REQ", SubscriptionId, ...Filter[]]
+  | ["CLOSE", SubscriptionId];
 
 type SubscriptionId = Brand<string, "SubscriptionId">;
 
