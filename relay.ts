@@ -1,6 +1,6 @@
 import { Notify } from "https://deno.land/x/async@v2.0.2/notify.ts";
 import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
-import { Brand, noop } from "./lib/utils.ts";
+import { Brand } from "./lib/utils.ts";
 import { log } from "./lib/log.ts";
 import { RelayUrl, WebSocketEventListner } from "./lib/types.ts";
 
@@ -89,31 +89,31 @@ export class Relay {
     this.#ws.close();
   }
 
-  async ensureOpen(onopen: (relay: Relay) => void = noop) {
-    switch (this.#ws.readyState) {
-      case WebSocket.CONNECTING:
-        await this.#notifier.notified();
-        onopen(this);
-        /* falls through */
+  get ready(): Promise<void> {
+    return (async () => {
+      switch (this.#ws.readyState) {
+        case WebSocket.CONNECTING:
+          await this.#notifier.notified();
+          /* falls through */
+        case WebSocket.OPEN:
+          return;
 
-      case WebSocket.OPEN:
-        return;
-
-      case WebSocket.CLOSING:
-        await this.#notifier.notified();
-        /* falls through */
-
-      case WebSocket.CLOSED:
-        this.#ws = this.connect();
-        await this.#notifier.notified();
-        onopen(this);
-    }
+        case WebSocket.CLOSING:
+          await this.#notifier.notified();
+          /* falls through */
+        case WebSocket.CLOSED:
+          this.#ws = this.connect();
+          await this.#notifier.notified();
+          return;
+      }
+    })();
   }
 
   async send(message: ClientToRelayMessage) {
-    await this.ensureOpen();
-    this.#ws.send(JSON.stringify(message));
-    log.debug("Sent", message, this.name);
+    await this.ready;
+    const str = JSON.stringify(message);
+    this.#ws.send(str);
+    log.debug(str);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {

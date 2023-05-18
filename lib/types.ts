@@ -8,7 +8,7 @@ export type NostrPubkey = Brand<string, "NostrPubkey">;
 
 export type RelayUrl = `wss://${string}`;
 
-type WebSocketEventType = Omit<WebSocketEventMap, "message">;
+export type WebSocketEventType = Omit<WebSocketEventMap, "message">;
 
 export type WebSocketEventListner = {
   [K in keyof WebSocketEventType]: (event: WebSocketEventMap[K]) => void;
