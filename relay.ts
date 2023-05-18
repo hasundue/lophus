@@ -46,8 +46,7 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
         }
       },
       flush: () => {
-        log.debug("Subscription closed by relay", this.id);
-        this.#relays.forEach((relay) => relay.ensureOpen(this.#request));
+        log.debug("Subscription closed", this.id);
       },
     });
 
@@ -64,7 +63,7 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
     relay.send(["REQ", this.id, this.filter]);
   }
 
-  #close() {
+  close() {
     this.#relays.forEach((relay) => {
       relay.send(["CLOSE", this.id]);
       relay.unsubscribe(this.id);
@@ -72,7 +71,13 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
   }
 
   async write(event: NostrEvent) {
-    await this.writable.getWriter().write(event);
+    const writer = this.writable.getWriter();
+
+    await writer.ready;
+    await writer.write(event).catch(log.error);
+
+    await writer.ready;
+    writer.releaseLock();
   }
 
   get stream() {
@@ -112,25 +117,27 @@ export class Relay {
       this.config.on?.error?.call(this, event);
     };
 
-    ws.onmessage = (ev: MessageEvent<RelayToClientMessage>) => {
-      log.debug("Message recieved", ev.data);
+    ws.onmessage = async (ev: MessageEvent<string>) => {
+      log.debug(ev.data);
+      const msg = JSON.parse(ev.data) as RelayToClientMessage;
       try {
-        switch (ev.data[0]) {
+        switch (msg[0]) {
           case "EVENT": {
-            const [_, id, event] = ev.data;
-            if (this.config.on?.event) this.config.on.event(id, event);
+            const [, sid, event] = msg;
+            if (this.config.on?.event) this.config.on.event(sid, event);
 
-            const sub = this.#subscriptions.get(id);
+            const sub = this.#subscriptions.get(sid);
             if (!sub) {
               log.warning("Unknown subscription", event);
+              this.send(["CLOSE", sid]);
               break;
             }
-            sub.write(event); // async
+            await sub.write(event);
             break;
           }
           case "EOSE": {
-            const [_, id] = ev.data;
-            this.config.on?.eose?.call(this, id);
+            const [, sid] = msg;
+            this.config.on?.eose?.call(this, sid);
 
             if (this.config.close_on_eose) {
               this.close();
@@ -138,20 +145,16 @@ export class Relay {
             break;
           }
           case "NOTICE": {
-            const [_, message] = ev.data;
+            const [, message] = msg;
             this.config.on?.notice?.call(this, message);
 
             break;
           }
+          default:
+            log.warning("Unknown message type:", msg[0]);
         }
-      } catch (e) {
-        if (e instanceof TypeError) {
-          console.error(
-            "Received malformed message from relay:",
-            this.config.url,
-            ev.data,
-          );
-        } else throw e;
+      } catch (err) {
+        log.error(err);
       }
     };
     return ws;
