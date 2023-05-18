@@ -14,6 +14,20 @@ export type Replace<T, K extends keyof T, V> = Omit<T, K> & { [P in K]: V };
 export const noop = () => {};
 export const now = () => Math.floor(Date.now() / 1000);
 
+export function anyof<T, U>(
+  iterable: Iterable<T>,
+  fn: (value: T) => Promise<U>,
+): Promise<U> {
+  return Promise.any(Array.from(iterable).map(fn));
+}
+
+export function allof<T, U>(
+  iterable: Iterable<T>,
+  fn: (value: T) => Promise<U>,
+): Promise<U[]> {
+  return Promise.all(Array.from(iterable).map(fn));
+}
+
 //
 // Logging
 //
@@ -37,4 +51,5 @@ export const log = Object.fromEntries(
       ? console[level as LogLevel]
       : noop;
     return [level, fn];
-  })) as { [K in LogLevel]: typeof console[K] };
+  }),
+) as { [K in LogLevel]: typeof console[K] };
