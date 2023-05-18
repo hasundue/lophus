@@ -1,7 +1,7 @@
-import { Notify } from "https://deno.land/x/async@v2.0.2/notify.ts";
-import { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
-import { log } from "./lib/utils.ts";
-import {
+import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
+import { Notify } from "./lib/async.ts";
+import { Expand, log } from "./lib/utils.ts";
+import type {
   ClientToRelayMessage,
   RelayToClientMessage,
   RelayUrl,
@@ -15,20 +15,25 @@ export interface RelayConfig {
   url: WebSocketUrl;
   read?: boolean;
   write?: boolean;
-  on?: RelayToClientEventListener;
+  on?: Expand<Relay["on"]>;
 }
 
-export type RelayToClientEventListener = Partial<
+export type RelayToClientEventListener =
   & WebSocketEventListner
-  & RelayToClientMessageListener
->;
+  & RelayToClientMessageListener;
+
+export type RelayToClientMessageListener = {
+  "event": (id: SubscriptionId, event: NostrEvent) => void;
+  "eose": (id: SubscriptionId) => void;
+  "notice": (message: string) => void;
+};
 
 export class Relay {
   readonly name: string;
   readonly url: RelayUrl;
   readonly read: boolean;
   readonly write: boolean;
-  readonly on: RelayToClientEventListener;
+  readonly on: Partial<RelayToClientEventListener>;
 
   #ws: WebSocket;
   readonly #notifier = new Notify();
@@ -94,6 +99,9 @@ export class Relay {
         log.error(err);
       }
     };
+
+    this.#subscriptions.forEach((sub) => sub.request(this));
+
     return ws;
   }
 
@@ -194,10 +202,10 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
     this.#relays = new Set(relays);
     this.#recieved = new Set();
 
-    this.#relays.forEach((relay) => this.#request(relay));
+    this.#relays.forEach((relay) => this.request(relay));
   }
 
-  #request(relay: Relay) {
+  request(relay: Relay) {
     relay.send(["REQ", this.id, this.filter]);
   }
 
@@ -222,12 +230,3 @@ class SubscriptionProvider extends TransformStream<NostrEvent, NostrEvent> {
     return this.readable;
   }
 }
-
-//
-// Types
-//
-type RelayToClientMessageListener = {
-  "event": (id: SubscriptionId, event: NostrEvent) => void;
-  "eose": (id: SubscriptionId) => void;
-  "notice": (message: string) => void;
-};
