@@ -1,5 +1,5 @@
 import { Mutex, Notify } from "./lib/x/async.ts";
-import { writeSafely, noop } from "./lib/utils.ts";
+import { noop, writeSafely } from "./lib/utils.ts";
 import { Expand, WebSocketEventListner } from "./lib/types.ts";
 import {
   ClientToRelayMessage,
@@ -80,9 +80,9 @@ class RelayProvider<R extends boolean, W extends boolean>
         this.#ws.send(JSON.stringify(msg));
       },
       close: async () => {
-        await this.ws_ready; 
+        await this.ws_ready;
         this.#ws.close();
-      }
+      },
     });
     this.url = config.url as RelayUrl;
     this.name = config.name ?? config.url;

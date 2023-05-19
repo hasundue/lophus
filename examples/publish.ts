@@ -12,7 +12,8 @@ const event = signEvent({
   created_at: Timestamp.now,
   kind: 1,
   tags: [],
-  content: `Hello, Nostr! This is Lophus, yet another JS/TS library for the protocol.
+  content:
+    `Hello, Nostr! This is Lophus, yet another JS/TS library for the protocol.
 https://github.com/hasundue/lophus`,
 }, nsec);
 

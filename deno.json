@@ -2,10 +2,11 @@
   "tasks": {
     "cache": "git ls-files | grep .ts | xargs deno cache",
     "test": "deno test -A --no-check",
-    "build": "deno run -A bin/bundle.ts client.ts > dist/client.js",
+    "build": "mkdir -p && deno run -A bin/bundle.ts client.ts > dist/client.js",
+    "docgen": "deno run -A bin/docgen.ts > README.md && deno fmt",
     "run:feed": "deno run -A examples/global_feed.ts",
     "run:transfer": "deno run -A examples/transfer_events.ts",
     "dev": "deno run --watch main.ts"
   },
-  "lock": false,
+  "lock": false
 }
