@@ -1,14 +1,19 @@
 import { connect } from "../client.ts";
-import { signEvent } from "../nips/01.ts";
+import { PrivateKey, PublicKey, signEvent } from "../lib/signer.ts";
+import { Timestamp } from "../lib/time.ts";
+
+const nsec = PrivateKey.generate();
+const pubkey = PublicKey.from(nsec);
 
 const relay = connect({ url: "wss://nos.lol" });
 
 const event = signEvent({
-  pubkey: MY_PUBKEY,
-  created_at: Date.now() / 1000,
+  pubkey,
+  created_at: Timestamp.now,
   kind: 1,
   tags: [],
-  content: "Hello, Nostr!",
-}, MY_PRIVKEY);
+  content: `Hello, Nostr! This is Lophus, yet another JS/TS library for the protocol.
+https://github.com/hasundue/lophus`,
+}, nsec);
 
-const events = relay.subscribe({ kinds: [1] });
+await relay.publish(event);

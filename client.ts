@@ -1,5 +1,5 @@
 import { Mutex, Notify } from "./lib/x/async.ts";
-import { noop } from "./lib/utils.ts";
+import { writeSafely, noop } from "./lib/utils.ts";
 import { Expand, WebSocketEventListner } from "./lib/types.ts";
 import {
   ClientToRelayMessage,
@@ -54,7 +54,7 @@ export function connect<R extends boolean = true, W extends boolean = true>(
 }
 
 type ReadRelayMethod = "subscribe" | "unsubscribe";
-type WriteRelayMethod = "send";
+type WriteRelayMethod = "publish" | "close";
 
 type RelayProviderMethod<R, W> = R extends true
   ? W extends true ? ReadRelayMethod | WriteRelayMethod : ReadRelayMethod
@@ -62,24 +62,28 @@ type RelayProviderMethod<R, W> = R extends true
   : never;
 
 class RelayProvider<R extends boolean, W extends boolean>
-  extends WritableStream {
+  extends WritableStream<SignedEvent> {
   readonly name: string;
   readonly url: RelayUrl;
   readonly on: Partial<RelayToClientEventListener>;
 
   #ws: WebSocket;
-  readonly #notifier = new Notify();
+  readonly #ws_notifier = new Notify();
   readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
+  readonly #writer_mutex = new Mutex();
 
   constructor(config: RelayConfig<R, W>) {
     super({
       write: async (event: SignedEvent) => {
-        const message: ClientToRelayMessage = ["EVENT", event];
-        await this.ready;
-        this.#ws.send(JSON.stringify(message));
+        await this.ws_ready;
+        const msg: ClientToRelayMessage = ["EVENT", event];
+        this.#ws.send(JSON.stringify(msg));
       },
+      close: async () => {
+        await this.ws_ready; 
+        this.#ws.close();
+      }
     });
-
     this.url = config.url as RelayUrl;
     this.name = config.name ?? config.url;
     this.on = config.on ?? {};
@@ -92,13 +96,13 @@ class RelayProvider<R extends boolean, W extends boolean>
     ws.onopen = (event) => {
       console.assert(this.#ws.readyState === WebSocket.OPEN);
       this.on.open?.call(this, event);
-      this.#notifier.notifyAll();
+      this.#ws_notifier.notifyAll();
     };
 
     ws.onclose = (event) => {
       if (event.code > 1000) console.error(event);
       this.on.close?.call(this, event);
-      this.#notifier.notifyAll();
+      this.#ws_notifier.notifyAll();
     };
 
     ws.onerror = (event) => {
@@ -137,21 +141,21 @@ class RelayProvider<R extends boolean, W extends boolean>
     return ws;
   }
 
-  get ready(): Promise<void> {
+  get ws_ready(): Promise<void> {
     return (async () => {
       switch (this.#ws.readyState) {
         case WebSocket.CONNECTING:
-          await this.#notifier.notified();
+          await this.#ws_notifier.notified();
           /* falls through */
         case WebSocket.OPEN:
           break;
 
         case WebSocket.CLOSING:
-          await this.#notifier.notified();
+          await this.#ws_notifier.notified();
           /* falls through */
         case WebSocket.CLOSED:
           this.#ws = this.connect();
-          await this.#notifier.notified();
+          await this.#ws_notifier.notified();
           break;
       }
     })();
@@ -159,13 +163,17 @@ class RelayProvider<R extends boolean, W extends boolean>
 
   async ensureReady(onReady: (relay: this) => void = noop) {
     const initial = this.#ws.readyState;
-    await this.ready;
+    await this.ws_ready;
     if (initial > WebSocket.OPEN) onReady(this);
   }
 
   async send(message: ClientToRelayMessage) {
-    await this.ready;
+    await this.ws_ready;
     this.#ws.send(JSON.stringify(message));
+  }
+
+  async publish(event: SignedEvent) {
+    await writeSafely(this, this.#writer_mutex, event);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
@@ -187,6 +195,8 @@ class RelayProvider<R extends boolean, W extends boolean>
     return sub;
   }
 }
+
+type AnyRelayProvider = RelayProvider<boolean, boolean>;
 
 //
 // Subscription and SubscriptionProvider
@@ -220,7 +230,7 @@ class SubscriptionProvider {
   constructor(
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
-    ...relays: Relay<true, boolean>[]
+    ...relays: RelayProvider<true, boolean>[]
   ) {
     this.events = new ReadableStream<SignedEvent>({
       start: (controller) => {
@@ -252,13 +262,13 @@ class SubscriptionProvider {
     });
 
     this.id = (options.id ?? SubscriptionId.random()) as SubscriptionId;
-    this.#relays = new Set(relays) as Set<RelayProvider<true, boolean>>;
+    this.#relays = new Set(relays);
     this.#recieved = new Set();
 
     this.#relays.forEach((relay) => this.request(relay));
   }
 
-  request(relay: Relay) {
+  request(relay: AnyRelayProvider) {
     relay.send(["REQ", this.id, this.filter]);
   }
 
