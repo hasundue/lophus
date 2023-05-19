@@ -1,10 +1,11 @@
 # Lophus
 
-Yet another TypeScript library for the Nostr protocol.
+Yet another TypeScript library for [Nostr][nostr].
 
 ## Features
+- Web standard [Streams API][streams-api]
 - Robust
 - Strongly typed
-- Use the web standard [Streams API][streams-api]
 
+[nostr]: https://nostr.com
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
