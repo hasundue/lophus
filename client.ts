@@ -1,4 +1,4 @@
-import { Notify } from "./lib/x/async.ts";
+import { Mutex, Notify } from "./lib/x/async.ts";
 import { noop } from "./lib/utils.ts";
 import { Expand, WebSocketEventListner } from "./lib/types.ts";
 import {
@@ -203,9 +203,10 @@ class SubscriptionProvider {
   readonly id: SubscriptionId;
 
   readonly #readable: ReadableStream<NostrEvent>;
+  readonly #reader_notifier = new Notify();
   readonly #writable: WritableStream<NostrEvent>;
-  readonly #notifier = new Notify();
-  #controller?: ReadableStreamDefaultController<NostrEvent>;
+  readonly #writer_mutex = new Mutex();
+  #reader?: ReadableStreamDefaultController<NostrEvent>;
   #relays: Set<RelayProvider<true, boolean>>;
   #recieved: Set<NostrEvent["id"]>;
 
@@ -221,8 +222,8 @@ class SubscriptionProvider {
 
     this.#readable = new ReadableStream<NostrEvent>({
       start: (controller) => {
-        this.#controller = controller;
-        this.#notifier.notify();
+        this.#reader = controller;
+        this.#reader_notifier.notify();
       },
       pull: () => {
         this.#relays.forEach((relay) => relay.ensureReady(this.request));
@@ -234,14 +235,14 @@ class SubscriptionProvider {
 
     this.#writable = new WritableStream<NostrEvent>({
       start: async () => {
-        if (!this.#controller) {
-          await this.#notifier.notified();
+        if (!this.#reader) {
+          await this.#reader_notifier.notified();
         }
       },
       write: (event) => {
         if (!this.#recieved.has(event.id)) {
           this.#recieved.add(event.id);
-          this.#controller!.enqueue(event);
+          this.#reader!.enqueue(event);
         }
       },
     });
@@ -261,6 +262,7 @@ class SubscriptionProvider {
   }
 
   async write(event: NostrEvent) {
+    await this.#writer_mutex.acquire();
     const writer = this.#writable.getWriter();
 
     await writer.ready;
@@ -268,6 +270,7 @@ class SubscriptionProvider {
 
     await writer.ready;
     writer.releaseLock();
+    this.#writer_mutex.release();
   }
 
   get events() {
