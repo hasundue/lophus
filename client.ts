@@ -16,7 +16,7 @@ export * from "./nips/01.ts";
 //
 // Utility classes
 //
-export class ReplyComposer
+export class DefaultAgent
   extends TransformStream<SignedEvent, UnsignedEvent> {}
 
 //

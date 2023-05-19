@@ -16,6 +16,7 @@ const texts_md = mapValues(
 const files_ts = [
   "../examples/global.ts",
   "../examples/publish.ts",
+  "../examples/echo.ts",
   "../examples/transfer.ts",
 ] as const;
 
