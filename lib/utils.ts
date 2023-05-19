@@ -2,7 +2,6 @@
 // Utility functions
 //
 export const noop = () => {};
-export const now = () => Math.floor(Date.now() / 1000);
 
 export function anyof<T, U>(
   iterable: Iterable<T>,

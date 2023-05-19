@@ -6,9 +6,9 @@ import {
   Filter,
   RelayToClientMessage,
   RelayUrl,
-  SubscriptionId,
   SignedEvent,
-} from "./types.ts";
+  SubscriptionId,
+} from "./nips/01.ts";
 
 //
 // Relay and RelayProvider
@@ -69,7 +69,7 @@ class RelayProvider<R extends boolean, W extends boolean>
 
   #ws: WebSocket;
   readonly #notifier = new Notify();
-  readonly #subscriptions = new Map<SubscriptionId, Subscription>();
+  readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
 
   constructor(config: RelayConfig<R, W>) {
     super({
@@ -119,7 +119,7 @@ class RelayProvider<R extends boolean, W extends boolean>
           const [, sid] = msg;
           this.on.eose?.call(this, sid);
           const sub = this.#subscription(sid);
-          if (sub?.options.close_on_eose) sub.close();
+          if (sub?.options.close_on_eose) sub.stop();
           break;
         }
         case "NOTICE": {
@@ -168,8 +168,8 @@ class RelayProvider<R extends boolean, W extends boolean>
     this.#ws.send(JSON.stringify(message));
   }
 
-  subscribe(filter: Filter, options: SubscribeOptions = {}): EventStream {
-    const sub = new Subscription(filter, options, this);
+  subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
+    const sub = new SubscriptionProvider(filter, options, this);
     this.#subscriptions.set(sub.id, sub);
     return sub;
   }
@@ -197,13 +197,18 @@ export interface SubscribeOptions {
   close_on_eose?: boolean;
 }
 
-export type EventStream = ReadableStream<SignedEvent> & {
-  readonly filter: Filter;
-  readonly options: SubscribeOptions;
-}
+export type Subscription = Pick<
+  SubscriptionProvider,
+  "filter" | "options" | "events" | "pipeTo" | "pipeThrough" | "stop"
+>;
 
-class Subscription extends ReadableStream<SignedEvent> {
+class SubscriptionProvider {
   readonly id: SubscriptionId;
+  readonly events: ReadableStream<SignedEvent>;
+
+  // Expose pipeTo and pipeThrough for convenience
+  readonly pipeTo: ReadableStream<SignedEvent>["pipeTo"];
+  readonly pipeThrough: ReadableStream<SignedEvent>["pipeThrough"];
 
   readonly #reader_notifier = new Notify();
   readonly #writable: WritableStream<SignedEvent>;
@@ -217,7 +222,7 @@ class Subscription extends ReadableStream<SignedEvent> {
     public readonly options: SubscribeOptions,
     ...relays: Relay<true, boolean>[]
   ) {
-    super({
+    this.events = new ReadableStream<SignedEvent>({
       start: (controller) => {
         this.#reader = controller;
         this.#reader_notifier.notify();
@@ -226,9 +231,11 @@ class Subscription extends ReadableStream<SignedEvent> {
         this.#relays.forEach((relay) => relay.ensureReady(this.request));
       },
       cancel: () => {
-        this.close();
+        this.stop();
       },
     });
+    this.pipeTo = this.events.pipeTo;
+    this.pipeThrough = this.events.pipeThrough;
 
     this.#writable = new WritableStream<SignedEvent>({
       start: async () => {
@@ -255,7 +262,7 @@ class Subscription extends ReadableStream<SignedEvent> {
     relay.send(["REQ", this.id, this.filter]);
   }
 
-  close() {
+  stop() {
     this.#relays.forEach((relay) => {
       relay.send(["CLOSE", this.id]);
       relay.unsubscribe(this.id);
