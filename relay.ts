@@ -36,13 +36,14 @@ export type RelayToClientMessageListener = {
 type ReadRelayMethod = "subscribe" | "unsubscribe";
 type WriteRelayMethod = "send" | "writable";
 
+type RelayProviderMethod<R, W> = R extends true
+  ? W extends true ? ReadRelayMethod | WriteRelayMethod : ReadRelayMethod
+  : W extends true ? WriteRelayMethod
+  : never;
+
 export type Relay<R extends boolean = true, W extends boolean = true> = Expand<
   & Pick<RelayProvider<R, W>, "name" | "url" | "on">
-  & ((R & W) extends true
-    ? Pick<RelayProvider<R, W>, ReadRelayMethod | WriteRelayMethod>
-    : R extends true ? Pick<RelayProvider<R, W>, ReadRelayMethod>
-    : W extends true ? Pick<RelayProvider<R, W>, WriteRelayMethod>
-    : never)
+  & Pick<RelayProvider<R, W>, RelayProviderMethod<R, W>>
 >;
 
 export function connect<R extends boolean = true, W extends boolean = true>(

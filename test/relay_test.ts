@@ -3,7 +3,6 @@ import { now } from "../lib/utils.ts";
 
 const relay = connect({
   url: "wss://nos.lol",
-  read: false,
 });
 
 const sub = relay.subscribe({
