@@ -1,12 +1,15 @@
 import {
+  EventId,
   EventKind,
+  EventTag,
+  PubKeyTag,
   PublicKey,
   RelayUrl,
   SignedEvent,
   UnsignedEvent,
 } from "../nips/01.ts";
 import { Timestamp } from "../lib/time.ts";
-import { Replace } from "../lib/types.ts";
+import { Determined, Optional, Overload, Replace } from "../lib/types.ts";
 
 export class DefaultAgent<SignedEvent, T>
   extends TransformStream<SignedEvent, T> {
@@ -22,45 +25,65 @@ export class DefaultAgent<SignedEvent, T>
   }
 }
 
-export type EventTemplate = Omit<UnsignedEvent, "created_at" | "pubkey">;
+export type EventTemplate<K extends EventKind> = Overload<
+  Determined<Optional<UnsignedEvent, "created_at" | "pubkey">, "kind", K>,
+  "tags",
+  { erefs?: EventId[]; prefs?: PublicKey[] }
+>;
 
-export type TextNoteTemplate = {
-  tags?: UnsignedEvent["tags"];
-  content: string;
-};
-
-export type TextNoteEvent = Replace<UnsignedEvent, "kind", EventKind.TextNote>;
+//
+// Text notes
+//
+export type TextNoteEvent = Replace<
+  UnsignedEvent,
+  "kind",
+  EventKind.TextNote
+>;
+export type TextNoteTemplate = EventTemplate<EventKind.TextNote>;
+export type TextNoteTemplater = (event: SignedEvent) => TextNoteTemplate;
 
 export class TextNoteComposer extends DefaultAgent<SignedEvent, TextNoteEvent> {
   constructor(
     pubkey: PublicKey,
-    compose: (event: SignedEvent) => TextNoteTemplate,
+    templater: TextNoteTemplater,
   ) {
     super((event) => {
-      const template = compose(event);
-      return {
-        ...template,
-        kind: EventKind.TextNote,
-        tags: template.tags ?? [],
-        pubkey,
-        created_at: Timestamp.now,
-      };
+      const template = templater(event);
+      return TextNoteComposer.compose(pubkey, template);
     });
+  }
+  static compose(
+    pubkey: PublicKey,
+    template: TextNoteTemplate,
+    relay_recommend?: RelayUrl,
+  ): TextNoteEvent {
+    const etags: EventTag[] =
+      template.erefs?.map((id) => ["e", id, relay_recommend ?? ""]) ?? [];
+    const ptags: PubKeyTag[] =
+      template.prefs?.map((id) => ["p", id, relay_recommend ?? ""]) ?? [];
+    return {
+      ...template,
+      kind: EventKind.TextNote,
+      tags: [...etags, ...ptags, ...(template.tags ?? [])],
+      pubkey,
+      created_at: Timestamp.now,
+    };
   }
 }
 
 export class ReplyComposer extends TextNoteComposer {
   constructor(
-    pubkey: ConstructorParameters<typeof TextNoteComposer>[0],
-    compose: ConstructorParameters<typeof TextNoteComposer>[1],
+    pubkey: PublicKey,
+    templater: TextNoteTemplater,
     relay_recommend?: RelayUrl,
   ) {
     super(pubkey, (event) => {
-      const template = compose(event);
+      const template = templater(event);
+      const note = TextNoteComposer.compose(pubkey, template);
       return {
-        ...template,
+        ...note,
         tags: [
-          ...(template.tags ?? []),
+          ...(note.tags ?? []),
           ["e", event.id, relay_recommend ?? ""],
           ["p", event.pubkey, relay_recommend ?? ""],
         ],

@@ -30,27 +30,25 @@ for await (const event of sub.events) {
 }
 ```
 
-### Publish an event
+### Publish a text note
 
 ```ts
 import { connect } from "../client.ts";
-import { PrivateKey, PublicKey, signEvent } from "../lib/signer.ts";
-import { Timestamp } from "../lib/time.ts";
+import { PrivateKey, PublicKey, Signer } from "../lib/signer.ts";
+import { TextNoteComposer } from "../lib/agents.ts";
 
 declare const nsec: PrivateKey;
 const pubkey = PublicKey.from(nsec);
 
-const relay = connect({ url: "wss://nos.lol" });
+const event = Signer.sign(
+  TextNoteComposer.compose(pubkey, {
+    content:
+      "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
+  }),
+  nsec,
+);
 
-const event = signEvent({
-  pubkey,
-  created_at: Timestamp.now,
-  kind: 1,
-  tags: [],
-  content: "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
-}, nsec);
-
-await relay.publish(event);
+await connect({ url: "wss://nos.lol" }).publish(event);
 ```
 
 ### Echo bot

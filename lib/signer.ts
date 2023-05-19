@@ -43,26 +43,22 @@ export const PublicKey = {
     bytesToHex(schnorr.getPublicKey(nsec)) as PublicKey,
 };
 
-export function signEvent(
-  event: UnsignedEvent,
-  nsec: PrivateKey,
-): SignedEvent {
-  const serialized = serializeEvent(event);
-  const hash = sha256(serialized);
-  const sig = schnorr.sign(hash, nsec);
-  return {
-    ...event,
-    id: bytesToHex(hash) as EventId,
-    sig: bytesToHex(sig) as EventSignature,
-  };
-}
-
 export class Signer extends TransformStream<UnsignedEvent, SignedEvent> {
   constructor(nsec: PrivateKey) {
     super({
       transform: (event, controller) => {
-        controller.enqueue(signEvent(event, nsec));
+        controller.enqueue(Signer.sign(event, nsec));
       },
     });
+  }
+  static sign(event: UnsignedEvent, nsec: PrivateKey): SignedEvent {
+    const serialized = serializeEvent(event);
+    const hash = sha256(serialized);
+    const sig = schnorr.sign(hash, nsec);
+    return {
+      ...event,
+      id: bytesToHex(hash) as EventId,
+      sig: bytesToHex(sig) as EventSignature,
+    };
   }
 }
