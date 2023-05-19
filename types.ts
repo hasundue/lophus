@@ -7,13 +7,16 @@ import { Brand } from "./lib/types.ts";
 //
 // Events
 //
-export type NostrEvent = {
+export type UnsignedEvent = {
   id: EventId;
   pubkey: PubKey;
   created_at: EventTimeStamp;
   kind: EventKind;
   tags: Tag[];
   content: string;
+};
+
+export type SignedEvent = UnsignedEvent & {
   sig: EventSignature;
 };
 
@@ -23,7 +26,7 @@ export type EventTimeStamp = Brand<number, "EventTimeStamp">;
 
 export enum EventKind {
   Metadata = 0,
-  Text = 1,
+  TextNote = 1,
   RecommendRelay = 2,
 }
 
@@ -39,14 +42,22 @@ export type EventSignature = Brand<string, "EventSignature">;
 export type RelayUrl = `wss://${string}`;
 
 export type ClientToRelayMessage =
-  | ["EVENT", NostrEvent]
-  | ["REQ", SubscriptionId, ...Filter[]]
-  | ["CLOSE", SubscriptionId];
+  | PublishMessage
+  | SubscribeMessage
+  | CloseMessage;
+
+export type PublishMessage = ["EVENT", SignedEvent];
+export type SubscribeMessage = ["REQ", SubscriptionId, ...Filter[]];
+export type CloseMessage = ["CLOSE", SubscriptionId];
 
 export type RelayToClientMessage =
-  | ["EVENT", SubscriptionId, NostrEvent]
-  | ["EOSE", SubscriptionId, ...Filter[]]
-  | ["NOTICE", string];
+  | EventMessage
+  | EoseMessage
+  | NoticeMessage;
+
+export type EventMessage = ["EVENT", SubscriptionId, UnsignedEvent];
+export type EoseMessage = ["EOSE", SubscriptionId, ...Filter[]];
+export type NoticeMessage = ["NOTICE", string];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 
@@ -54,7 +65,7 @@ export const SubscriptionId = {
   random: () => Math.random().toString().slice(2) as SubscriptionId,
 };
 
-export type Filter = {
+export type Filter = Partial<{
   ids: EventId[];
   authors: PubKey[];
   kinds: EventKind[];
@@ -63,4 +74,4 @@ export type Filter = {
   since: EventTimeStamp;
   until: EventTimeStamp;
   limit: number;
-}
+}>;

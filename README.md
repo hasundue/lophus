@@ -9,7 +9,7 @@ Yet another TypeScript library for [Nostr][nostr].
 - Strongly typed
 
 ## Supported NIPs
-- [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md) Basic protocol
+- [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic protocol
 
 [nostr]: https://nostr.com
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API

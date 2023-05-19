@@ -4,10 +4,10 @@ import { Expand, WebSocketEventListner } from "./lib/types.ts";
 import {
   ClientToRelayMessage,
   Filter,
-  NostrEvent,
   RelayToClientMessage,
   RelayUrl,
   SubscriptionId,
+  SignedEvent,
 } from "./types.ts";
 
 //
@@ -29,13 +29,20 @@ export type RelayToClientEventListener =
   & WebSocketEventListner
   & RelayToClientMessageListener;
 
+export type ClientToRelayMessageListener = {
+  "publish": (event: SignedEvent) => void;
+  "subscribe": (id: SubscriptionId, ...filter: Filter[]) => void;
+  "close": (id: SubscriptionId) => void;
+};
+
 export type RelayToClientMessageListener = {
-  "event": (id: SubscriptionId, event: NostrEvent) => void;
+  "event": (id: SubscriptionId, event: SignedEvent) => void;
   "eose": (id: SubscriptionId) => void;
   "notice": (message: string) => void;
 };
 
 export type Relay<R extends boolean = true, W extends boolean = true> =
+  & WritableStream<SignedEvent>
   & Pick<RelayProvider<R, W>, "name" | "url" | "on">
   & Pick<RelayProvider<R, W>, RelayProviderMethod<R, W>>;
 
@@ -47,34 +54,36 @@ export function connect<R extends boolean = true, W extends boolean = true>(
 }
 
 type ReadRelayMethod = "subscribe" | "unsubscribe";
-type WriteRelayMethod = "send" | "writable";
+type WriteRelayMethod = "send";
 
 type RelayProviderMethod<R, W> = R extends true
   ? W extends true ? ReadRelayMethod | WriteRelayMethod : ReadRelayMethod
   : W extends true ? WriteRelayMethod
   : never;
 
-class RelayProvider<R extends boolean, W extends boolean> {
+class RelayProvider<R extends boolean, W extends boolean>
+  extends WritableStream {
   readonly name: string;
   readonly url: RelayUrl;
   readonly on: Partial<RelayToClientEventListener>;
-  readonly writable: WritableStream<NostrEvent>;
 
   #ws: WebSocket;
   readonly #notifier = new Notify();
-  readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
+  readonly #subscriptions = new Map<SubscriptionId, Subscription>();
 
   constructor(config: RelayConfig<R, W>) {
+    super({
+      write: async (event: SignedEvent) => {
+        const message: ClientToRelayMessage = ["EVENT", event];
+        await this.ready;
+        this.#ws.send(JSON.stringify(message));
+      },
+    });
+
     this.url = config.url as RelayUrl;
     this.name = config.name ?? config.url;
     this.on = config.on ?? {};
     this.#ws = this.connect();
-
-    this.writable = new WritableStream({
-      write: (event: NostrEvent) => {
-        this.send(["EVENT", event]);
-      },
-    });
   }
 
   connect(): WebSocket {
@@ -128,11 +137,6 @@ class RelayProvider<R extends boolean, W extends boolean> {
     return ws;
   }
 
-  close() {
-    this.#subscriptions.forEach((sub) => sub.close());
-    this.#ws.close();
-  }
-
   get ready(): Promise<void> {
     return (async () => {
       switch (this.#ws.readyState) {
@@ -164,8 +168,8 @@ class RelayProvider<R extends boolean, W extends boolean> {
     this.#ws.send(JSON.stringify(message));
   }
 
-  subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
-    const sub = new SubscriptionProvider(filter, options, this);
+  subscribe(filter: Filter, options: SubscribeOptions = {}): EventStream {
+    const sub = new Subscription(filter, options, this);
     this.#subscriptions.set(sub.id, sub);
     return sub;
   }
@@ -193,34 +197,27 @@ export interface SubscribeOptions {
   close_on_eose?: boolean;
 }
 
-export interface Subscription {
+export type EventStream = ReadableStream<SignedEvent> & {
   readonly filter: Filter;
   readonly options: SubscribeOptions;
-  readonly events: ReadableStream<NostrEvent>;
 }
 
-class SubscriptionProvider {
+class Subscription extends ReadableStream<SignedEvent> {
   readonly id: SubscriptionId;
 
-  readonly #readable: ReadableStream<NostrEvent>;
   readonly #reader_notifier = new Notify();
-  readonly #writable: WritableStream<NostrEvent>;
+  readonly #writable: WritableStream<SignedEvent>;
   readonly #writer_mutex = new Mutex();
-  #reader?: ReadableStreamDefaultController<NostrEvent>;
+  #reader?: ReadableStreamDefaultController<SignedEvent>;
   #relays: Set<RelayProvider<true, boolean>>;
-  #recieved: Set<NostrEvent["id"]>;
+  #recieved: Set<SignedEvent["id"]>;
 
   constructor(
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
     ...relays: Relay<true, boolean>[]
   ) {
-    this.id = (options.id ?? SubscriptionId.random()) as SubscriptionId;
-
-    this.#relays = new Set(relays) as Set<RelayProvider<true, boolean>>;
-    this.#recieved = new Set();
-
-    this.#readable = new ReadableStream<NostrEvent>({
+    super({
       start: (controller) => {
         this.#reader = controller;
         this.#reader_notifier.notify();
@@ -233,7 +230,7 @@ class SubscriptionProvider {
       },
     });
 
-    this.#writable = new WritableStream<NostrEvent>({
+    this.#writable = new WritableStream<SignedEvent>({
       start: async () => {
         if (!this.#reader) {
           await this.#reader_notifier.notified();
@@ -246,6 +243,10 @@ class SubscriptionProvider {
         }
       },
     });
+
+    this.id = (options.id ?? SubscriptionId.random()) as SubscriptionId;
+    this.#relays = new Set(relays) as Set<RelayProvider<true, boolean>>;
+    this.#recieved = new Set();
 
     this.#relays.forEach((relay) => this.request(relay));
   }
@@ -261,7 +262,7 @@ class SubscriptionProvider {
     });
   }
 
-  async write(event: NostrEvent) {
+  async write(event: SignedEvent) {
     await this.#writer_mutex.acquire();
     const writer = this.#writable.getWriter();
 
@@ -271,9 +272,5 @@ class SubscriptionProvider {
     await writer.ready;
     writer.releaseLock();
     this.#writer_mutex.release();
-  }
-
-  get events() {
-    return this.#readable;
   }
 }
