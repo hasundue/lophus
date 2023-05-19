@@ -41,10 +41,9 @@ type RelayProviderMethod<R, W> = R extends true
   : W extends true ? WriteRelayMethod
   : never;
 
-export type Relay<R extends boolean = true, W extends boolean = true> = Expand<
+export type Relay<R extends boolean = true, W extends boolean = true> =
   & Pick<RelayProvider<R, W>, "name" | "url" | "on">
-  & Pick<RelayProvider<R, W>, RelayProviderMethod<R, W>>
->;
+  & Pick<RelayProvider<R, W>, RelayProviderMethod<R, W>>;
 
 export function connect<R extends boolean = true, W extends boolean = true>(
   relay: RelayConfig<R, W>,

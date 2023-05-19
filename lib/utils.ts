@@ -4,12 +4,10 @@ import "https://deno.land/std@0.187.0/dotenv/load.ts";
 // Utility types
 //
 export type Brand<K, T> = K & { __brand: T };
+
+export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 export type Require<T, K extends keyof T> = T & Required<Pick<T, K>>;
 export type Replace<T, K extends keyof T, V> = Omit<T, K> & { [P in K]: V };
-
-export type Expand<T> = T extends infer O
-  ? { [K in keyof O]: O[K] extends never ? undefined : O[K] }
-  : never;
 
 //
 // Utility functions
