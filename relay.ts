@@ -12,12 +12,15 @@ import type {
 
 const { debug, error, info, warn } = log;
 
-export interface RelayConfig {
+export interface RelayConfig<
+  R extends boolean = true,
+  W extends boolean = true,
+> {
   name?: string;
   url: WebSocketUrl;
-  read?: boolean;
-  write?: boolean;
-  on?: Expand<Relay["on"]>;
+  read?: R;
+  write?: W;
+  on?: Expand<RelayProvider<R, W>["on"]>;
 }
 
 export type RelayToClientEventListener =
@@ -30,24 +33,46 @@ export type RelayToClientMessageListener = {
   "notice": (message: string) => void;
 };
 
-export class Relay {
+type ReadRelayMethod = "subscribe" | "unsubscribe";
+type WriteRelayMethod = "send" | "writable";
+
+export type Relay<R extends boolean = true, W extends boolean = true> = Expand<
+  & Pick<RelayProvider<R, W>, "name" | "url" | "on">
+  & ((R & W) extends true
+    ? Pick<RelayProvider<R, W>, ReadRelayMethod | WriteRelayMethod>
+    : R extends true ? Pick<RelayProvider<R, W>, ReadRelayMethod>
+    : W extends true ? Pick<RelayProvider<R, W>, WriteRelayMethod>
+    : never)
+>;
+
+export function connect<R extends boolean = true, W extends boolean = true>(
+  relay: RelayConfig<R, W>,
+) {
+  // @ts-ignore: TS2322 Difficult to use generics for methods of RelayProvider
+  return new RelayProvider<R, W>(relay) as Relay<R, W>;
+}
+
+class RelayProvider<R extends boolean, W extends boolean> {
   readonly name: string;
   readonly url: RelayUrl;
-  readonly read: boolean;
-  readonly write: boolean;
   readonly on: Partial<RelayToClientEventListener>;
+  readonly writable: WritableStream<NostrEvent>;
 
   #ws: WebSocket;
   readonly #notifier = new Notify();
   readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
 
-  constructor(config: RelayConfig) {
+  constructor(config: RelayConfig<R, W>) {
     this.url = config.url as RelayUrl;
     this.name = config.name ?? config.url;
-    this.read = config.read ?? true;
-    this.write = config.write ?? true;
     this.on = config.on ?? {};
     this.#ws = this.connect();
+
+    this.writable = new WritableStream({
+      write: (event: NostrEvent) => {
+        this.send(["EVENT", event]);
+      },
+    });
   }
 
   connect(): WebSocket {
@@ -143,15 +168,11 @@ export class Relay {
 
   async send(message: ClientToRelayMessage) {
     await this.ready;
-    const str = JSON.stringify(message);
-    this.#ws.send(str);
+    this.#ws.send(JSON.stringify(message));
     debug(message);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
-    if (!this.read) {
-      throw new Error("Cannot subscribe to a write-only relay");
-    }
     const sub = new SubscriptionProvider(filter, options, this);
     this.#subscriptions.set(sub.id, sub);
     return sub;
@@ -192,18 +213,18 @@ class SubscriptionProvider {
   readonly #writable: WritableStream<NostrEvent>;
   readonly #notifier = new Notify();
   #controller?: ReadableStreamDefaultController<NostrEvent>;
-  #relays: Set<Relay>;
+  #relays: Set<RelayProvider<true, boolean>>;
   #recieved: Set<NostrEvent["id"]>;
 
   constructor(
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
-    ...relays: Relay[]
+    ...relays: Relay<true, boolean>[]
   ) {
     this.id =
       (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
 
-    this.#relays = new Set(relays);
+    this.#relays = new Set(relays) as Set<RelayProvider<true, boolean>>;
     this.#recieved = new Set();
 
     this.#readable = new ReadableStream<NostrEvent>({

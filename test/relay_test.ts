@@ -1,8 +1,9 @@
-import { Relay } from "../relay.ts";
+import { connect } from "../relay.ts";
 import { now } from "../lib/utils.ts";
 
-const relay = new Relay({
+const relay = connect({
   url: "wss://nos.lol",
+  read: false,
 });
 
 const sub = relay.subscribe({
