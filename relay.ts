@@ -101,36 +101,32 @@ class RelayProvider<R extends boolean, W extends boolean> {
     ws.onmessage = (ev: MessageEvent<string>) => {
       const msg = JSON.parse(ev.data) as RelayToClientMessage;
       debug(msg);
-      try {
-        switch (msg[0]) {
-          case "EVENT": {
-            const [, sid, event] = msg;
-            this.on.event?.call(this, sid, event);
-            this.#subscription(sid)?.write(event);
-            break;
-          }
-          case "EOSE": {
-            const [, sid] = msg;
-            this.on.eose?.call(this, sid);
-            const sub = this.#subscription(sid);
-            if (sub?.options.close_on_eose) sub.close();
-            break;
-          }
-          case "NOTICE": {
-            const [, message] = msg;
-            this.on.notice?.call(this, message);
-            break;
-          }
-          default:
-            warn("Unknown message type:", msg[0]);
+      switch (msg[0]) {
+        case "EVENT": {
+          const [, sid, event] = msg;
+          this.on.event?.call(this, sid, event);
+          this.#subscription(sid)?.write(event);
+          break;
         }
-      } catch (err) {
-        error(err);
+        case "EOSE": {
+          const [, sid] = msg;
+          this.on.eose?.call(this, sid);
+          const sub = this.#subscription(sid);
+          if (sub?.options.close_on_eose) sub.close();
+          break;
+        }
+        case "NOTICE": {
+          const [, message] = msg;
+          this.on.notice?.call(this, message);
+          break;
+        }
+        default: {
+          warn("Unknown message type:", msg[0]);
+        }
       }
     };
 
     this.#subscriptions.forEach((sub) => sub.request(this));
-
     return ws;
   }
 
