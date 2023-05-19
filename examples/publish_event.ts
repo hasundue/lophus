@@ -2,7 +2,7 @@ import { connect } from "../client.ts";
 import { PrivateKey, PublicKey, signEvent } from "../lib/signer.ts";
 import { Timestamp } from "../lib/time.ts";
 
-const nsec = PrivateKey.generate();
+declare const nsec: PrivateKey;
 const pubkey = PublicKey.from(nsec);
 
 const relay = connect({ url: "wss://nos.lol" });

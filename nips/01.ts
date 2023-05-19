@@ -78,8 +78,8 @@ export type Filter = Partial<{
   ids: EventId[];
   authors: PublicKey[];
   kinds: EventKind[];
-  "#e": EventTag[];
-  "#p": PubKeyTag[];
+  "#e": EventId[];
+  "#p": PublicKey[];
   since: EventTimestamp;
   until: EventTimestamp;
   limit: number;
