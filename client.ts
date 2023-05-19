@@ -16,8 +16,7 @@ export * from "./nips/01.ts";
 //
 // Utility classes
 //
-export class DefaultAgent
-  extends TransformStream<SignedEvent, UnsignedEvent> {}
+export class DefaultAgent extends TransformStream<SignedEvent, UnsignedEvent> {}
 
 //
 // Relay and RelayProvider
