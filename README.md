@@ -1,5 +1,8 @@
 # Lophus
 
+> **Warning**\
+> Still under development and not ready for use.
+
 Yet another TypeScript library for [Nostr][nostr].
 
 ## Features
