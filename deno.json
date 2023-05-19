@@ -3,6 +3,7 @@
     "cache": "git ls-files | grep .ts | xargs deno cache",
     "test": "deno test -A --no-check",
     "build": "deno run -A bin/bundle.ts client.ts > dist/client.js",
+    "run:example": "deno run -A examples/client/global_feed.ts",
     "dev": "deno run --watch main.ts"
   },
   "lock": false,
