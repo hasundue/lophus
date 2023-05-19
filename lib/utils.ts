@@ -28,29 +28,3 @@ export function allof<T, U>(
 ) {
   return Promise.all(Array.from(iterable).map(fn));
 }
-
-//
-// Logging
-//
-const LogLevelTable = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-} as const;
-type LogLevel = keyof typeof LogLevelTable;
-
-const LOG_LEVEL = Deno.env.get("LOG_LEVEL")?.toLowerCase() ?? "info";
-if (!Object.keys(LogLevelTable).includes(LOG_LEVEL)) {
-  throw new Error(`Invalid log level: ${LOG_LEVEL}`);
-}
-const logLevel = LOG_LEVEL as LogLevel;
-
-export const log = Object.fromEntries(
-  Object.entries(LogLevelTable).map(([level, value]) => {
-    const fn = value >= LogLevelTable[logLevel]
-      ? console[level as LogLevel]
-      : noop;
-    return [level, fn];
-  }),
-) as { [K in LogLevel]: typeof console[K] };

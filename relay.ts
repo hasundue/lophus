@@ -1,6 +1,6 @@
 import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { Notify } from "./lib/async.ts";
-import { anyof, Brand, Expand, log, noop } from "./lib/utils.ts";
+import { anyof, Brand, Expand, noop } from "./lib/utils.ts";
 import type {
   ClientToRelayMessage,
   RelayToClientMessage,
@@ -8,8 +8,6 @@ import type {
   WebSocketEventListner,
   WebSocketUrl,
 } from "./types.ts";
-
-const { debug, error, info, warn } = log;
 
 //
 // Relay and RelayProvider
@@ -81,31 +79,27 @@ class RelayProvider<R extends boolean, W extends boolean> {
   }
 
   connect(): WebSocket {
-    info("Connecting", this.name);
     const ws = new WebSocket(this.url);
 
     ws.onopen = (event) => {
-      info("Opened", this.name);
       console.assert(this.#ws.readyState === WebSocket.OPEN);
       this.on.open?.call(this, event);
       this.#notifier.notifyAll();
     };
 
     ws.onclose = (event) => {
-      info("Closed", this.name);
-      (event.code === 1000 ? debug : error)(event);
+      if (event.code > 1000) console.error(event);
       this.on.close?.call(this, event);
       this.#notifier.notifyAll();
     };
 
     ws.onerror = (event) => {
-      error("Error", this.name);
+      console.error("Error", this.name);
       this.on.error?.call(this, event);
     };
 
     ws.onmessage = (ev: MessageEvent<string>) => {
       const msg = JSON.parse(ev.data) as RelayToClientMessage;
-      debug(msg);
       switch (msg[0]) {
         case "EVENT": {
           const [, sid, event] = msg;
@@ -126,7 +120,7 @@ class RelayProvider<R extends boolean, W extends boolean> {
           break;
         }
         default: {
-          warn("Unknown message type:", msg[0]);
+          console.warn("Unknown message type:", msg[0]);
         }
       }
     };
@@ -157,7 +151,6 @@ class RelayProvider<R extends boolean, W extends boolean> {
           await this.#notifier.notified();
           break;
       }
-      debug("Ready", this.name);
     })();
   }
 
@@ -170,7 +163,6 @@ class RelayProvider<R extends boolean, W extends boolean> {
   async send(message: ClientToRelayMessage) {
     await this.ready;
     this.#ws.send(JSON.stringify(message));
-    debug(message);
   }
 
   subscribe(filter: Filter, options: SubscribeOptions = {}): Subscription {
@@ -186,7 +178,7 @@ class RelayProvider<R extends boolean, W extends boolean> {
   #subscription(id: SubscriptionId) {
     const sub = this.#subscriptions.get(id);
     if (!sub) {
-      warn("Unknown subscription", id);
+      console.warn("Unknown subscription", id);
       this.send(["CLOSE", id]);
     }
     return sub;
@@ -235,13 +227,11 @@ class SubscriptionProvider {
         this.#notifier.notify();
       },
       pull: async () => {
-        debug("Pull", this.id);
         await anyof(this.#relays, async (relay) => {
           await relay.ensureReady(this.request);
         });
       },
       cancel: () => {
-        debug("Close", this.id);
         this.close();
       },
     });
@@ -278,7 +268,7 @@ class SubscriptionProvider {
     const writer = this.#writable.getWriter();
 
     await writer.ready;
-    await writer.write(event).catch(error);
+    await writer.write(event).catch(console.error);
 
     await writer.ready;
     writer.releaseLock();
