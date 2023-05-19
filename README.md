@@ -9,7 +9,8 @@ Yet another TypeScript library for [Nostr][nostr].
 
 - Takes full advantage of the Web standard [Streams API][streams-api]
 - Portable (no dependency on Deno or Node.js APIs)
-- Lightweight (~ 4.0 KB when minified)
+- Lightweight (~ 4.0 KB, minified client.js)
+- Strongly Typed
 
 [nostr]: https://nostr.com
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
@@ -64,11 +65,12 @@ const pubkey = PublicKey.from(nsec);
 
 const relay = connect({ url: "wss://nos.lol" });
 
-const echo = new ReplyComposer(pubkey, (event) => ({ content: event.content }));
-const signer = new Signer(nsec);
-
 relay.subscribe({ kinds: [1], "#p": [pubkey] })
-  .pipeThrough(echo).pipeThrough(signer).pipeTo(relay);
+  .pipeThrough(
+    new ReplyComposer(pubkey, (event) => ({ content: event.content })),
+  )
+  .pipeThrough(new Signer(nsec))
+  .pipeTo(relay);
 ```
 
 ### Transfer events from relay to relay
