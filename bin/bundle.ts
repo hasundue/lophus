@@ -6,9 +6,18 @@ const result = await bundle(
 );
 const { code } = result;
 
+Deno.writeTextFileSync(
+  new URL("../dist/client.js", import.meta.url),
+  code,
+);
+
 const minified = await transform(code, {
   minify: true,
 });
 
-console.log(minified.code);
+Deno.writeTextFileSync(
+  new URL("../dist/client.min.js", import.meta.url),
+  minified.code,
+);
+
 Deno.exit(0);
