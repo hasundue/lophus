@@ -1,5 +1,3 @@
-import "https://deno.land/std@0.187.0/dotenv/load.ts";
-
 //
 // Utility types
 //
