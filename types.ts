@@ -11,7 +11,6 @@ export type SubscriptionId = Brand<string, "SubscriptionId">;
 // Communication
 //
 export type WebSocketUrl = `wss://${string}`;
-export type RelayUrl = Brand<WebSocketUrl, "RelayUrl">;
 
 export type RelayToClientMessage =
   | ["EVENT", SubscriptionId, NostrEvent]
