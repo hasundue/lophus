@@ -13,9 +13,7 @@ const event = signEvent({
   created_at: Timestamp.now,
   kind: 1,
   tags: [],
-  content:
-    `Hello, Nostr! This is Lophus, yet another JS/TS library for the protocol.
-https://github.com/hasundue/lophus`,
+  content: "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
 }, nsec);
 
 await relay.publish(event);
