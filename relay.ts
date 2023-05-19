@@ -51,23 +51,25 @@ export class Relay {
   }
 
   connect(): WebSocket {
+    info("Connecting", this.name);
     const ws = new WebSocket(this.url);
 
     ws.onopen = (event) => {
-      info("Connection opened", this.name);
+      info("Opened", this.name);
+      console.assert(this.#ws.readyState === WebSocket.OPEN);
       this.on.open?.call(this, event);
-      this.#notifier.notify();
+      this.#notifier.notifyAll();
     };
 
     ws.onclose = (event) => {
-      info("Connection closed", this.name);
+      info("Closed", this.name);
       (event.code === 1000 ? debug : error)(event);
       this.on.close?.call(this, event);
-      this.#notifier.notify();
+      this.#notifier.notifyAll();
     };
 
     ws.onerror = (event) => {
-      error("Connection error", this.name);
+      error("Error", this.name);
       this.on.error?.call(this, event);
     };
 
@@ -116,30 +118,27 @@ export class Relay {
     return (async () => {
       switch (this.#ws.readyState) {
         case WebSocket.CONNECTING:
-          debug("CONNECTING", this.name);
           await this.#notifier.notified();
           /* falls through */
         case WebSocket.OPEN:
-          debug("OPEN", this.name);
-          return;
+          break;
 
         case WebSocket.CLOSING:
-          debug("CLOSING", this.name);
           await this.#notifier.notified();
           /* falls through */
         case WebSocket.CLOSED:
-          debug("CLOSED", this.name);
           this.#ws = this.connect();
           await this.#notifier.notified();
-          return;
+          break;
       }
+      debug("Ready", this.name);
     })();
   }
 
   async ensureReady(onReady: (relay: this) => void = noop) {
+    const initial = this.#ws.readyState;
     await this.ready;
-    debug("Ready", this.name);
-    onReady(this);
+    if (initial > WebSocket.OPEN) onReady(this);
   }
 
   async send(message: ClientToRelayMessage) {
@@ -201,6 +200,12 @@ class SubscriptionProvider {
     public readonly options: SubscribeOptions,
     ...relays: Relay[]
   ) {
+    this.id =
+      (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
+
+    this.#relays = new Set(relays);
+    this.#recieved = new Set();
+
     this.#readable = new ReadableStream<NostrEvent>({
       start: (controller) => {
         this.#controller = controller;
@@ -231,12 +236,6 @@ class SubscriptionProvider {
         }
       },
     });
-
-    this.id =
-      (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
-
-    this.#relays = new Set(relays);
-    this.#recieved = new Set();
 
     this.#relays.forEach((relay) => this.request(relay));
   }
