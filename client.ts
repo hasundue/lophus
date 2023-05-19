@@ -1,15 +1,14 @@
-import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { Notify } from "./lib/x/async.ts";
 import { noop } from "./lib/utils.ts";
-import type {
-  Brand,
-  Expand,
+import { Expand, WebSocketEventListner } from "./lib/types.ts";
+import {
   ClientToRelayMessage,
+  Filter,
+  NostrEvent,
   RelayToClientMessage,
+  RelayUrl,
   SubscriptionId,
-  WebSocketEventListner,
-  WebSocketUrl,
-} from "./lib/types.ts";
+} from "./types.ts";
 
 //
 // Relay and RelayProvider
@@ -20,7 +19,7 @@ export interface RelayConfig<
   W extends boolean = true,
 > {
   name?: string;
-  url: WebSocketUrl;
+  url: RelayUrl;
   read?: R;
   write?: W;
   on?: Expand<RelayProvider<R, W>["on"]>;
@@ -46,8 +45,6 @@ export function connect<R extends boolean = true, W extends boolean = true>(
   // @ts-ignore: TS2322 Difficult to use generics for methods of RelayProvider
   return new RelayProvider<R, W>(relay) as Relay<R, W>;
 }
-
-type RelayUrl = Brand<WebSocketUrl, "RelayUrl">;
 
 type ReadRelayMethod = "subscribe" | "unsubscribe";
 type WriteRelayMethod = "send" | "writable";
@@ -217,8 +214,7 @@ class SubscriptionProvider {
     public readonly options: SubscribeOptions,
     ...relays: Relay<true, boolean>[]
   ) {
-    this.id =
-      (options.id ?? Math.random().toString().slice(2)) as SubscriptionId;
+    this.id = (options.id ?? SubscriptionId.random()) as SubscriptionId;
 
     this.#relays = new Set(relays) as Set<RelayProvider<true, boolean>>;
     this.#recieved = new Set();
