@@ -25,8 +25,10 @@ export enum EventKind {
 }
 
 export type Tag = EventTag | PubKeyTag;
-export type EventTag = ["e", EventId, RelayUrl?];
-export type PubKeyTag = ["p", PublicKey, RelayUrl?];
+export type EventTag = ["e", EventId, RecmRelayUrl];
+export type PubKeyTag = ["p", PublicKey, RecmRelayUrl];
+
+export type RecmRelayUrl = RelayUrl | "";
 
 export type SignedEvent = UnsignedEvent & {
   id: EventId;
