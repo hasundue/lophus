@@ -1,6 +1,7 @@
 {
   "tasks": {
     "cache": "git ls-files | grep .ts | xargs deno cache",
+    "lint": "git ls-files | grep .ts | xargs deno lint",
     "test": "deno test -A --no-check",
     "build": "mkdir -p && deno run -A bin/bundle.ts client.ts > dist/client.js",
     "docgen": "deno run -A bin/docgen.ts > README.md && deno fmt",

@@ -25,8 +25,8 @@ export enum EventKind {
 }
 
 export type Tag = EventTag | PubKeyTag;
-export type EventTag = ["e", EventId, RelayUrl];
-export type PubKeyTag = ["p", PublicKey, RelayUrl];
+export type EventTag = ["e", EventId, RelayUrl?];
+export type PubKeyTag = ["p", PublicKey, RelayUrl?];
 
 export type SignedEvent = UnsignedEvent & {
   id: EventId;
@@ -34,6 +34,7 @@ export type SignedEvent = UnsignedEvent & {
 };
 
 export type EventId = Brand<string, "EventId">;
+export type PrivateKey = Brand<string, "PrivateKey">;
 export type EventSignature = Brand<string, "EventSignature">;
 
 export type EventSerializePrecursor = [

@@ -1,5 +1,5 @@
-import { connect } from "../client.ts";
-import { PublicKey } from "../types.ts";
+// Transfer events from relay to relay
+import { connect, PublicKey } from "../client.ts";
 
 declare const pubkey: PublicKey;
 

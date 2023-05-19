@@ -1,3 +1,4 @@
+// Publish an event
 import { connect } from "../client.ts";
 import { PrivateKey, PublicKey, signEvent } from "../lib/signer.ts";
 import { Timestamp } from "../lib/time.ts";

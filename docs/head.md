@@ -4,6 +4,9 @@ Yet another TypeScript library for [Nostr][nostr].
 
 ## Features
 
-- Web standard [Streams API][streams-api]
+- Takes full advantage of the Web standard [Streams API][streams-api]
 - Portable (no dependency on Deno or Node.js APIs)
 - Lightweight (~ 4.0 KB when minified)
+
+[nostr]: https://nostr.com
+[streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API

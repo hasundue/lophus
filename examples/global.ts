@@ -1,3 +1,4 @@
+// Global feed
 import { connect } from "../client.ts";
 
 const relay = connect({ url: "wss://nos.lol" });

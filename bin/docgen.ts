@@ -3,39 +3,35 @@
 //
 import { mapValues } from "https://deno.land/std@0.187.0/collections/map_values.ts";
 
-const sources = {
-  head_md: "../docs/head.md",
-  example_global_ts: "../examples/global.ts",
-  example_publish_ts: "../examples/publish.ts",
-  example_transfer_ts: "../examples/transfer.ts",
-  nips_md: "../docs/nips.md",
-  links_md: "../docs/links.md",
+const files_md = {
+  head: "../docs/head.md",
+  nips: "../docs/nips.md",
 } as const;
 
-const contents = mapValues(
-  sources,
-  (path) => Deno.readTextFileSync(new URL(path, import.meta.url)),
+const texts_md = mapValues(
+  files_md,
+  (path) => Deno.readTextFileSync(new URL(path, import.meta.url)) + "\n",
 );
+
+const files_ts = [
+  "../examples/global.ts",
+  "../examples/publish.ts",
+  "../examples/transfer.ts",
+] as const;
 
 const ts_begin = "```ts";
 const ts_end = "```";
 
-const output = `${contents.head_md}
-## Examples
-### Global feed
-${ts_begin}
-${contents.example_global_ts}
-${ts_end}
-### Publish
-${ts_begin}
-${contents.example_publish_ts}
-${ts_end}
-### Transfer
-${ts_begin}
-${contents.example_transfer_ts}
-${ts_end}
-${contents.nips_md}
-${contents.links_md}
-`;
+const texts_ts = files_ts.map((path) => {
+  const text = Deno.readTextFileSync(new URL(path, import.meta.url));
+  const lines = text.split("\n");
+  const title = lines[0].replace("// ", "### ");
+  return [title, ts_begin, ...lines.slice(1), ts_end].join("\n") + "\n";
+});
+
+const output = texts_md.head +
+  "## Examples\n" +
+  texts_ts.join("\n") +
+  texts_md.nips;
 
 console.log(output);

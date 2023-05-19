@@ -8,12 +8,20 @@ import {
   RelayUrl,
   SignedEvent,
   SubscriptionId,
+  UnsignedEvent,
 } from "./nips/01.ts";
+
+export * from "./nips/01.ts";
+
+//
+// Utility classes
+//
+export class ReplyComposer
+  extends TransformStream<SignedEvent, UnsignedEvent> {}
 
 //
 // Relay and RelayProvider
 //
-
 export interface RelayConfig<
   R extends boolean = true,
   W extends boolean = true,
@@ -201,7 +209,6 @@ type AnyRelayProvider = RelayProvider<boolean, boolean>;
 //
 // Subscription and SubscriptionProvider
 //
-
 export interface SubscribeOptions {
   id?: string;
   close_on_eose?: boolean;
