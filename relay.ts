@@ -1,6 +1,6 @@
 import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
 import { Notify } from "./lib/async.ts";
-import { anyof, Brand, Expand, noop } from "./lib/utils.ts";
+import { Brand, Expand, noop } from "./lib/utils.ts";
 import type {
   ClientToRelayMessage,
   RelayToClientMessage,
@@ -226,10 +226,8 @@ class SubscriptionProvider {
         this.#controller = controller;
         this.#notifier.notify();
       },
-      pull: async () => {
-        await anyof(this.#relays, async (relay) => {
-          await relay.ensureReady(this.request);
-        });
+      pull: () => {
+        this.#relays.forEach((relay) => relay.ensureReady(this.request));
       },
       cancel: () => {
         this.close();
