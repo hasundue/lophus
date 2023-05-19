@@ -1,17 +1,14 @@
 // Publish a text note
 import { connect } from "../client.ts";
-import { PrivateKey, PublicKey, Signer } from "../lib/signer.ts";
+import { env } from "../lib/env.ts";
 import { TextNoteComposer } from "../lib/agents.ts";
-
-declare const nsec: PrivateKey;
-const pubkey = PublicKey.from(nsec);
+import { Signer } from "../lib/signer.ts";
 
 const event = Signer.sign(
-  TextNoteComposer.compose(pubkey, {
+  TextNoteComposer.compose(env.PUBLIC_KEY, {
     content:
       "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
   }),
-  nsec,
+  env.PRIVATE_KEY,
 );
-
 await connect({ url: "wss://nos.lol" }).publish(event);

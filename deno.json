@@ -5,8 +5,9 @@
     "test": "deno test -A --no-check",
     "build": "mkdir -p && deno run -A bin/bundle.ts client.ts > dist/client.js",
     "docgen": "deno run -A bin/docgen.ts > README.md && deno fmt",
-    "run:feed": "deno run -A examples/global_feed.ts",
-    "run:transfer": "deno run -A examples/transfer_events.ts",
+    "run:feed": "deno run -A examples/global.ts",
+    "run:publish": "deno run -A examples/publish.ts",
+    "run:transfer": "deno run -A examples/transfer.ts",
     "dev": "deno run --watch main.ts"
   },
   "lock": false

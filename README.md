@@ -34,20 +34,17 @@ for await (const event of sub.events) {
 
 ```ts
 import { connect } from "../client.ts";
-import { PrivateKey, PublicKey, Signer } from "../lib/signer.ts";
+import { env } from "../lib/env.ts";
 import { TextNoteComposer } from "../lib/agents.ts";
-
-declare const nsec: PrivateKey;
-const pubkey = PublicKey.from(nsec);
+import { Signer } from "../lib/signer.ts";
 
 const event = Signer.sign(
-  TextNoteComposer.compose(pubkey, {
+  TextNoteComposer.compose(env.PUBLIC_KEY, {
     content:
       "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
   }),
-  nsec,
+  env.PRIVATE_KEY,
 );
-
 await connect({ url: "wss://nos.lol" }).publish(event);
 ```
 
@@ -55,33 +52,30 @@ await connect({ url: "wss://nos.lol" }).publish(event);
 
 ```ts
 import { connect } from "../client.ts";
-import { PrivateKey, PublicKey, Signer } from "../lib/signer.ts";
+import { Signer } from "../lib/signer.ts";
+import { env } from "../lib/env.ts";
 import { ReplyComposer } from "../lib/agents.ts";
-
-declare const nsec: PrivateKey;
-const pubkey = PublicKey.from(nsec);
 
 const relay = connect({ url: "wss://nos.lol" });
 
-relay.subscribe({ kinds: [1], "#p": [pubkey] })
+relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
   .pipeThrough(
-    new ReplyComposer(pubkey, (event) => ({ content: event.content })),
+    new ReplyComposer(env.PUBLIC_KEY, (event) => ({ content: event.content })),
   )
-  .pipeThrough(new Signer(nsec))
+  .pipeThrough(new Signer(env.PRIVATE_KEY))
   .pipeTo(relay);
 ```
 
 ### Transfer events from relay to relay
 
 ```ts
-import { connect, PublicKey } from "../client.ts";
-
-declare const pubkey: PublicKey;
+import { connect } from "../client.ts";
+import { env } from "../lib/env.ts";
 
 const relay_src = connect({ url: "wss://relay.nostr.band", write: false });
 const relay_dst = connect({ url: "wss://nos.lol", read: false });
 
-relay_src.subscribe({ kinds: [1], "#p": [pubkey] }).pipeTo(relay_dst);
+relay_src.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).pipeTo(relay_dst);
 ```
 
 ## Supported NIPs
