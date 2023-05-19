@@ -1,4 +1,4 @@
-import { connect } from "../relay.ts";
+import { connect } from "../client.ts";
 import { now } from "../lib/utils.ts";
 
 const relay = connect({ url: "wss://nos.lol" });
