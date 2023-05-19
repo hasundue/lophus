@@ -2,6 +2,7 @@
   "tasks": {
     "cache": "git ls-files | grep .ts | xargs deno cache",
     "test": "deno test -A --no-check",
+    "build": "deno run -A bin/bundle.ts",
     "dev": "deno run --watch main.ts"
   },
   "lock": false,

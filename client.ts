@@ -1,13 +1,15 @@
 import type { Event as NostrEvent, Filter } from "npm:nostr-tools@1.10.1";
-import { Notify } from "./lib/async.ts";
-import { Brand, Expand, noop } from "./lib/utils.ts";
+import { Notify } from "./lib/x/async.ts";
+import { noop } from "./lib/utils.ts";
 import type {
+  Brand,
+  Expand,
   ClientToRelayMessage,
   RelayToClientMessage,
   SubscriptionId,
   WebSocketEventListner,
   WebSocketUrl,
-} from "./types.ts";
+} from "./lib/types.ts";
 
 //
 // Relay and RelayProvider
