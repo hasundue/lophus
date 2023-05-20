@@ -34,10 +34,15 @@ export type Overload<T, K extends keyof T, V> = Expand<
 >;
 
 //
+// Streams API
+//
+export type ReadableWritableStream<R = unknown, W = unknown> =
+  & ReadableStream<R>
+  & WritableStream<W>;
+
+//
 // WebSocket
 //
-export type WebSocketEventType = Omit<WebSocketEventMap, "message">;
-
 export type WebSocketEventListner = {
-  [K in keyof WebSocketEventType]: (event: WebSocketEventMap[K]) => void;
+  [K in keyof WebSocketEventMap]: (event: WebSocketEventMap[K]) => void;
 };
