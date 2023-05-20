@@ -17,7 +17,7 @@ Yet another TypeScript library for [Nostr][nostr].
 
 ## Examples
 
-See [examples/README.md](https://github.com/hasundue/lophus/examples/README.md).
+See [./examples/README.md](https://github.com/hasundue/lophus/blob/main/examples/README.md).
 
 ## Supported NIPs
 
