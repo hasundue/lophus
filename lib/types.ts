@@ -43,6 +43,6 @@ export type ReadableWritableStream<R = unknown, W = unknown> =
 //
 // WebSocket
 //
-export type WebSocketEventListner = {
+export type WebSocketEventHook = {
   [K in keyof WebSocketEventMap]: (event: WebSocketEventMap[K]) => void;
 };

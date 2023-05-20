@@ -53,6 +53,8 @@ export type EventSerializePrecursor = [
 //
 export type RelayUrl = `wss://${string}`;
 
+export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
+
 export type ClientToRelayMessage =
   | PublishMessage
   | SubscribeMessage
