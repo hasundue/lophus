@@ -9,9 +9,9 @@ Yet another TypeScript library for [Nostr][nostr].
 
 - Takes full advantage of the Web standard [Streams API][streams-api]
 - Portable
-  - not depend on Deno or Node.js APIs
+  - Not depend on Deno or Node.js APIs
 - Lightweight
-  - a minified client.js ~ 4.0 KB
+  - A minified client.js ~ 4.0 KB
 - Strongly Typed
 
 [nostr]: https://nostr.com
