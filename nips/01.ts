@@ -7,13 +7,13 @@ import { Brand } from "../lib/types.ts";
 //
 // Events
 //
-export type UnsignedEvent = {
+export interface UnsignedEvent {
   pubkey: PublicKey;
   created_at: EventTimestamp;
   kind: EventKind;
   tags: Tag[];
   content: string;
-};
+}
 
 export type PublicKey = Brand<string, "PublicKey">;
 export type EventTimestamp = Brand<number, "EventTimeStamp">;
@@ -30,10 +30,10 @@ export type PubKeyTag = ["p", PublicKey, RecmRelayUrl];
 
 export type RecmRelayUrl = RelayUrl | "";
 
-export type SignedEvent = UnsignedEvent & {
+export interface SignedEvent extends UnsignedEvent {
   id: EventId;
   sig: EventSignature;
-};
+}
 
 export type EventId = Brand<string, "EventId">;
 export type PrivateKey = Brand<string, "PrivateKey">;
@@ -77,13 +77,13 @@ export const SubscriptionId = {
   random: () => Math.random().toString().slice(2) as SubscriptionId,
 };
 
-export type Filter = Partial<{
-  ids: EventId[];
-  authors: PublicKey[];
-  kinds: EventKind[];
-  "#e": EventId[];
-  "#p": PublicKey[];
-  since: EventTimestamp;
-  until: EventTimestamp;
-  limit: number;
-}>;
+export interface Filter {
+  ids?: EventId[];
+  authors?: PublicKey[];
+  kinds?: EventKind[];
+  "#e"?: EventId[];
+  "#p"?: PublicKey[];
+  since?: EventTimestamp;
+  until?: EventTimestamp;
+  limit?: number;
+}
