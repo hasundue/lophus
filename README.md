@@ -7,15 +7,13 @@ Yet another TypeScript library for [Nostr][nostr].
 
 ## Features
 
-- **Delightful DX** 🛠️
-  - Takes full advantage of [Web Streams API][streams-api].
-  - Strongly typed.
-- **Portable** 📦
-  - Not depends on Deno or Node.js APIs.
-- **Lightweight** 🪶
-  - A minified client.js ~ 4.0 KB.
-- **Modular** 🔌
-  - Utilities and NIPs are implemented as modules, which enables you to keep an app as small as possible.
+- **Delightful DX** 🛠️ - Takes full advantage of [Web Streams API][streams-api].
+- **Portable** 📦 - The core module (client.ts) has no dependencies on Deno or
+  Node.js APIs.
+- **Lightweight** 🪶 - A minified version of the client module (client.js) is
+  smaller than 4.0 KB.
+- **Modular** 🔌 - All utilities and NIPs are implemented as modules, which
+  enables you to keep an app as small as possible.
 
 [nostr]: https://nostr.com
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
