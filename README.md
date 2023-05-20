@@ -8,8 +8,10 @@ Yet another TypeScript library for [Nostr][nostr].
 ## Features
 
 - Takes full advantage of the Web standard [Streams API][streams-api]
-- Portable (no dependency on Deno or Node.js APIs)
-- Lightweight (~ 4.0 KB, minified client.js)
+- Portable
+  - not depend on Deno or Node.js APIs
+- Lightweight
+  - a minified client.js ~ 4.0 KB
 - Strongly Typed
 
 [nostr]: https://nostr.com
@@ -17,7 +19,7 @@ Yet another TypeScript library for [Nostr][nostr].
 
 ## Examples
 
-See [./examples/README.md](https://github.com/hasundue/lophus/blob/main/examples/README.md).
+See [./examples](https://github.com/hasundue/lophus/tree/main/examples).
 
 ## Supported NIPs
 
