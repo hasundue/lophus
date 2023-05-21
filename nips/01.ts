@@ -70,14 +70,10 @@ export type RelayToClientMessage =
   | NoticeMessage;
 
 export type EventMessage = ["EVENT", SubscriptionId, SignedEvent];
-export type EoseMessage = ["EOSE", SubscriptionId, ...Filter[]];
+export type EoseMessage = ["EOSE", SubscriptionId];
 export type NoticeMessage = ["NOTICE", string];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
-
-export const SubscriptionId = {
-  random: () => Math.random().toString().slice(2) as SubscriptionId,
-};
 
 export interface Filter {
   ids?: EventId[];
