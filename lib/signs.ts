@@ -44,17 +44,17 @@ export const PublicKey = {
 };
 
 export class Signer extends TransformStream<UnsignedEvent, SignedEvent> {
-  constructor(nsec: PrivateKey) {
+  constructor(readonly nsec: PrivateKey) {
     super({
       transform: (event, controller) => {
-        controller.enqueue(Signer.sign(event, nsec));
+        controller.enqueue(this.sign(event));
       },
     });
   }
-  static sign(event: UnsignedEvent, nsec: PrivateKey): SignedEvent {
+  sign(event: UnsignedEvent): SignedEvent {
     const serialized = serializeEvent(event);
     const hash = sha256(serialized);
-    const sig = schnorr.sign(hash, nsec);
+    const sig = schnorr.sign(hash, this.nsec);
     return {
       ...event,
       id: bytesToHex(hash) as EventId,

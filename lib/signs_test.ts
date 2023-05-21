@@ -1,6 +1,6 @@
 import { assert, describe, it } from "../lib/std/testing.ts";
 import { Timestamp } from "../lib/time.ts";
-import { PrivateKey, PublicKey, Signer, signEvent } from "./signer.ts";
+import { PrivateKey, PublicKey, Signer } from "./signs.ts";
 
 describe("PrivateKey", () => {
   it("generates a private key", () => {
@@ -20,34 +20,26 @@ describe("PublicKey", () => {
 });
 
 describe("signEvent", () => {
-  it("signs an event", () => {
-    const nsec = PrivateKey.generate();
-    const pubkey = PublicKey.from(nsec);
-    const event = {
-      pubkey: pubkey,
-      created_at: Timestamp.now,
-      kind: 1,
-      tags: [],
-      content: "lophus",
-    };
-    const signedEvent = signEvent(event, nsec);
-    console.debug(signedEvent);
-    assert(signedEvent);
-  });
 });
 
 describe("Signer", () => {
-  it("signs an event", async () => {
-    const nsec = PrivateKey.generate();
-    const pubkey = PublicKey.from(nsec);
-    const event = {
-      pubkey: pubkey,
-      created_at: Timestamp.now,
-      kind: 1,
-      tags: [],
-      content: "lophus",
-    };
-    const signer = new Signer(nsec);
+  const nsec = PrivateKey.generate();
+  const signer = new Signer(nsec);
+  const event = {
+    pubkey: PublicKey.from(nsec),
+    created_at: Timestamp.now,
+    kind: 1,
+    tags: [],
+    content: "lophus",
+  };
+
+  it("signs an event", () => {
+    const signedEvent = signer.sign(event);
+    console.debug(signedEvent);
+    assert(signedEvent);
+  });
+
+  it("signs events from a stream", async () => {
     const writer = signer.writable.getWriter();
     writer.write(event);
     writer.close();

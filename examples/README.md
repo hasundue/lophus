@@ -18,19 +18,17 @@ for await (const event of sub.events) {
 ```ts
 import { Relay } from "../client.ts";
 import { env } from "../lib/env.ts";
-import { TextNoteComposer } from "../lib/agents.ts";
-import { Signer } from "../lib/signer.ts";
+import { TextNoteComposer } from "../lib/notes.ts";
+import { Signer } from "../lib/signs.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 
-const event = Signer.sign(
-  TextNoteComposer.compose(env.PUBLIC_KEY, {
+const event = new Signer(env.PRIVATE_KEY).sign(
+  new TextNoteComposer(env.PUBLIC_KEY).compose({
     content:
       "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
   }),
-  env.PRIVATE_KEY,
 );
-
 await relay.publish(event);
 ```
 
@@ -38,15 +36,21 @@ await relay.publish(event);
 
 ```ts
 import { Relay } from "../client.ts";
-import { Signer } from "../lib/signer.ts";
+import { Signer } from "../lib/signs.ts";
 import { env } from "../lib/env.ts";
-import { ReplyComposer } from "../lib/agents.ts";
+import { DefaultAgent } from "../lib/agents.ts";
+import { ReplyComposer } from "../lib/notes.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 
 relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
   .pipeThrough(
-    new ReplyComposer(env.PUBLIC_KEY, (event) => ({ content: event.content })),
+    new DefaultAgent((event) =>
+      new ReplyComposer(env.PUBLIC_KEY).compose(
+        { content: event.content },
+        { replyTo: event },
+      )
+    ),
   )
   .pipeThrough(new Signer(env.PRIVATE_KEY))
   .pipeTo(relay.publisher);
