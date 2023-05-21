@@ -6,7 +6,7 @@ import { ReplyComposer } from "../lib/agents.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 
-relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
+relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
   .pipeThrough(
     new ReplyComposer(env.PUBLIC_KEY, (event) => ({ content: event.content })),
   )
