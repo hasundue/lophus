@@ -1,11 +1,11 @@
 ## Examples
 
-### Global feed
+### Global feed streaming
 
 ```ts
-import { connect } from "../client.ts";
+import { Relay } from "../client.ts";
 
-const relay = connect({ url: "wss://nos.lol" });
+const relay = new Relay({ url: "wss://nos.lol" });
 const sub = relay.subscribe({ kinds: [1] });
 
 for await (const event of sub.events) {
@@ -16,10 +16,12 @@ for await (const event of sub.events) {
 ### Publish a text note
 
 ```ts
-import { connect } from "../client.ts";
+import { Relay } from "../client.ts";
 import { env } from "../lib/env.ts";
 import { TextNoteComposer } from "../lib/agents.ts";
 import { Signer } from "../lib/signer.ts";
+
+const relay = new Relay({ url: "wss://nos.lol" });
 
 const event = Signer.sign(
   TextNoteComposer.compose(env.PUBLIC_KEY, {
@@ -28,35 +30,35 @@ const event = Signer.sign(
   }),
   env.PRIVATE_KEY,
 );
-await connect({ url: "wss://nos.lol" }).publish(event);
+
+await relay.publish(event);
 ```
 
 ### Echo bot
 
 ```ts
-import { connect } from "../client.ts";
+import { Relay } from "../client.ts";
 import { Signer } from "../lib/signer.ts";
 import { env } from "../lib/env.ts";
 import { ReplyComposer } from "../lib/agents.ts";
 
-const relay = connect({ url: "wss://nos.lol" });
+const relay = new Relay({ url: "wss://nos.lol" });
 
-relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
+relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
   .pipeThrough(
     new ReplyComposer(env.PUBLIC_KEY, (event) => ({ content: event.content })),
   )
   .pipeThrough(new Signer(env.PRIVATE_KEY))
-  .pipeTo(relay);
+  .pipeTo(relay.publisher);
 ```
 
 ### Transfer events from relay to relay
 
 ```ts
-import { connect } from "../client.ts";
+import { Relay } from "../client.ts";
 import { env } from "../lib/env.ts";
 
-const relay_src = connect({ url: "wss://relay.nostr.band", write: false });
-const relay_dst = connect({ url: "wss://nos.lol", read: false });
-
-relay_src.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).pipeTo(relay_dst);
+new Relay({ url: "wss://relay.nostr.band" })
+  .subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
+  .pipeTo(new Relay({ url: "wss://nos.lol" }).publisher);
 ```
