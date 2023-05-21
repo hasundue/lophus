@@ -10,6 +10,7 @@ import {
   SubscriptionId,
 } from "./nips/01.ts";
 import { WebSocketEventHooks } from "./lib/websockets.ts";
+import { pipeThroughFrom } from "./lib/x/streamtools.ts";
 
 export * from "./nips/01.ts";
 
@@ -62,21 +63,25 @@ export class Relay
     filter: Filter | Filter[],
     opts: SubscribeOptions = {},
   ): Subscription {
-    const filter_list = Array.isArray(filter) ? filter : [filter];
-
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
-    const provider = new SubscriptionProvider({ ...opts, id });
 
+    const provider = new SubscriptionProvider({
+      id,
+      close_on_eose: opts.close_on_eose ?? true,
+    });
     const sub = this.messages.pipeThrough(provider);
     this.#subs.set(id, sub);
 
-    this.send(["REQ", id, ...filter_list]);
+    this.send(["REQ", id, ...[filter].flat()]);
     return sub;
   }
 
-  unsubscribe(id: SubscriptionId) {
-    this.send(["CLOSE", id]);
-    this.#subs.delete(id);
+  publish(event: SignedEvent): Promise<void> {
+    return this.send(MessagePacker.pack(event));
+  }
+
+  get publisher() {
+    return pipeThroughFrom(this.messenger, new MessagePacker());
   }
 }
 
@@ -104,7 +109,7 @@ class SubscriptionProvider
   extends TransformStream<RelayToClientMessage, SignedEvent> {
   #recieved = new Set<EventId>();
 
-  constructor(opts: SubscribeOptions) {
+  constructor(opts: Required<SubscribeOptions>) {
     super({
       transform: (msg, controller) => {
         if (
@@ -112,7 +117,7 @@ class SubscriptionProvider
           !this.#recieved.has(msg[2].id)
         ) {
           this.#recieved.add(msg[2].id);
-          controller.enqueue(msg[2] as SignedEvent);
+          controller.enqueue(msg[2]);
         }
         if (
           msg[0] === "EOSE" && msg[1] === opts.id && opts.close_on_eose
