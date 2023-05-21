@@ -1,11 +1,11 @@
 {
   "tasks": {
-    "cache": "git ls-files | grep .ts | xargs deno cache",
-    "fmt": "git ls-files | grep .ts | xargs deno fmt",
-    "lint": "git ls-files | grep .ts | xargs deno lint",
+    "cache": "fd -e ts | xargs deno cache",
+    "fmt": "fd -e ts -e md | xargs deno fmt",
+    "lint": "fd -e ts | xargs deno lint",
     "test": "deno test -A --no-check",
     "build": "mkdir -p dist && deno run -A bin/bundle.ts",
-    "docgen": "deno run -A bin/docgen.ts && deno task fmt",
+    "docgen": "deno run -A bin/docgen.ts && deno fmt ./examples",
     "run:feed": "deno run -A examples/global.ts",
     "run:publish": "deno run -A examples/publish.ts",
     "run:transfer": "deno run -A examples/transfer.ts",
