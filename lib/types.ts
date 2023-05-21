@@ -39,10 +39,3 @@ export type Overload<T, K extends keyof T, V> = Expand<
 export type ReadableWritableStream<R = unknown, W = unknown> =
   & ReadableStream<R>
   & WritableStream<W>;
-
-//
-// WebSocket
-//
-export type WebSocketEventHooks = {
-  [K in keyof WebSocketEventMap]?: (event: WebSocketEventMap[K]) => void;
-};
