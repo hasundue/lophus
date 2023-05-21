@@ -1,4 +1,4 @@
-import { NostrNode, NostrEventListener } from "./mod.ts";
+import { NostrEventListener, NostrNode } from "./mod.ts";
 import {
   ClientToRelayMessage,
   Filter,
@@ -24,8 +24,7 @@ export type RelayConfig = {
   on?: Expand<NostrEventListener>;
 };
 
-class RemoteRelay
-  implements NostrNode<RelayToClientMessage, ClientToRelayMessage> {
+class Relay implements NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   // Websocket and its notifier for exclusive control
   #ws: WebSocket;
   readonly #ws_notifier = new Notify();
@@ -35,15 +34,15 @@ class RemoteRelay
   readonly messages: ReadableStream<RelayToClientMessage>;
 
   // Writable end (outgoing messages)
-  write = true;
-  readonly writable: WritableStream<ClientToRelayMessage>;
+  send = true;
+  readonly #sender: WritableStream<ClientToRelayMessage>;
   readonly #writer_mutex = new Mutex();
 
   // Subscriptions on this relay
   readonly #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
 
   constructor(private config: RelayConfig) {
-    this.messages = new ReadableStream<RelayToClientMessage>({
+    #this.messages = new ReadableStream<RelayToClientMessage>({
       start: (controller) => {
         this.#ws.onmessage = (ev: MessageEvent<string>) => {
           const msg = JSON.parse(ev.data) as RelayToClientMessage;
@@ -51,7 +50,7 @@ class RemoteRelay
         };
       },
     });
-    this.writable = new WritableStream<ClientToRelayMessage>({
+    this.#sender = new WritableStream<ClientToRelayMessage>({
       write: async (msg) => {
         await this.ws_ready;
         this.#ws.send(JSON.stringify(msg));
@@ -61,9 +60,6 @@ class RemoteRelay
         this.#ws.close();
       },
     });
-    this.url = config.url as RelayUrl;
-    this.name = config.name ?? config.url;
-    this.on = config.on ?? {};
     this.#ws = this.connect();
   }
 
@@ -172,7 +168,7 @@ class RemoteRelay
   }
 }
 
-type AnyRelayProvider = RemoteRelay<boolean, boolean>;
+type AnyRelayProvider = Relay<boolean, boolean>;
 
 //
 // Subscription and SubscriptionProvider
@@ -199,13 +195,13 @@ class SubscriptionProvider {
   readonly #writable: WritableStream<SignedEvent>;
   readonly #writer_mutex = new Mutex();
   #reader?: ReadableStreamDefaultController<SignedEvent>;
-  #relays: Set<RemoteRelay<true, boolean>>;
+  #relays: Set<Relay<true, boolean>>;
   #recieved: Set<SignedEvent["id"]>;
 
   constructor(
     public readonly filter: Filter,
     public readonly options: SubscribeOptions,
-    ...relays: RemoteRelay<true, boolean>[]
+    ...relays: Relay<true, boolean>[]
   ) {
     this.events = new ReadableStream<SignedEvent>({
       start: (controller) => {
