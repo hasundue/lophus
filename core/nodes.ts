@@ -1,5 +1,5 @@
-import { NostrMessage } from "./nips/01.ts";
-import { LazyWebSocket } from "./lib/websockets.ts";
+import { NostrMessage } from "../nips/01.ts";
+import { LazyWebSocket } from "./websockets.ts";
 
 /**
  * A Nostr Relay or Client.
