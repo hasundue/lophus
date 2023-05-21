@@ -5,7 +5,6 @@ export function merge<R extends unknown>(
   streams: ReadableStream<R>[],
 ) {
   const readers = streams.map((st) => st.getReader());
-
   return new ReadableStream<R>({
     async pull(controller) {
       await Promise.any(readers.map(async (r) => {

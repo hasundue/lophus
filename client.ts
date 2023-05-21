@@ -1,4 +1,4 @@
-import { NostrNode } from "./mod.ts";
+import { NostrNode } from "./core/nodes.ts";
 import {
   ClientToRelayMessage,
   EventId,
@@ -85,8 +85,9 @@ export class Relay
 
 export class Subscription {
   readonly id: SubscriptionId;
-  #relays: Relay[];
 
+  #relays: Relay[];
+  #filters: Filter[];
   #provider: SubscriptionProvider;
 
   constructor(
@@ -96,6 +97,7 @@ export class Subscription {
   ) {
     this.id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     this.#relays = [relays].flat();
+    this.#filters = [filters].flat();
 
     const provider = new SubscriptionProvider({
       id: this.id,
@@ -104,7 +106,7 @@ export class Subscription {
     const sub = this.messages.pipeThrough(provider);
     this.#subs.set(id, sub);
 
-    this.send(["REQ", id, ...[filter].flat()]);
+    this.send(["REQ", id, ...[filters].flat()]);
   }
 
   get events() {
