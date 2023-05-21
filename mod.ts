@@ -5,7 +5,6 @@ import {
   SubscriptionId,
 } from "./nips/01.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./lib/websockets.ts";
-import { Mutex } from "./lib/x/async.ts";
 
 export type NostrEventHooks =
   & RelayToClientEventHooks
@@ -36,48 +35,34 @@ export class NostrNode<
   W extends NostrMessage = NostrMessage,
 > {
   #ws: LazyWebSocket;
-  #writer_mutex = new Mutex();
 
-  constructor(
-    protected createWebSocket: () => WebSocket,
-    protected on: NostrEventHooks,
-  ) {
-    this.#ws = new LazyWebSocket(createWebSocket, on);
+  constructor(protected createWebSocket: () => WebSocket) {
+    this.#ws = new LazyWebSocket(createWebSocket);
   }
 
   get messages() {
     return new ReadableStream<R>({
       start: (controller) => {
         this.#ws.addEventListener("message", (ev: MessageEvent<string>) => {
-          const msg = JSON.parse(ev.data) as R;
-          controller.enqueue(msg);
+          controller.enqueue(JSON.parse(ev.data));
         });
       },
     });
   }
 
-  get events(): ReadableStream<SignedEvent> {
-    return this.messages.pipeThrough(new EventStreamProvider());
-  }
-
-  get sender() {
+  get messenger() {
     return new WritableStream<W>({
       write: (msg) => this.#ws.send(JSON.stringify(msg)),
     });
   }
 
   async send(...msgs: W[]): Promise<void> {
+    const writer = this.messenger.getWriter();
     for (const msg of msgs) {
-      await this.#writer_mutex.acquire();
-      const writer = this.sender.getWriter();
-
       await writer.ready;
-      await writer.write(msg).catch(console.error);
-
-      await writer.ready;
-      writer.releaseLock();
-      this.#writer_mutex.release();
+      writer.write(msg).catch(console.error);
     }
+    writer.close();
   }
 }
 

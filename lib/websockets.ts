@@ -8,31 +8,19 @@ export class LazyWebSocket {
   #ws?: WebSocket;
   #notifier = new Notify();
 
-  constructor(
-    protected createWebSocket: () => WebSocket,
-    protected on: WebSocketEventHooks,
-  ) {}
+  constructor(protected createWebSocket: () => WebSocket) {}
 
   protected ensureCreated(): WebSocket {
-    return this.#ws ?? (this.#ws = this.createWebSocket());
+    if (this.#ws) return this.#ws;
+    this.#ws = this.createWebSocket();
+    this.#ws.addEventListener("open", () => this.#notifier.notify());
+    this.#ws.addEventListener("close", () => this.#notifier.notify());
+    return this.#ws;
   }
 
   protected async ensureReady(): Promise<WebSocket> {
-    // If the webSocket is not created yet, create it.
-    if (!this.#ws) {
-      this.#ws = this.createWebSocket();
+    this.#ws = this.ensureCreated();
 
-      this.#ws.addEventListener("open", (ev) => {
-        this.on.open?.call(this.#ws, ev);
-        this.#notifier.notifyAll();
-      });
-
-      this.#ws.addEventListener("close", (ev) => {
-        this.on.close?.call(this, ev);
-        this.#notifier.notifyAll();
-      });
-    }
-    // If the webSocket is not ready yet, wait for it.
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
         await this.#notifier.notified();
