@@ -1,9 +1,9 @@
-// Global feed
-import { connect } from "../client.ts";
+// Global feed streaming
+import { Relay } from "../client.ts";
 
-const relay = connect({ url: "wss://nos.lol" });
-const sub = relay.subscribe({ kinds: [1] });
+const relay = new Relay({ url: "wss://nos.lol" });
+const events = relay.subscribe({ kinds: [1] });
 
-for await (const event of sub.events) {
+for await (const event of events) {
   console.log(event);
 }

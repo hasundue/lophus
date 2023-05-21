@@ -29,39 +29,53 @@ export interface SubscribeOptions {
   close_on_eose?: boolean;
 }
 
+export type Subscription = ReadableStream<SignedEvent>;
+
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
-  read = true;
-  write = true;
-
+  config: {
+    readonly name: string;
+    readonly url: RelayUrl;
+    read: boolean;
+    write: boolean;
+  };
   #subs = new Map<SubscriptionId, Subscription>();
 
-  constructor(protected readonly config: RelayConfig) {
-    const on = config.on ?? {};
+  constructor(config: RelayConfig) {
     super(() => {
       const ws = new WebSocket(config.url);
       for (const type in config.on) {
-        // @ts-ignore TODO: fix this
+        // @ts-ignore TODO: This should be safe
         ws.addEventListener(type, on[type].bind(ws));
       }
       return ws;
     });
+    this.config = {
+      name: config.name ?? config.url,
+      url: config.url,
+      read: config.read ?? true,
+      write: config.write ?? true,
+    };
   }
 
   subscribe(
     filter: Filter | Filter[],
-    options: SubscribeOptions = {},
+    opts: SubscribeOptions = {},
   ): Subscription {
-    const sub = new Subscription(options);
-    this.#subs.set(sub.id, sub);
+    const filter_list = Array.isArray(filter) ? filter : [filter];
 
-    const filters = Array.isArray(filter) ? filter : [filter];
-    this.send(["REQ", sub.id, ...filters]);
+    const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    const provider = new SubscriptionProvider({ ...opts, id });
 
+    const sub = this.messages.pipeThrough(provider);
+    this.#subs.set(id, sub);
+
+    this.send(["REQ", id, ...filter_list]);
     return sub;
   }
 
   unsubscribe(id: SubscriptionId) {
+    this.send(["CLOSE", id]);
     this.#subs.delete(id);
   }
 }
@@ -74,37 +88,38 @@ export class MessagePacker
   constructor() {
     super({
       transform: (event, controller) => {
-        controller.enqueue(["EVENT", event]);
+        controller.enqueue(MessagePacker.pack(event));
       },
     });
+  }
+  static pack(event: SignedEvent): PublishMessage {
+    return ["EVENT", event];
   }
 }
 
 /**
  * A transformer that filters out non-event messages.
  */
-export class Subscription
+class SubscriptionProvider
   extends TransformStream<RelayToClientMessage, SignedEvent> {
-  readonly id: SubscriptionId;
   #recieved = new Set<EventId>();
 
   constructor(opts: SubscribeOptions) {
-    const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     super({
       transform: (msg, controller) => {
         if (
-          msg[0] === "EVENT" && msg[1] === id && !this.#recieved.has(msg[2].id)
+          msg[0] === "EVENT" && msg[1] === opts.id &&
+          !this.#recieved.has(msg[2].id)
         ) {
           this.#recieved.add(msg[2].id);
           controller.enqueue(msg[2] as SignedEvent);
         }
         if (
-          msg[0] === "EOSE" && msg[1] === id && opts.close_on_eose
+          msg[0] === "EOSE" && msg[1] === opts.id && opts.close_on_eose
         ) {
           controller.terminate();
         }
       },
     });
-    this.id = id;
   }
 }
