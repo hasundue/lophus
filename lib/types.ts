@@ -43,6 +43,6 @@ export type ReadableWritableStream<R = unknown, W = unknown> =
 //
 // WebSocket
 //
-export type WebSocketEventHook = {
-  [K in keyof WebSocketEventMap]: (event: WebSocketEventMap[K]) => void;
+export type WebSocketEventHooks = {
+  [K in keyof WebSocketEventMap]?: (event: WebSocketEventMap[K]) => void;
 };
