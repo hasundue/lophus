@@ -9,8 +9,8 @@ import {
   SignedEvent,
   SubscriptionId,
 } from "./nips/01.ts";
-import { WebSocketEventHooks } from "./lib/websockets.ts";
-import { pipeThroughFrom } from "./lib/x/streamtools.ts";
+import { WebSocketEventHooks } from "./core/websockets.ts";
+import { pipeThroughFrom } from "./core/x/streamtools.ts";
 
 export * from "./nips/01.ts";
 
@@ -29,8 +29,6 @@ export interface SubscribeOptions {
   id?: string;
   close_on_eose?: boolean;
 }
-
-export type Subscription = ReadableStream<SignedEvent>;
 
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
@@ -60,7 +58,7 @@ export class Relay
   }
 
   subscribe(
-    filter: Filter | Filter[],
+    filters: Filter | Filter[],
     opts: SubscribeOptions = {},
   ): Subscription {
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
@@ -72,7 +70,7 @@ export class Relay
     const sub = this.messages.pipeThrough(provider);
     this.#subs.set(id, sub);
 
-    this.send(["REQ", id, ...[filter].flat()]);
+    this.send(["REQ", id, ...[filters].flat()]);
     return sub;
   }
 
@@ -82,6 +80,35 @@ export class Relay
 
   get publisher() {
     return pipeThroughFrom(this.messenger, new MessagePacker());
+  }
+}
+
+export class Subscription {
+  readonly id: SubscriptionId;
+  #relays: Relay[];
+
+  #provider: SubscriptionProvider;
+
+  constructor(
+    relays: Relay | Relay[],
+    filters: Filter | Filter[],
+    opts: SubscribeOptions = {},
+  ) {
+    this.id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    this.#relays = [relays].flat();
+
+    const provider = new SubscriptionProvider({
+      id: this.id,
+      close_on_eose: opts.close_on_eose ?? false,
+    });
+    const sub = this.messages.pipeThrough(provider);
+    this.#subs.set(id, sub);
+
+    this.send(["REQ", id, ...[filter].flat()]);
+  }
+
+  get events() {
+    return this.#relays[0].messages.pipeThrough(this.#provider);
   }
 }
 
