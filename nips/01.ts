@@ -61,7 +61,7 @@ export type ClientToRelayMessage =
   | CloseMessage;
 
 export type PublishMessage = ["EVENT", SignedEvent];
-export type SubscribeMessage = ["REQ", SubscriptionId, ...Filter[]];
+export type SubscribeMessage = ["REQ", SubscriptionId, ...NostrFilter[]];
 export type CloseMessage = ["CLOSE", SubscriptionId];
 
 export type RelayToClientMessage =
@@ -75,7 +75,7 @@ export type NoticeMessage = ["NOTICE", string];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 
-export interface Filter {
+export interface NostrFilter {
   ids?: EventId[];
   authors?: PublicKey[];
   kinds?: EventKind[];

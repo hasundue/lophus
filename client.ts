@@ -1,7 +1,7 @@
 import { NostrNode } from "./core/nodes.ts";
 import {
   ClientToRelayMessage,
-  Filter,
+  NostrFilter,
   PublishMessage,
   RelayToClientMessage,
   RelayUrl,
@@ -55,7 +55,7 @@ export class Relay
   }
 
   subscribe(
-    filters: Filter | Filter[],
+    filters: NostrFilter | NostrFilter[],
     opts: SubscribeOptions = {},
   ): Subscription {
     const sub = new Subscription(this, filters, opts);
@@ -76,12 +76,12 @@ export class Subscription {
   readonly id: SubscriptionId;
 
   #relays: Relay[];
-  #filters: Filter[];
+  #filters: NostrFilter[];
   #provider: SubscriptionProvider;
 
   constructor(
     relays: Relay | Relay[],
-    filters: Filter | Filter[],
+    filters: NostrFilter | NostrFilter[],
     opts: SubscribeOptions = {},
   ) {
     this.id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
