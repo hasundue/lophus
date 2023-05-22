@@ -9,7 +9,7 @@ import {
   UnsignedEvent,
 } from "../nips/01.ts";
 import { Timestamp } from "../lib/time.ts";
-import { Determined, Optional, Overload, Replace } from "../lib/types.ts";
+import { Determined, Optional, Overload, Replace } from "../core/types.ts";
 
 export type EventTemplate<K extends EventKind> = Overload<
   Determined<Optional<UnsignedEvent, "created_at" | "pubkey">, "kind", K>,

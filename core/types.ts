@@ -28,14 +28,8 @@ export type Determined<T, K extends keyof T, V extends T[K]> = Expand<
   & { [P in K]?: V }
 >;
 
+// TODO: Implement a real overload
 export type Overload<T, K extends keyof T, V> = Expand<
   & Optional<T, K>
   & Partial<V>
 >;
-
-//
-// Streams API
-//
-export type ReadableWritableStream<R = unknown, W = unknown> =
-  & ReadableStream<R>
-  & WritableStream<W>;

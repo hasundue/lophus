@@ -6,7 +6,7 @@ import {
   SignedEvent,
   UnsignedEvent,
 } from "../nips/01.ts";
-import { Brand } from "../lib/types.ts";
+import { Brand } from "../core/types.ts";
 import { bytesToHex, schnorr, sha256 } from "../lib/x/noble.ts";
 
 export function createPrecursor(event: UnsignedEvent): EventSerializePrecursor {
