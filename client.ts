@@ -106,7 +106,7 @@ class SubscriptionProvider
   extends TransformStream<RelayToClientMessage, SignedEvent> {
   constructor(opts: Required<SubscribeOptions>) {
     super({
-      transform: (msg, controller) => {
+      transform(msg, controller) {
         if (msg[0] === "EVENT" && msg[1] === opts.id) {
           controller.enqueue(msg[2]);
         }
@@ -127,7 +127,7 @@ export class MessagePacker
   extends TransformStream<SignedEvent, PublishMessage> {
   constructor() {
     super({
-      transform: (event, controller) => {
+      transform(event, controller) {
         controller.enqueue(MessagePacker.pack(event));
       },
     });
