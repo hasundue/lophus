@@ -12,8 +12,8 @@ Yet another TypeScript library for [Nostr][nostr].
   Node.js APIs.
 - **Lightweight** 🪶 - A minified version of the client core (client.min.js) is
   about 3.5 KB.
-- **Modular** 🔌 - All utilities and NIPs are implemented as modules, which
-  enables you to keep an app as small as possible.
+- **Modular** 🔌 - High-level interfaces and NIPs are implemented as optional
+  modules, which enables you to keep an app as small as possible.
 
 [nostr]: https://nostr.com
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
