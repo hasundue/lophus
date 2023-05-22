@@ -97,9 +97,9 @@ export class Subscription {
   get events(): ReadableStream<SignedEvent> {
     this.#relays.forEach((r) => r.send(["REQ", this.id, ...this.#filters]));
 
-    return merge(this.#relays.map((r) => r.messages))
-      .pipeThrough(distinctBy((msg) => msg[1]))
-      .pipeThrough(this.#provider);
+    return merge(
+      this.#relays.map((r) => r.messages.pipeThrough(this.#provider)),
+    ).pipeThrough(distinctBy((ev) => ev.id));
   }
 }
 
