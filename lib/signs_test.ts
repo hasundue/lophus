@@ -1,5 +1,5 @@
 import { assert, describe, it } from "../lib/std/testing.ts";
-import { Timestamp } from "../lib/time.ts";
+import { Timestamp } from "../lib/times.ts";
 import { PrivateKey, PublicKey, Signer } from "./signs.ts";
 
 describe("PrivateKey", () => {
