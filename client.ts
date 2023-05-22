@@ -55,10 +55,10 @@ export class Relay
   }
 
   subscribe(
-    filters: NostrFilter | NostrFilter[],
+    filter: NostrFilter | NostrFilter[],
     opts: SubscribeOptions = {},
   ): Subscription {
-    const sub = new Subscription(this, filters, opts);
+    const sub = new Subscription([this], [filter].flat(), opts);
     this.#subs.set(sub.id, sub);
     return sub;
   }
@@ -80,13 +80,13 @@ export class Subscription {
   #provider: SubscriptionProvider;
 
   constructor(
-    relays: Relay | Relay[],
-    filters: NostrFilter | NostrFilter[],
+    relays: Relay[],
+    filters: NostrFilter[],
     opts: SubscribeOptions = {},
   ) {
     this.id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
-    this.#relays = [relays].flat();
-    this.#filters = [filters].flat();
+    this.#relays = relays;
+    this.#filters = filters;
 
     this.#provider = new SubscriptionProvider({
       id: this.id,
@@ -96,7 +96,6 @@ export class Subscription {
 
   get events(): ReadableStream<SignedEvent> {
     this.#relays.forEach((r) => r.send(["REQ", this.id, ...this.#filters]));
-
     return merge(
       this.#relays.map((r) => r.messages.pipeThrough(this.#provider)),
     ).pipeThrough(distinctBy((ev) => ev.id));
