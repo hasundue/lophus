@@ -51,6 +51,11 @@ export class LazyWebSocket {
     this.#ws = this.ensureCreated();
     this.#ws.addEventListener(type, listener, options);
   }
+
+  async close() {
+    this.#ws?.close();
+    await this.#notifier.notified(); // wait for the websocket to close.
+  }
 }
 
 export type WebSocketEventHooks = {
