@@ -17,7 +17,7 @@ class Env {
   }
 
   get PUBLIC_KEY() {
-    if (this.#pubkey) {
+    if (!this.#pubkey) {
       const value = Deno.env.get("PUBLIC_KEY");
       if (!value) {
         throw new Error("PUBLIC_KEY is not set");
