@@ -42,7 +42,7 @@ export class Relay
       const ws = new WebSocket(config.url);
       for (const type in config.on) {
         // @ts-ignore TODO: This should be safe
-        ws.addEventListener(type, on[type].bind(ws));
+        ws.addEventListener(type, config.on[type].bind(ws));
       }
       return ws;
     });
