@@ -1,3 +1,4 @@
+import { entries } from "./utils.ts";
 import { Notify } from "./x/async.ts";
 
 /**
@@ -65,5 +66,23 @@ export class LazyWebSocket {
 }
 
 export type WebSocketEventHooks = {
-  [K in keyof WebSocketEventMap]?: (event: WebSocketEventMap[K]) => void;
+  [K in keyof Omit<WebSocketEventMap, "message">]?: (
+    ev: WebSocketEventMap[K],
+  ) => void;
 };
+
+export function assignEventHooks(
+  ws: WebSocket,
+  hooks: WebSocketEventHooks,
+): void {
+  for (const hook of entries(hooks)) {
+    assignEventHook(ws, hook);
+  }
+}
+
+function assignEventHook<T extends keyof WebSocketEventHooks>(
+  ws: WebSocket,
+  hook: [T, WebSocketEventHooks[T]],
+) {
+  if (hook[1]) ws.addEventListener(hook[0], hook[1].bind(ws));
+}
