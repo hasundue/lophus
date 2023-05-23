@@ -1,5 +1,5 @@
 import { NostrNode } from "./core/nodes.ts";
-import {
+import type {
   ClientToRelayMessage,
   NostrFilter,
   PublishMessage,
@@ -8,9 +8,10 @@ import {
   SignedEvent,
   SubscriptionId,
 } from "./nips/01.ts";
-import { WebSocketEventHooks } from "./core/websockets.ts";
+import type { WebSocketEventHooks } from "./core/websockets.ts";
 import { distinctBy, merge } from "./core/streams.ts";
 import { pipeThroughFrom } from "./core/x/streamtools.ts";
+import { Notify } from "./core/x/async.ts";
 
 export * from "./nips/01.ts";
 
@@ -22,11 +23,6 @@ export interface RelayConfig {
   on?: WebSocketEventHooks;
 }
 
-export interface SubscribeOptions {
-  id?: string;
-  close_on_eose?: boolean;
-}
-
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   config: {
@@ -35,7 +31,6 @@ export class Relay
     read: boolean;
     write: boolean;
   };
-  #subs = new Map<SubscriptionId, Subscription>();
 
   constructor(config: RelayConfig) {
     super(() => {
@@ -57,10 +52,8 @@ export class Relay
   subscribe(
     filter: NostrFilter | NostrFilter[],
     opts: SubscribeOptions = {},
-  ): Subscription {
-    const sub = new Subscription([this], [filter].flat(), opts);
-    this.#subs.set(sub.id, sub);
-    return sub;
+  ) {
+    return new Subscription([this], [filter].flat(), opts);
   }
 
   publish(event: SignedEvent): Promise<void> {
@@ -72,12 +65,19 @@ export class Relay
   }
 }
 
+export interface SubscribeOptions {
+  id?: string;
+  realtime?: boolean;
+}
+
 export class Subscription {
   readonly id: SubscriptionId;
+  readonly realtime: boolean;
 
+  #closed = new Notify();
   #relays: Relay[];
   #filters: NostrFilter[];
-  #provider: SubscriptionProvider;
+  #provider: TransformStream<RelayToClientMessage, SignedEvent>;
 
   constructor(
     relays: Relay[],
@@ -85,12 +85,22 @@ export class Subscription {
     opts: SubscribeOptions = {},
   ) {
     this.id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    this.realtime = opts.realtime ?? true;
     this.#relays = relays;
     this.#filters = filters;
 
-    this.#provider = new SubscriptionProvider({
-      id: this.id,
-      close_on_eose: opts.close_on_eose ?? false,
+    this.#provider = new TransformStream<RelayToClientMessage, SignedEvent>({
+      transform: (msg, controller) => {
+        if (msg[0] === "EVENT" && msg[1] === this.id) {
+          controller.enqueue(msg[2]);
+        }
+        if (
+          msg[0] === "EOSE" && msg[1] === this.id && !this.realtime
+        ) {
+          controller.terminate();
+          this.#closed.notifyAll();
+        }
+      },
     });
   }
 
@@ -100,23 +110,14 @@ export class Subscription {
       this.#relays.map((r) => r.messages.pipeThrough(this.#provider)),
     ).pipeThrough(distinctBy((ev) => ev.id));
   }
-}
 
-class SubscriptionProvider
-  extends TransformStream<RelayToClientMessage, SignedEvent> {
-  constructor(opts: Required<SubscribeOptions>) {
-    super({
-      transform(msg, controller) {
-        if (msg[0] === "EVENT" && msg[1] === opts.id) {
-          controller.enqueue(msg[2]);
-        }
-        if (
-          msg[0] === "EOSE" && msg[1] === opts.id && opts.close_on_eose
-        ) {
-          controller.terminate();
-        }
-      },
-    });
+  async close() {
+    await Promise.all(this.#relays.map((r) => r.send(["CLOSE", this.id])));
+    this.#closed.notifyAll();
+  }
+
+  get closed() {
+    return this.#closed.notified();
   }
 }
 

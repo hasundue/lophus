@@ -10,7 +10,7 @@ export class NostrNode<
   W extends NostrMessage = NostrMessage,
 > {
   #ws: LazyWebSocket;
-  #notifier = new Notify();
+  #closed = new Notify();
 
   constructor(protected createWebSocket: () => WebSocket) {
     this.#ws = new LazyWebSocket(createWebSocket);
@@ -18,26 +18,18 @@ export class NostrNode<
 
   get messages() {
     return new ReadableStream<R>({
-      start: async (controller) => {
+      start: (controller) => {
         this.#ws.addEventListener("message", (event: MessageEvent<string>) => {
           controller.enqueue(JSON.parse(event.data));
         });
-        // close the stream when the node is closed.
-        await this.#notifier.notified();
-        controller.close();
       },
     });
   }
 
-  get messenger() {
+  get messenger(): WritableStream<W> {
     const stream = new WritableStream<W>({
       write: (msg) => this.#ws.send(JSON.stringify(msg)),
     });
-    // close the stream when the node is closed.
-    (async () => {
-      await this.#notifier.notified();
-      stream.close();
-    })();
     return stream;
   }
 
@@ -50,8 +42,8 @@ export class NostrNode<
     writer.close();
   }
 
-  async close() {
+  async close(): Promise<void> {
+    this.#closed.notify();
     await this.#ws.close();
-    this.#notifier.notifyAll(); // close the messages streams.
   }
 }
