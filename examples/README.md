@@ -1,17 +1,18 @@
 ## Examples
 
-### Global feed streaming
+### Global timeline streaming
 
 ```ts
 import { Relay } from "../client.ts";
 import { Timestamp } from "../lib/times.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
-const sub = relay.subscribe({ kinds: [1], since: Timestamp.now });
 
-for await (const event of sub.events) {
-  console.log(event);
-}
+relay.request("GLOBAL", { kinds: [1], since: Timestamp.now });
+
+relay.messages.pipeTo(
+  new WritableStream({ write: (event) => console.log(event) }),
+);
 ```
 
 ### Publish a text note

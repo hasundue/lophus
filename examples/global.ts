@@ -1,9 +1,11 @@
-// Global feed streaming
+// Global timeline streaming
 import { Relay } from "../client.ts";
 import { Timestamp } from "../lib/times.ts";
 
-const sub = new Relay({ url: "wss://nos.lol" })
-  .subscribe({ kinds: [1], since: Timestamp.now });
+const relay = new Relay({ url: "wss://nos.lol" });
 
-sub.events.pipeTo(new WritableStream({ write: (event) => console.log(event) }));
-await sub.closed;
+relay.request("GLOBAL", { kinds: [1], since: Timestamp.now });
+
+relay.messages.pipeTo(
+  new WritableStream({ write: (event) => console.log(event) }),
+);
