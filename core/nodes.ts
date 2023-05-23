@@ -1,49 +1,29 @@
 import { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import { Notify } from "./x/async.ts";
+import { provide } from "../core/x/streamtools.ts";
 
 /**
  * A Nostr Relay or Client.
  */
-export class NostrNode<
-  R extends NostrMessage = NostrMessage,
-  W extends NostrMessage = NostrMessage,
-> {
-  #ws: LazyWebSocket;
-  #closed = new Notify();
+export class NostrNode<W extends NostrMessage = NostrMessage> {
+  protected ws: LazyWebSocket;
+  protected readonly closed = new Notify();
 
-  constructor(protected createWebSocket: () => WebSocket) {
-    this.#ws = new LazyWebSocket(createWebSocket);
-  }
+  protected readonly messenger = new WritableStream<W>({
+    write: (msg) => this.ws.send(JSON.stringify(msg)),
+  });
 
-  get messages() {
-    return new ReadableStream<R>({
-      start: (controller) => {
-        this.#ws.addEventListener("message", (event: MessageEvent<string>) => {
-          controller.enqueue(JSON.parse(event.data));
-        });
-      },
-    });
-  }
-
-  get messenger(): WritableStream<W> {
-    const stream = new WritableStream<W>({
-      write: (msg) => this.#ws.send(JSON.stringify(msg)),
-    });
-    return stream;
+  constructor(createWebSocket: () => WebSocket) {
+    this.ws = new LazyWebSocket(createWebSocket);
   }
 
   async send(...msgs: W[]): Promise<void> {
-    const writer = this.messenger.getWriter();
-    for (const msg of msgs) {
-      await writer.ready;
-      writer.write(msg).catch(console.error);
-    }
-    writer.close();
+    await provide(this.messenger, msgs);
   }
 
   async close(): Promise<void> {
-    this.#closed.notify();
-    await this.#ws.close();
+    this.closed.notify();
+    await this.ws.close();
   }
 }
