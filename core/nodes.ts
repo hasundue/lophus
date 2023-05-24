@@ -1,31 +1,29 @@
 import { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket } from "./websockets.ts";
-import { Notify } from "./x/async.ts";
 import {
   broadcast,
-  LophusReadableStream,
-  LophusReadableStreamQueuingThresholds,
+  createImpatientReadableStream,
+  ImpatientReadableStreamQueuingStrategy,
 } from "./streams.ts";
 import { provide } from "../core/x/streamtools.ts";
 
-export type LophusMessage = LophusRestartMessage;
-export type LophusRestartMessage = ["RESTART"];
+export type LophusMessage = RestartMessage;
+export type RestartMessage = ["RESTART"];
 
-export type MessageBufferOptions = LophusReadableStreamQueuingThresholds;
+export type MessageBufferOptions = ImpatientReadableStreamQueuingStrategy;
 
 /**
  * Common base class for relays and clients.
  */
-export class NostrNode<W extends LophusMessage | NostrMessage> {
+export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
   #ws: LazyWebSocket;
-  readonly #closed = new Notify();
 
-  protected readonly messenger = new WritableStream<W>({
+  readonly messenger = new WritableStream<W>({
     write: (msg) => this.#ws.send(JSON.stringify(msg)),
   });
 
-  #messages: LophusReadableStream<W>;
-  #channels: WritableStream<W>[] = [];
+  #messages: ReadableStream<R | LophusMessage>;
+  #channels: WritableStream<R | LophusMessage>[] = [];
 
   constructor(
     createWebSocket: () => WebSocket,
@@ -33,34 +31,35 @@ export class NostrNode<W extends LophusMessage | NostrMessage> {
   ) {
     this.#ws = new LazyWebSocket(createWebSocket);
 
-    this.#messages = new LophusReadableStream<W>({
+    this.#messages = createImpatientReadableStream<R | LophusMessage>({
       start: (controller) => {
         this.#ws.addEventListener("message", (ev) => {
-          const msg = JSON.parse(ev.data) as W;
+          const msg = JSON.parse(ev.data) as R;
           controller.enqueue(msg);
-          controller.adjustBackpressure();
         });
       },
       stop: () => {
         this.#ws.close();
-        this.#closed.notify();
       },
       restart: (controller) => {
         controller.enqueue(["RESTART"]);
       },
-      cancel: () => this.#closed.notify(),
     }, opts);
 
     broadcast(this.#messages, this.#channels);
   }
 
-  protected listen<T extends W>(messageType: T[0], listener: (msg: T) => void) {
-    this.#ws.addEventListener("message", (ev) => {
-      const msg = JSON.parse(ev.data) as T;
-      if (msg[0] === messageType) {
-        listener(msg);
-      }
+  protected listen<S extends unknown>(
+    listener: (msg: R | LophusMessage) => S | undefined,
+  ): ReadableStream<S> {
+    const channel = new TransformStream<R | LophusMessage, S>({
+      transform(msg, controller) {
+        const result = listener(msg);
+        if (result) controller.enqueue(result);
+      },
     });
+    this.#channels.push(channel.writable);
+    return channel.readable;
   }
 
   async send(...msgs: W[]): Promise<void> {
@@ -68,7 +67,6 @@ export class NostrNode<W extends LophusMessage | NostrMessage> {
   }
 
   async close(): Promise<void> {
-    this.#closed.notify();
     await this.#ws.close();
   }
 }

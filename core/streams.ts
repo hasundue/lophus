@@ -34,14 +34,14 @@ export interface ImpatientReadableStreamUnderlyingSource<R extends unknown> {
   cancel?: UnderlyingSource<R>["cancel"];
 }
 
-export interface ImpatientReadableStreamQueuingThresholds {
+export interface ImpatientReadableStreamQueuingStrategy {
   stop?: number;
   restart?: number;
 }
 
 export function createImpatientReadableStream<R extends unknown>(
   source: ImpatientReadableStreamUnderlyingSource<R>,
-  strategy?: ImpatientReadableStreamQueuingThresholds,
+  strategy?: ImpatientReadableStreamQueuingStrategy,
 ): ReadableStream<R> {
   const stop = strategy?.stop ?? 20;
   const restart = strategy?.restart ?? Math.floor(stop / 2);
