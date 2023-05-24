@@ -1,8 +1,8 @@
 // Publish a text note
 import { Relay } from "../client.ts";
-import { env } from "../lib/env.ts";
 import { TextNoteComposer } from "../lib/notes.ts";
 import { Signer } from "../lib/signs.ts";
+import { env } from "../lib/env.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 

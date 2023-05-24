@@ -50,9 +50,10 @@ export class Relay
   }
 
   subscribe(
-    filters: SubscriptionFilter[],
+    filter: SubscriptionFilter | SubscriptionFilter[],
     opts: SubscriptionOptions = {},
   ): ReadableStream<SignedEvent> {
+    const filters = [filter].flat();
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     const realtime = opts.realtime ?? true;
 
@@ -90,19 +91,25 @@ export class Relay
     return readable;
   }
 
-  async request(id: string, filters: SubscriptionFilter[]) {
-    return await this.send(["REQ", id as SubscriptionId, ...filters]);
+  request(id: string, filters: SubscriptionFilter[]) {
+    return this.send(["REQ", id as SubscriptionId, ...filters]);
   }
 
-  async publish(event: SignedEvent): Promise<void> {
-    return await this.send(["EVENT", event]);
+  publish(event: SignedEvent): Promise<void> {
+    return this.send(["EVENT", event]);
   }
 
-  async close(sid?: SubscriptionId) {
+  get publisher() {
+    return new WritableStream<SignedEvent>({
+      write: (event) => this.publish(event),
+    });
+  }
+
+  close(sid?: SubscriptionId) {
     if (!sid) {
-      return await super.close();
+      return super.close();
     }
-    return await this.send(["CLOSE", sid]);
+    return this.send(["CLOSE", sid]);
   }
 }
 

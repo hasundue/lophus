@@ -7,7 +7,7 @@ import { Relay } from "../client.ts";
 import { Timestamp } from "../lib/times.ts";
 
 new Relay({ url: "wss://nos.lol" })
-  .subscribe([{ kinds: [1], since: Timestamp.now }])
+  .subscribe({ kinds: [1], since: Timestamp.now })
   .pipeTo(new WritableStream({ write: (ev) => console.log(ev) }));
 ```
 
@@ -15,9 +15,9 @@ new Relay({ url: "wss://nos.lol" })
 
 ```ts
 import { Relay } from "../client.ts";
-import { env } from "../lib/env.ts";
 import { TextNoteComposer } from "../lib/notes.ts";
 import { Signer } from "../lib/signs.ts";
+import { env } from "../lib/env.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 
@@ -35,13 +35,13 @@ await relay.publish(event);
 ```ts
 import { Relay } from "../client.ts";
 import { Signer } from "../lib/signs.ts";
-import { env } from "../lib/env.ts";
 import { DefaultAgent } from "../lib/agents.ts";
 import { ReplyComposer } from "../lib/notes.ts";
+import { env } from "../lib/env.ts";
 
 const relay = new Relay({ url: "wss://nos.lol" });
 
-relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
+relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
   .pipeThrough(
     new DefaultAgent((event) =>
       new ReplyComposer(env.PUBLIC_KEY).compose(
@@ -61,6 +61,6 @@ import { Relay } from "../client.ts";
 import { env } from "../lib/env.ts";
 
 new Relay({ url: "wss://relay.nostr.band" })
-  .subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] }).events
+  .subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
   .pipeTo(new Relay({ url: "wss://nos.lol" }).publisher);
 ```
