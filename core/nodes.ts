@@ -5,7 +5,7 @@ import {
   createImpatientReadableStream,
   ImpatientStreamQueuingStrategy,
 } from "./streams.ts";
-import { provide } from "./x/streamtools.ts";
+import { push } from "./x/streamtools.ts";
 
 /**
  * Internal messages which are not part of the Nostr protocol.
@@ -54,8 +54,8 @@ export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
     this.#channels.push(writable);
   }
 
-  async send(...msgs: W[]): Promise<void> {
-    await provide(this.messenger, msgs);
+  async send(msg: W): Promise<void> {
+    await push(this.messenger, msg);
   }
 
   readonly messenger = new WritableStream<W>({
