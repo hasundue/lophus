@@ -7,6 +7,8 @@ import { Brand } from "../core/types.ts";
 //
 // Events
 //
+export type NostrEvent = UnsignedEvent | SignedEvent;
+
 export interface UnsignedEvent {
   pubkey: PublicKey;
   created_at: EventTimestamp;
