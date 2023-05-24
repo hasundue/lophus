@@ -3,14 +3,17 @@ import { LazyWebSocket } from "./websockets.ts";
 import {
   broadcast,
   createImpatientReadableStream,
-  ImpatientReadableStreamQueuingStrategy,
+  ImpatientStreamQueuingStrategy,
 } from "./streams.ts";
-import { provide } from "../core/x/streamtools.ts";
+import { provide } from "./x/streamtools.ts";
 
-export type LophusMessage = RestartMessage;
+/**
+ * Internal messages which are not part of the Nostr protocol.
+ */
+export type InternalMessage = RestartMessage;
 export type RestartMessage = ["RESTART"];
 
-export type MessageBufferOptions = ImpatientReadableStreamQueuingStrategy;
+export type MessageBufferOptions = ImpatientStreamQueuingStrategy;
 
 /**
  * Common base class for relays and clients.
@@ -18,12 +21,8 @@ export type MessageBufferOptions = ImpatientReadableStreamQueuingStrategy;
 export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
   #ws: LazyWebSocket;
 
-  readonly messenger = new WritableStream<W>({
-    write: (msg) => this.#ws.send(JSON.stringify(msg)),
-  });
-
-  #messages: ReadableStream<R | LophusMessage>;
-  #channels: WritableStream<R | LophusMessage>[] = [];
+  readonly #messages: ReadableStream<R | InternalMessage>;
+  readonly #channels: WritableStream<R | InternalMessage>[] = [];
 
   constructor(
     createWebSocket: () => WebSocket,
@@ -31,40 +30,37 @@ export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
   ) {
     this.#ws = new LazyWebSocket(createWebSocket);
 
-    this.#messages = createImpatientReadableStream<R | LophusMessage>({
+    this.#messages = createImpatientReadableStream<R | InternalMessage>({
       start: (controller) => {
         this.#ws.addEventListener("message", (ev) => {
           const msg = JSON.parse(ev.data) as R;
           controller.enqueue(msg);
         });
       },
-      stop: () => {
-        this.#ws.close();
+      stop: async () => {
+        // TODO: let other listeners wait until restart
+        await this.#ws.close();
       },
       restart: (controller) => {
+        // TODO: notify other listeners
         controller.enqueue(["RESTART"]);
       },
     }, opts);
 
-    broadcast(this.#messages, this.#channels);
+    broadcast(this.#messages, this.#channels, "any");
   }
 
-  protected listen<S extends unknown>(
-    listener: (msg: R | LophusMessage) => S | undefined,
-  ): ReadableStream<S> {
-    const channel = new TransformStream<R | LophusMessage, S>({
-      transform(msg, controller) {
-        const result = listener(msg);
-        if (result) controller.enqueue(result);
-      },
-    });
-    this.#channels.push(channel.writable);
-    return channel.readable;
+  protected listen(writable: WritableStream<R | InternalMessage>) {
+    this.#channels.push(writable);
   }
 
   async send(...msgs: W[]): Promise<void> {
     await provide(this.messenger, msgs);
   }
+
+  readonly messenger = new WritableStream<W>({
+    write: (msg) => this.#ws.send(JSON.stringify(msg)),
+  });
 
   async close(): Promise<void> {
     await this.#ws.close();

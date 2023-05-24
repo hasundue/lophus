@@ -13,35 +13,37 @@ export function broadcast<T = unknown>(
   return source.pipeTo(
     new WritableStream({
       write: (msg) => {
-        // @ts-ignore 2349 - TS doesn't handle a method union well
-        return (Promise[strategy])(targets.map((target) => push(target, msg)));
+        // deno-lint-ignore no-explicit-any
+        return (Promise[strategy] as any)(
+          targets.map((target) => push(target, msg)),
+        );
       },
     }),
   );
 }
 
-export interface ImpatientReadableStreamUnderlyingSource<R extends unknown> {
+export type ImpatientStreamQueuingStrategy = {
+  stop?: number;
+  restart?: number;
+};
+
+export type ImpatientReadableStreamUnderlyingSource<R extends unknown> = {
   start: (
     controller: ImpatientReadableStreamController<R>,
   ) => void | Promise<void>;
   stop?: (
+    chunk: R,
     controller: ImpatientReadableStreamController<R>,
-    chunk?: R,
-  ) => void;
+  ) => void | Promise<void>;
   restart?: (
     contoller: TransformStreamDefaultController<R>,
   ) => void;
   cancel?: UnderlyingSource<R>["cancel"];
-}
-
-export interface ImpatientReadableStreamQueuingStrategy {
-  stop?: number;
-  restart?: number;
-}
+};
 
 export function createImpatientReadableStream<R extends unknown>(
   source: ImpatientReadableStreamUnderlyingSource<R>,
-  strategy?: ImpatientReadableStreamQueuingStrategy,
+  strategy?: ImpatientStreamQueuingStrategy,
 ): ReadableStream<R> {
   const stop = strategy?.stop ?? 20;
   const restart = strategy?.restart ?? Math.floor(stop / 2);
@@ -49,7 +51,7 @@ export function createImpatientReadableStream<R extends unknown>(
   const readable = new ReadableStream<R>({
     start(controller) {
       source.start?.(
-        new ImpatientReadableStreamController(controller, source.stop),
+        new ImpatientReadableStreamController<R>(controller, source.stop),
       );
     },
     cancel: source.cancel,
@@ -83,11 +85,11 @@ class ImpatientReadableStreamController<R extends unknown>
     return this.controller.desiredSize;
   }
 
-  enqueue(chunk: R) {
+  async enqueue(chunk: R) {
     this.controller.enqueue(chunk);
 
     if (this.desiredSize && this.desiredSize <= 0) {
-      this.stop?.(this, chunk);
+      await this.stop?.(chunk, this);
     }
   }
 }
