@@ -21,26 +21,40 @@ export function broadcast<T = unknown>(
   );
 }
 
-export interface LophusReadableStreamQueuingStrategy<R> {
+export interface LophusReadableStreamQueuingThresholds {
   stop?: number;
-  applyBackpressure: (chunk: R) => void | Promise<void>;
   restart?: number;
-  releaseBackpressure: (chunk: R) => void | Promise<void>;
+}
+
+export interface LophusReadableStreamUnderlyingSource<R extends unknown> {
+  start: (
+    controller: LophusReadableStreamController<R>,
+  ) => void | Promise<void>;
+  stop: (
+    controller: LophusReadableStreamController<R>,
+    chunk?: R,
+  ) => void | Promise<void>;
+  restart: (
+    controller: LophusReadableStreamController<R>,
+    chunk?: R,
+  ) => void | Promise<void>;
+  cancel?: UnderlyingSource<R>["cancel"];
 }
 
 export class LophusReadableStream<R extends unknown> extends ReadableStream<R> {
   constructor(
-    source: {
-      start?: (controller: NostrReadableStreamController<R>) => void;
-      cancel?: UnderlyingSource<R>["cancel"];
-    },
-    strategy: LophusReadableStreamQueuingStrategy<R>,
+    source: LophusReadableStreamUnderlyingSource<R>,
+    strategy?: LophusReadableStreamQueuingThresholds,
   ) {
     const stop = strategy?.stop ?? 20;
     super({
       start(controller) {
         source.start?.(
-          new NostrReadableStreamController(controller, { ...strategy, stop }),
+          new LophusReadableStreamController(
+            controller,
+            source,
+            { ...strategy, stop },
+          ),
         );
       },
       cancel: source.cancel,
@@ -48,10 +62,10 @@ export class LophusReadableStream<R extends unknown> extends ReadableStream<R> {
   }
 }
 
-export class NostrReadableStreamController<R extends unknown>
+export class LophusReadableStreamController<R extends unknown>
   implements Omit<ReadableStreamDefaultController, "desiredSize"> {
   protected desiredSize: ReadableStreamDefaultController["desiredSize"];
-  protected strategy: Required<LophusReadableStreamQueuingStrategy<R>>;
+  protected thresholds: Required<LophusReadableStreamQueuingThresholds>;
   protected backpressure_enabled = false;
 
   close: ReadableStreamDefaultController["close"];
@@ -60,7 +74,11 @@ export class NostrReadableStreamController<R extends unknown>
 
   constructor(
     defaultController: ReadableStreamDefaultController<R>,
-    strategy: Require<LophusReadableStreamQueuingStrategy<R>, "stop">,
+    protected pulling: Pick<
+      LophusReadableStreamUnderlyingSource<R>,
+      "stop" | "restart"
+    >,
+    strategy: Require<LophusReadableStreamQueuingThresholds, "stop">,
   ) {
     this.desiredSize = defaultController.desiredSize;
     this.close = defaultController.close.bind(defaultController);
@@ -68,18 +86,18 @@ export class NostrReadableStreamController<R extends unknown>
     this.error = defaultController.error.bind(defaultController);
 
     const restart = strategy?.restart ?? Math.floor(strategy.stop / 2);
-    this.strategy = { ...strategy, restart };
+    this.thresholds = { ...strategy, restart };
   }
 
-  async adjustBackpressure(chunk: R) {
+  async adjustBackpressure(chunk?: R) {
     if (this.desiredSize === null) return;
 
     if (this.desiredSize <= 0) {
-      await this.strategy.applyBackpressure(chunk);
+      await this.pulling.stop(this, chunk);
       this.backpressure_enabled = true;
     }
-    if (this.desiredSize > this.strategy.stop - this.strategy.restart) {
-      await this.strategy.releaseBackpressure(chunk);
+    if (this.desiredSize > this.thresholds.stop - this.thresholds.restart) {
+      await this.pulling.restart(this, chunk);
       this.backpressure_enabled = false;
     }
   }

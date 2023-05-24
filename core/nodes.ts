@@ -1,17 +1,22 @@
-import { NostrEvent, NostrMessage } from "../nips/01.ts";
+import { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import { Notify } from "./x/async.ts";
-import { provide, push } from "../core/x/streamtools.ts";
+import {
+  broadcast,
+  LophusReadableStream,
+  LophusReadableStreamQueuingThresholds,
+} from "./streams.ts";
+import { provide } from "../core/x/streamtools.ts";
 
-export interface BufferOptions {
-  size: number;
-  restart?: number;
-}
+export type LophusMessage = LophusRestartMessage;
+export type LophusRestartMessage = ["RESTART"];
+
+export type MessageBufferOptions = LophusReadableStreamQueuingThresholds;
 
 /**
  * Common base class for relays and clients.
  */
-export class NostrNode<W extends NostrMessage = NostrMessage> {
+export class NostrNode<W extends LophusMessage | NostrMessage> {
   #ws: LazyWebSocket;
   readonly #closed = new Notify();
 
@@ -19,27 +24,34 @@ export class NostrNode<W extends NostrMessage = NostrMessage> {
     write: (msg) => this.#ws.send(JSON.stringify(msg)),
   });
 
-  #buffer: ReadableStream<W>;
-  #channels: WritableStreamDefaultWriter<W>[] = [];
+  #messages: LophusReadableStream<W>;
+  #channels: WritableStream<W>[] = [];
 
   constructor(
     createWebSocket: () => WebSocket,
-    opts?: BufferOptions,
+    opts?: MessageBufferOptions,
   ) {
     this.#ws = new LazyWebSocket(createWebSocket);
 
-    const bufsize = opts?.size ?? 20;
-    const restart = opts?.restart ?? Math.floor(bufsize / 2);
-
-    this.#buffer = new ReadableStream<W>({
+    this.#messages = new LophusReadableStream<W>({
       start: (controller) => {
         this.#ws.addEventListener("message", (ev) => {
           const msg = JSON.parse(ev.data) as W;
           controller.enqueue(msg);
+          controller.adjustBackpressure();
         });
       },
+      stop: () => {
+        this.#ws.close();
+        this.#closed.notify();
+      },
+      restart: (controller) => {
+        controller.enqueue(["RESTART"]);
+      },
       cancel: () => this.#closed.notify(),
-    }, new CountQueuingStrategy({ highWaterMark: bufsize }));
+    }, opts);
+
+    broadcast(this.#messages, this.#channels);
   }
 
   protected listen<T extends W>(messageType: T[0], listener: (msg: T) => void) {
@@ -58,21 +70,5 @@ export class NostrNode<W extends NostrMessage = NostrMessage> {
   async close(): Promise<void> {
     this.#closed.notify();
     await this.#ws.close();
-  }
-}
-
-class MessageStream<R extends NostrMessage, W extends R | NostrEvent>
-  extends TransformStream<R, W> {
-  constructor(
-    filter: (msg: R) => W | undefined,
-    restart: (msg: R) => void | Promise<void>,
-    opts?: BufferOptions,
-  ) {
-    super({
-      transform: (msg, controller) => {
-        const item = filter(msg);
-        if (item) controller.enqueue(item);
-      },
-    });
   }
 }
