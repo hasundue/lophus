@@ -1,9 +1,9 @@
-import { NostrMessage } from "../nips/01.ts";
-import { LazyWebSocket } from "./websockets.ts";
+import type { NostrMessage } from "../nips/01.ts";
+import { WebSocketEventHooks, LazyWebSocket } from "./websockets.ts";
 import {
   broadcast,
-  createImpatientReadableStream,
-  ImpatientStreamQueuingStrategy,
+  createDwReadableStream,
+  DwStreamWatermarks,
 } from "./streams.ts";
 import { push } from "./x/streamtools.ts";
 
@@ -13,7 +13,12 @@ import { push } from "./x/streamtools.ts";
 export type InternalMessage = RestartMessage;
 export type RestartMessage = ["RESTART"];
 
-export type MessageBufferOptions = ImpatientStreamQueuingStrategy;
+export type MessageBufferConfig = DwStreamWatermarks;
+
+export interface NostrNodeConfig {
+  buffer: DwStreamWatermarks;
+  on?: WebSocketEventHooks;
+}
 
 /**
  * Common base class for relays and clients.
@@ -21,48 +26,54 @@ export type MessageBufferOptions = ImpatientStreamQueuingStrategy;
 export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
   #ws: LazyWebSocket;
 
-  readonly #messages: ReadableStream<R | InternalMessage>;
-  readonly #channels: WritableStream<R | InternalMessage>[] = [];
+  #channels: WritableStream<R | InternalMessage>[] = [];
 
   constructor(
     createWebSocket: () => WebSocket,
-    opts?: MessageBufferOptions,
+    config: NostrNodeConfig,
   ) {
-    this.#ws = new LazyWebSocket(createWebSocket);
+    this.#ws = new LazyWebSocket(createWebSocket, config.on ?? {});
 
-    this.#messages = createImpatientReadableStream<R | InternalMessage>({
+    const messages = createDwReadableStream<R | InternalMessage>({
       start: (controller) => {
         this.#ws.addEventListener("message", (ev) => {
           const msg = JSON.parse(ev.data) as R;
           controller.enqueue(msg);
         });
+        this.#ws.addEventListener("close", () => {
+          controller.enqueue(["RESTART"]);
+        });
       },
       stop: async () => {
-        // TODO: let other listeners wait until restart
+        // TODO: let other listeners wait until restart?
         await this.#ws.close();
       },
       restart: (controller) => {
-        // TODO: notify other listeners
+        // TODO: notify other listeners?
         controller.enqueue(["RESTART"]);
       },
-    }, opts);
+    }, config.buffer);
 
-    broadcast(this.#messages, this.#channels, "any");
+    broadcast(messages, this.#channels, "any");
   }
 
-  protected listen(writable: WritableStream<R | InternalMessage>) {
+  protected channel(writable: WritableStream<R | InternalMessage>) {
     this.#channels.push(writable);
   }
 
-  async send(msg: W): Promise<void> {
-    await push(this.messenger, msg);
+  protected unchannel(writable: WritableStream<R | InternalMessage>) {
+    this.#channels = this.#channels.filter((w) => w !== writable);
+  }
+
+  send(msg: W): Promise<void> {
+    return push(this.messenger, msg);
   }
 
   readonly messenger = new WritableStream<W>({
     write: (msg) => this.#ws.send(JSON.stringify(msg)),
   });
 
-  async close(): Promise<void> {
-    await this.#ws.close();
+  close(): Promise<void> {
+    return this.#ws.close();
   }
 }

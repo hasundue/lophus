@@ -1,4 +1,3 @@
-import { InternalMessage, NostrNode } from "./core/nodes.ts";
 import type {
   ClientToRelayMessage,
   EventTimestamp,
@@ -8,30 +7,27 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
+import type { WebSocketEventHooks } from "./core/websockets.ts";
 import {
-  assignEventHooks,
-  type WebSocketEventHooks,
-} from "./core/websockets.ts";
-import {
-  createImpatientReadableStream,
-  type ImpatientStreamQueuingStrategy,
-} from "./core/streams.ts";
+  InternalMessage,
+  MessageBufferConfig,
+  NostrNode,
+} from "./core/nodes.ts";
+import { createDwReadableStream } from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
-export type EventBufferOptions = ImpatientStreamQueuingStrategy;
-
 export interface RelayConfig {
-  name?: string;
   url: RelayUrl;
+  name?: string;
+  buffer?: MessageBufferConfig;
   on?: WebSocketEventHooks;
-  buffer?: EventBufferOptions;
 }
 
 export interface SubscriptionOptions {
   id?: string;
   realtime?: boolean;
-  buffer?: EventBufferOptions;
+  buffer?: MessageBufferConfig;
 }
 
 export class Relay
@@ -40,11 +36,10 @@ export class Relay
   readonly url: RelayUrl;
 
   constructor(config: RelayConfig) {
-    super(() => {
-      const ws = new WebSocket(config.url);
-      assignEventHooks(ws, config.on ?? {});
-      return ws;
-    });
+    super(
+      () => new WebSocket(config.url),
+      { buffer: { high: 20 }, ...config },
+    );
     this.name = config.name ?? config.url;
     this.url = config.url;
   }
@@ -53,46 +48,47 @@ export class Relay
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: SubscriptionOptions = {},
   ): ReadableStream<SignedEvent> {
-    const filters = [filter].flat();
+    const fs = [filter].flat();
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     const realtime = opts.realtime ?? true;
 
-    let controller_read: ReadableStreamDefaultController<SignedEvent>;
-    let latest: EventTimestamp;
+    let cntr_read: ReadableStreamDefaultController<SignedEvent>;
+    let last: EventTimestamp;
 
-    const readable = createImpatientReadableStream<SignedEvent>({
-      start: (controller) => {
-        controller_read = controller;
-        this.request(id, filters);
-      },
-      stop: () => this.close(id),
-      restart: () => this.request(id, since(filters, latest)),
-    });
+    const since = (since: EventTimestamp) => fs.map((f) => ({ since, ...f }));
 
     const writable = new WritableStream<
       RelayToClientMessage | InternalMessage
     >({
       write: (msg) => {
         if (msg[0] === "EVENT" && msg[1] === id) {
-          controller_read.enqueue(msg[2]);
-          latest = msg[2].created_at;
+          last = msg[2].created_at;
+          return cntr_read.enqueue(msg[2]);
         }
         if (msg[0] === "EOSE" && msg[1] === id && !realtime) {
-          controller_read.close();
+          return cntr_read.close();
         }
         if (msg[0] === "RESTART") {
-          this.request(id, since(filters, latest));
+          return this.send(["REQ", id, ...since(last)]);
         }
       },
     });
 
-    this.listen(writable);
+    const readable = createDwReadableStream<SignedEvent>(
+      {
+        start: (controller) => {
+          cntr_read = controller;
+          this.channel(writable);
+          this.send(["REQ", id, ...fs]);
+        },
+        stop: () => this.close(id),
+        restart: () => this.send(["REQ", id, ...since(last)]),
+        cancel: () => this.unchannel(writable),
+      },
+      { high: 20, ...opts.buffer },
+    );
 
     return readable;
-  }
-
-  request(id: string, filters: SubscriptionFilter[]) {
-    return this.send(["REQ", id as SubscriptionId, ...filters]);
   }
 
   publish(event: SignedEvent): Promise<void> {
@@ -111,8 +107,4 @@ export class Relay
     }
     return this.send(["CLOSE", sid]);
   }
-}
-
-function since(fs: SubscriptionFilter[], since: EventTimestamp) {
-  return fs.map((f) => ({ since, ...f }));
 }

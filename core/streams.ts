@@ -22,18 +22,18 @@ export function broadcast<T = unknown>(
   );
 }
 
-export type ImpatientStreamQueuingStrategy = {
-  stop?: number;
-  restart?: number;
+export type DwStreamWatermarks = {
+  high: number;
+  low?: number;
 };
 
-export type ImpatientReadableStreamUnderlyingSource<R extends unknown> = {
+export type DwUnderlyingSource<R extends unknown> = {
   start: (
-    controller: ImpatientReadableStreamController<R>,
+    controller: DwReadableStreamController<R>,
   ) => void | Promise<void>;
   stop?: (
     chunk: R,
-    controller: ImpatientReadableStreamController<R>,
+    controller: DwReadableStreamController<R>,
   ) => void | Promise<void>;
   restart?: (
     contoller: TransformStreamDefaultController<R>,
@@ -41,41 +41,40 @@ export type ImpatientReadableStreamUnderlyingSource<R extends unknown> = {
   cancel?: UnderlyingSource<R>["cancel"];
 };
 
-export function createImpatientReadableStream<R extends unknown>(
-  source: ImpatientReadableStreamUnderlyingSource<R>,
-  strategy?: ImpatientStreamQueuingStrategy,
+export function createDwReadableStream<R extends unknown>(
+  source: DwUnderlyingSource<R>,
+  marks: DwStreamWatermarks,
 ): ReadableStream<R> {
-  const stop = strategy?.stop ?? 20;
-  const restart = strategy?.restart ?? Math.floor(stop / 2);
+  const low = marks?.low ?? Math.floor(marks.high / 2);
 
   const readable = new ReadableStream<R>({
     start(controller) {
       source.start?.(
-        new ImpatientReadableStreamController<R>(controller, source.stop),
+        new DwReadableStreamController<R>(controller, source.stop),
       );
     },
     cancel: source.cancel,
-  }, new CountQueuingStrategy({ highWaterMark: stop }));
+  }, new CountQueuingStrategy({ highWaterMark: marks.high }));
 
   const buffer = new TransformStream<R, R>({
     flush(controller) {
       source.restart?.(controller);
     },
-  }, new CountQueuingStrategy({ highWaterMark: restart }));
+  }, new CountQueuingStrategy({ highWaterMark: marks.high - low }));
 
   readable.pipeTo(buffer.writable);
 
   return buffer.readable;
 }
 
-class ImpatientReadableStreamController<R extends unknown>
+class DwReadableStreamController<R extends unknown>
   implements ReadableStreamDefaultController<R> {
   close: ReadableStreamDefaultController["close"];
   error: ReadableStreamDefaultController["error"];
 
   constructor(
     protected controller: ReadableStreamDefaultController<R>,
-    protected stop: ImpatientReadableStreamUnderlyingSource<R>["stop"],
+    protected stop: DwUnderlyingSource<R>["stop"],
   ) {
     this.close = controller.close.bind(controller);
     this.error = controller.error.bind(controller);
