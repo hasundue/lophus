@@ -1,5 +1,4 @@
 import { push } from "./x/streamtools.ts";
-import { Require } from "./types.ts";
 
 export type BroadcastPromiseOperation<T> = keyof Pick<
   typeof Promise<T>,
@@ -11,94 +10,84 @@ export function broadcast<T = unknown>(
   targets: WritableStream<T>[],
   strategy: BroadcastPromiseOperation<T> = "all",
 ) {
-  source.pipeTo(
+  return source.pipeTo(
     new WritableStream({
-      write: async (msg) => {
+      write: (msg) => {
         // @ts-ignore 2349 - TS doesn't handle a method union well
-        await (Promise[strategy])(targets.map((target) => push(target, msg)));
+        return (Promise[strategy])(targets.map((target) => push(target, msg)));
       },
     }),
   );
 }
 
-export interface LophusReadableStreamQueuingThresholds {
+export interface ImpatientReadableStreamUnderlyingSource<R extends unknown> {
+  start: (
+    controller: ImpatientReadableStreamController<R>,
+  ) => void | Promise<void>;
+  stop?: (
+    controller: ImpatientReadableStreamController<R>,
+    chunk?: R,
+  ) => void;
+  restart?: (
+    contoller: TransformStreamDefaultController<R>,
+  ) => void;
+  cancel?: UnderlyingSource<R>["cancel"];
+}
+
+export interface ImpatientReadableStreamQueuingThresholds {
   stop?: number;
   restart?: number;
 }
 
-export interface LophusReadableStreamUnderlyingSource<R extends unknown> {
-  start: (
-    controller: LophusReadableStreamController<R>,
-  ) => void | Promise<void>;
-  stop: (
-    controller: LophusReadableStreamController<R>,
-    chunk?: R,
-  ) => void | Promise<void>;
-  restart: (
-    controller: LophusReadableStreamController<R>,
-    chunk?: R,
-  ) => void | Promise<void>;
-  cancel?: UnderlyingSource<R>["cancel"];
+export function createImpatientReadableStream<R extends unknown>(
+  source: ImpatientReadableStreamUnderlyingSource<R>,
+  strategy?: ImpatientReadableStreamQueuingThresholds,
+): ReadableStream<R> {
+  const stop = strategy?.stop ?? 20;
+  const restart = strategy?.restart ?? Math.floor(stop / 2);
+
+  const readable = new ReadableStream<R>({
+    start(controller) {
+      source.start?.(
+        new ImpatientReadableStreamController(controller, source.stop),
+      );
+    },
+    cancel: source.cancel,
+  }, new CountQueuingStrategy({ highWaterMark: stop }));
+
+  const buffer = new TransformStream<R, R>({
+    flush(controller) {
+      source.restart?.(controller);
+    },
+  }, new CountQueuingStrategy({ highWaterMark: restart }));
+
+  readable.pipeTo(buffer.writable);
+
+  return buffer.readable;
 }
 
-export class LophusReadableStream<R extends unknown> extends ReadableStream<R> {
-  constructor(
-    source: LophusReadableStreamUnderlyingSource<R>,
-    strategy?: LophusReadableStreamQueuingThresholds,
-  ) {
-    const stop = strategy?.stop ?? 20;
-    super({
-      start(controller) {
-        source.start?.(
-          new LophusReadableStreamController(
-            controller,
-            source,
-            { ...strategy, stop },
-          ),
-        );
-      },
-      cancel: source.cancel,
-    }, new CountQueuingStrategy({ highWaterMark: stop }));
-  }
-}
-
-export class LophusReadableStreamController<R extends unknown>
-  implements Omit<ReadableStreamDefaultController, "desiredSize"> {
-  protected desiredSize: ReadableStreamDefaultController["desiredSize"];
-  protected thresholds: Required<LophusReadableStreamQueuingThresholds>;
-  protected backpressure_enabled = false;
-
+class ImpatientReadableStreamController<R extends unknown>
+  implements ReadableStreamDefaultController<R> {
   close: ReadableStreamDefaultController["close"];
-  enqueue: ReadableStreamDefaultController["enqueue"];
   error: ReadableStreamDefaultController["error"];
 
   constructor(
-    defaultController: ReadableStreamDefaultController<R>,
-    protected pulling: Pick<
-      LophusReadableStreamUnderlyingSource<R>,
-      "stop" | "restart"
-    >,
-    strategy: Require<LophusReadableStreamQueuingThresholds, "stop">,
+    protected controller: ReadableStreamDefaultController<R>,
+    protected stop: ImpatientReadableStreamUnderlyingSource<R>["stop"],
   ) {
-    this.desiredSize = defaultController.desiredSize;
-    this.close = defaultController.close.bind(defaultController);
-    this.enqueue = defaultController.enqueue.bind(defaultController);
-    this.error = defaultController.error.bind(defaultController);
-
-    const restart = strategy?.restart ?? Math.floor(strategy.stop / 2);
-    this.thresholds = { ...strategy, restart };
+    this.close = controller.close.bind(controller);
+    this.error = controller.error.bind(controller);
   }
 
-  async adjustBackpressure(chunk?: R) {
-    if (this.desiredSize === null) return;
+  get desiredSize() {
+    return this.controller.desiredSize;
+  }
 
-    if (this.desiredSize <= 0) {
-      await this.pulling.stop(this, chunk);
-      this.backpressure_enabled = true;
-    }
-    if (this.desiredSize > this.thresholds.stop - this.thresholds.restart) {
-      await this.pulling.restart(this, chunk);
-      this.backpressure_enabled = false;
+  enqueue(chunk: R) {
+    this.controller.enqueue(chunk);
+
+    if (this.desiredSize && this.desiredSize <= 0) {
+      this.stop?.(this, chunk);
     }
   }
 }

@@ -1,8 +1,9 @@
-import { describe, it } from "../lib/std/testing.ts";
-import { broadcast } from "./streams.ts";
+import { assertEquals, beforeAll, describe, it } from "../lib/std/testing.ts";
+import { collect } from "../lib/x/streamtools.ts";
+import { broadcast, createImpatientReadableStream } from "./streams.ts";
 
 describe("broadcast", () => {
-  it("should broadcast messages to multiple targets", () => {
+  it("should broadcast messages to multiple targets", async () => {
     const source = new ReadableStream<number>({
       start: (controller) => {
         controller.enqueue(1);
@@ -12,19 +13,55 @@ describe("broadcast", () => {
       },
     });
 
+    const results = [[], []] as number[][];
+
     const targets = [
       new WritableStream<number>({
         write: (msg) => {
-          console.log("target1", msg);
+          results[0].push(msg);
         },
       }),
       new WritableStream<number>({
         write: (msg) => {
-          console.log("target2", msg);
+          results[1].push(msg);
         },
       }),
     ];
 
-    broadcast(source, targets);
+    await broadcast(source, targets);
+
+    assertEquals(results, [[1, 2, 3], [1, 2, 3]]);
+  });
+});
+
+describe("ImpatientReadableStream", () => {
+  let stops = 0;
+  let restarts = 0;
+
+  beforeAll(async () => {
+    const stream = createImpatientReadableStream<number>({
+      start: (controller) => {
+        controller.enqueue(1);
+        controller.enqueue(2);
+        controller.enqueue(3);
+        controller.close();
+      },
+      stop: () => {
+        stops++;
+      },
+      restart: () => {
+        restarts++;
+      },
+    }, { stop: 2, restart: 1 });
+
+    await collect(stream);
+  });
+
+  it("should stop after a certain number of messages", () => {
+    assertEquals(stops, 1);
+  });
+
+  it("should restart after a certain number of messages", () => {
+    assertEquals(restarts, 1);
   });
 });
