@@ -120,4 +120,4 @@ export interface MetadataContent {
   picture: Url;
 }
 
-export type Url = Brand<string, "Url">;
+export type Url = Brand<string, "Url"> | "";
