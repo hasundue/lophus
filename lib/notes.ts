@@ -8,8 +8,8 @@ import {
   SignedEvent,
   UnsignedEvent,
 } from "../nips/01.ts";
-import { Timestamp } from "../lib/times.ts";
 import { Determined, Optional, Overload, Replace } from "../core/types.ts";
+import { Timestamp } from "./times.ts";
 
 export type EventTemplate<K extends EventKind> = Overload<
   Determined<Optional<UnsignedEvent, "created_at" | "pubkey">, "kind", K>,

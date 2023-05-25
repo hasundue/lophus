@@ -1,4 +1,5 @@
 import type { NostrMessage } from "../nips/01.ts";
+import type { Brand } from "./types.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
 import {
   broadcast,
@@ -13,6 +14,12 @@ import { push } from "./x/streamtools.ts";
 export type InternalMessage = RestartMessage;
 export type RestartMessage = ["RESTART"];
 
+export type ChannelId = Brand<string, "ChannelId">;
+
+export interface ChannelOptions {
+  id?: ChannelId;
+}
+
 export type MessageBufferConfig = DualMarkStreamWatermarks;
 
 export interface NostrNodeConfig {
@@ -23,16 +30,26 @@ export interface NostrNodeConfig {
 /**
  * Common base class for relays and clients.
  */
-export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
+export class NostrNode<
+  R extends NostrMessage = NostrMessage,
+  W extends NostrMessage = NostrMessage,
+> {
   #ws: LazyWebSocket;
 
-  #channels: WritableStream<R | InternalMessage>[] = [];
+  #chs?: WritableStream<R | InternalMessage>[];
+  #chs_map = new Map<ChannelId, WritableStream<R | InternalMessage>>();
 
   constructor(
     createWebSocket: () => WebSocket,
-    config: NostrNodeConfig,
+    protected config: NostrNodeConfig,
   ) {
     this.#ws = new LazyWebSocket(createWebSocket, config.on ?? {});
+  }
+
+  protected get channels() {
+    if (this.#chs) return this.#chs;
+
+    this.#chs = [];
 
     const msgs = createDualMarkReadableStream<R | InternalMessage>({
       start: (cnt) => {
@@ -52,25 +69,40 @@ export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
         // TODO: notify other listeners?
         cnt.enqueue(["RESTART"]);
       },
-    }, config.buffer);
+    }, this.config.buffer);
 
-    broadcast(msgs, this.#channels, "any");
+    broadcast(msgs, this.#chs, "any");
+
+    return this.#chs;
   }
 
-  protected channel(writable: WritableStream<R | InternalMessage>) {
-    this.#channels.push(writable);
+  protected channel(
+    writable: WritableStream<R | InternalMessage>,
+    opts?: ChannelOptions,
+  ): ChannelId {
+    this.channels.push(writable);
+
+    const id = opts?.id ?? crypto.randomUUID() as ChannelId;
+    this.#chs_map.set(id, writable);
+
+    return id;
   }
 
-  protected unchannel(writable: WritableStream<R | InternalMessage>) {
-    this.#channels = this.#channels.filter((w) => w !== writable);
+  protected async unchannel(id: ChannelId) {
+    this.#chs_map.delete(id);
+    this.#chs = Array.from(this.#chs_map.values());
+
+    if (this.#chs.length === 0) {
+      await this.#ws.close();
+    }
   }
 
   send(msg: W): Promise<void> {
-    return push(this.messenger, msg);
+    return this.#ws.send(JSON.stringify(msg));
   }
 
   readonly messenger = new WritableStream<W>({
-    write: (msg) => this.#ws.send(JSON.stringify(msg)),
+    write: (msg) => this.send(msg),
   });
 
   close(): Promise<void> {
