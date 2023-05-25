@@ -1,5 +1,4 @@
 import { Relay } from "../client.ts";
-import { DualMarkStreamWatermarks } from "../core/streams.ts";
 import {
   assert,
   assertEquals,
@@ -10,10 +9,10 @@ import {
   it,
 } from "../lib/std/testing.ts";
 
-describe("Relay", () => {
+describe("Relay constructor", () => {
   let relay: Relay;
 
-  describe("constructed with url", () => {
+  describe("called with url", () => {
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net");
     });
@@ -31,10 +30,7 @@ describe("Relay", () => {
     });
 
     it("should have default options", () => {
-      assertObjectMatch(
-        relay.config.buffer,
-        DualMarkStreamWatermarks.default({ high: 20 }),
-      );
+      assertObjectMatch(relay.config.buffer, { high: 20 });
       assertEquals(relay.config.read, true);
       assertEquals(relay.config.write, true);
       assertEquals(relay.config.on, {});
@@ -45,7 +41,7 @@ describe("Relay", () => {
     });
   });
 
-  describe("constructed with url and options", () => {
+  describe("called with url and options", () => {
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net", {
         name: "test",
@@ -73,10 +69,7 @@ describe("Relay", () => {
     });
 
     it("should have buffer options", () => {
-      assertObjectMatch(
-        relay.config.buffer,
-        DualMarkStreamWatermarks.default({ high: 10 }),
-      );
+      assertObjectMatch(relay.config.buffer, { high: 10 });
     });
 
     it("should have read and write options", () => {
@@ -89,5 +82,13 @@ describe("Relay", () => {
       assertEquals(typeof relay.config.on.close, "function");
       assertEquals(typeof relay.config.on.error, "function");
     });
+  });
+});
+
+describe("Relay", () => {
+  let relay: Relay;
+
+  beforeEach(() => {
+    relay = new Relay("wss://nostr-dev.wellorder.net");
   });
 });

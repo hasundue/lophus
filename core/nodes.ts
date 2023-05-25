@@ -6,7 +6,6 @@ import {
   createDualMarkReadableStream,
   DualMarkStreamWatermarks,
 } from "./streams.ts";
-import { push } from "./x/streamtools.ts";
 
 /**
  * Internal messages which are not part of the Nostr protocol.

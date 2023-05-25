@@ -27,15 +27,6 @@ export type DualMarkStreamWatermarks = {
   low?: number;
 };
 
-export const DualMarkStreamWatermarks = {
-  default(marks: DualMarkStreamWatermarks): Required<DualMarkStreamWatermarks> {
-    return {
-      low: Math.floor(marks.high / 2),
-      ...marks,
-    };
-  },
-};
-
 export type DualMarkStreamUnderlyingSource<R extends unknown> = {
   start: (
     controller: DualMarkReadableStreamController<R>,
@@ -53,7 +44,7 @@ export function createDualMarkReadableStream<R extends unknown>(
   source: DualMarkStreamUnderlyingSource<R>,
   marks: DualMarkStreamWatermarks,
 ): ReadableStream<R> {
-  const { high, low } = DualMarkStreamWatermarks.default(marks);
+  const { high, low } = { low: Math.floor(marks.high / 2), ...marks };
 
   const readable = new ReadableStream<R>({
     start(controller) {

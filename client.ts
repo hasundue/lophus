@@ -14,10 +14,7 @@ import {
   MessageBufferConfig,
   NostrNode,
 } from "./core/nodes.ts";
-import {
-  createDualMarkReadableStream,
-  DualMarkStreamWatermarks,
-} from "./core/streams.ts";
+import { createDualMarkReadableStream } from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
@@ -141,7 +138,7 @@ class RelayConfigImpl implements Required<RelayOptions> {
     this.#read = opts.read ?? true;
     this.#write = opts.write ?? true;
     this.on = opts.on ?? {};
-    this.buffer = DualMarkStreamWatermarks.default(opts.buffer ?? { high: 20 });
+    this.buffer = opts.buffer ?? { high: 20 };
   }
 
   get read() {
