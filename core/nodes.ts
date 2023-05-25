@@ -1,5 +1,6 @@
 import type { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
+import { push } from "./x/streamtools.ts";
 
 /**
  * Common base class for relays and clients.
@@ -39,13 +40,17 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
         this.#ws.addEventListener("message", (ev) => {
           con.enqueue(JSON.parse(ev.data));
           if (con.desiredSize && con.desiredSize <= 0) {
-            this.#ws.close(1009);
+            this.#ws.close(1009); // use the 'message is too big' code
           }
         });
       },
       pull: () => this.#ws.ready,
       cancel: () => this.#ws.close(),
     }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
+  }
+
+  async send(msg: W) {
+    await push(this, msg);
   }
 }
 
