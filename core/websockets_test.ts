@@ -41,6 +41,16 @@ describe("LazyWebSocket", () => {
     assert(ws instanceof WebSocket);
   });
 
+  it("should notify when the WebSocket is opened", async () => {
+    lazy.send("test");
+    await lazy.notify.open.notified();
+  });
+
+  it("should notify when the WebSocket is closed", async () => {
+    lazy.addEventListener("open", () => lazy.close());
+    await lazy.notify.close.notified();
+  });
+
   it("should trigger the onopen event when the WebSocket is opened", async () => {
     const opened = new Promise((resolve) => {
       lazy.addEventListener("open", resolve);

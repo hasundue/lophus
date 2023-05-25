@@ -6,54 +6,57 @@ import { Notify } from "./x/async.ts";
  */
 export class LazyWebSocket {
   #ws?: WebSocket;
-  #opened = new Notify();
-  #closed = new Notify();
+
+  readonly notify = {
+    open: new Notify(),
+    close: new Notify(),
+  };
 
   constructor(
     protected createWebSocket: () => WebSocket,
     protected on?: WebSocketEventHooks,
   ) {}
 
-  protected ensureCreated(): WebSocket {
+  protected created(): WebSocket {
     if (this.#ws) return this.#ws;
 
     this.#ws = this.createWebSocket();
 
     this.#ws.onopen = (ev) => {
       this.on?.open?.(ev);
-      this.#opened.notify();
+      this.notify.open.notifyAll();
     };
     this.#ws.onclose = (ev) => {
       this.on?.close?.(ev);
-      this.#closed.notify();
+      this.notify.close.notifyAll();
     };
     this.#ws.onerror = this.on?.error ?? null;
 
     return this.#ws;
   }
 
-  protected async ensureReady(): Promise<WebSocket> {
-    this.#ws = this.ensureCreated();
+  protected async ready(): Promise<WebSocket> {
+    this.#ws = this.created();
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.#opened.notified();
+        await this.notify.open.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
 
       case WebSocket.CLOSING:
-        await this.#closed.notified();
+        await this.notify.close.notified();
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.createWebSocket();
-        await this.#closed.notified();
+        await this.notify.open.notified();
     }
     return this.#ws;
   }
 
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
-    this.#ws = await this.ensureReady();
+    this.#ws = await this.ready();
     this.#ws.send(data);
   }
 
@@ -62,18 +65,18 @@ export class LazyWebSocket {
     listener: (this: WebSocket, ev: WebSocketEventMap[T]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ) {
-    this.#ws = this.ensureCreated();
+    this.#ws = this.created();
     this.#ws.addEventListener(type, listener, options);
   }
 
-  async close(): Promise<void> {
+  async close(code?: number, reason?: string): Promise<void> {
     if (!this.#ws || this.#ws.readyState === WebSocket.CLOSED) {
       return Promise.resolve();
     }
     if (this.#ws.readyState < WebSocket.CLOSING) {
-      this.#ws.close();
+      this.#ws.close(code, reason);
     }
-    await this.#closed.notified();
+    await this.notify.close.notified();
   }
 }
 
