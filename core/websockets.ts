@@ -7,11 +7,12 @@ import { Notify } from "./x/async.ts";
  */
 export class LazyWebSocket {
   #ws?: WebSocket;
-  #notifier = new Notify();
+  #opened = new Notify();
+  #closed = new Notify();
 
   constructor(
     protected createWebSocket: () => WebSocket,
-    protected on: WebSocketEventHooks,
+    protected on?: WebSocketEventHooks,
   ) {}
 
   protected ensureCreated(): WebSocket {
@@ -21,11 +22,11 @@ export class LazyWebSocket {
 
     this.#ws.onopen = (ev) => {
       this.on?.open?.(ev);
-      this.#notifier.notify();
+      this.#opened.notify();
     };
     this.#ws.onclose = (ev) => {
       this.on?.close?.(ev);
-      this.#notifier.notify();
+      this.#closed.notify();
     };
     this.#ws.onerror = this.on?.error ?? null;
 
@@ -37,17 +38,17 @@ export class LazyWebSocket {
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.#notifier.notified();
+        await this.#opened.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
 
       case WebSocket.CLOSING:
-        await this.#notifier.notified();
+        await this.#closed.notified();
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.createWebSocket();
-        await this.#notifier.notified();
+        await this.#closed.notified();
     }
     return this.#ws;
   }
@@ -73,7 +74,7 @@ export class LazyWebSocket {
     if (this.#ws.readyState < WebSocket.CLOSING) {
       this.#ws.close();
     }
-    await this.#notifier.notified();
+    await this.#closed.notified();
   }
 }
 
