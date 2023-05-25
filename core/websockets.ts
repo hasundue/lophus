@@ -1,4 +1,3 @@
-import { entries } from "./utils.ts";
 import { Notify } from "./x/async.ts";
 
 /**
