@@ -8,8 +8,11 @@ import {
   SubscriptionOptions,
 } from "../client.ts";
 import { broadcast } from "../core/streams.ts";
-import { distinctBy, merge } from "../lib/./streams.ts";
+import { distinctBy, merge } from "../lib/streams.ts";
 
+/**
+ * A pool of relays that can be used as a single relay.
+ */
 export class RelayPool implements Omit<Relay, "config"> {
   #relays: Relay[];
 
@@ -18,8 +21,9 @@ export class RelayPool implements Omit<Relay, "config"> {
   }
 
   // ----------------------
-  // Methods unique to Pool
+  // RelayPool methods
   // ----------------------
+
   get relays() {
     return this.#relays;
   }
@@ -33,30 +37,9 @@ export class RelayPool implements Omit<Relay, "config"> {
   }
 
   // ----------------------
-  // Methods from NostrNode
+  // Relay methods
   // ----------------------
-  send(msg: ClientToRelayMessage) {
-    return Promise.race(
-      this.relays_write.map((r) => r.send(msg)),
-    );
-  }
 
-  close(sid?: SubscriptionId) {
-    return Promise.race(this.#relays.map((r) => r.close(sid)));
-  }
-
-  get messenger() {
-    const ch = new TransformStream<
-      ClientToRelayMessage,
-      ClientToRelayMessage
-    >();
-    broadcast(ch.readable, this.relays_write.map((r) => r.messenger));
-    return ch.writable;
-  }
-
-  // ----------------------
-  // Methods from Relay
-  // ----------------------
   subscribe(
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: SubscriptionOptions = {},
@@ -74,6 +57,29 @@ export class RelayPool implements Omit<Relay, "config"> {
   get publisher() {
     const ch = new TransformStream<SignedEvent, SignedEvent>();
     broadcast(ch.readable, this.relays_write.map((r) => r.publisher));
+    return ch.writable;
+  }
+
+  // ----------------------
+  // NostrNode methods
+  // ----------------------
+
+  close(sid?: SubscriptionId) {
+    return Promise.race(this.#relays.map((r) => r.close(sid)));
+  }
+
+  send(msg: ClientToRelayMessage) {
+    return Promise.race(
+      this.relays_write.map((r) => r.send(msg)),
+    );
+  }
+
+  get messenger() {
+    const ch = new TransformStream<
+      ClientToRelayMessage,
+      ClientToRelayMessage
+    >();
+    broadcast(ch.readable, this.relays_write.map((r) => r.messenger));
     return ch.writable;
   }
 }
