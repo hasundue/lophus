@@ -83,19 +83,3 @@ export type WebSocketEventHooks = {
     ev: WebSocketEventMap[K],
   ) => void;
 };
-
-export function assignEventHooks(
-  ws: WebSocket,
-  hooks: WebSocketEventHooks,
-): void {
-  for (const hook of entries(hooks)) {
-    assignEventHook(ws, hook);
-  }
-}
-
-function assignEventHook<T extends keyof WebSocketEventHooks>(
-  ws: WebSocket,
-  hook: [T, WebSocketEventHooks[T]],
-) {
-  if (hook[1]) ws.addEventListener(hook[0], hook[1].bind(ws));
-}
