@@ -14,14 +14,56 @@ import {
   NostrNode,
 } from "./core/nodes.ts";
 import { createDwReadableStream } from "./core/streams.ts";
+import { Brand } from "./core/types.ts";
 
 export * from "./nips/01.ts";
 
 export interface RelayConfig {
   url: RelayUrl;
   name?: string;
-  buffer?: MessageBufferConfig;
+  read?: boolean;
+  write?: boolean;
   on?: WebSocketEventHooks;
+  buffer?: MessageBufferConfig;
+}
+
+export type RelayName = Brand<string, "RelayName">;
+
+export class RelayConfigImpl implements Required<RelayConfig> {
+  readonly name: string;
+  readonly url: RelayUrl;
+  readonly buffer: MessageBufferConfig;
+  readonly on: WebSocketEventHooks;
+
+  #read: boolean;
+  #write: boolean;
+
+  constructor(_relay: Relay, config: RelayConfig) {
+    this.name = config.name ?? config.url.slice(6).split("/")[0];
+    this.url = config.url as RelayUrl;
+    this.buffer = config.buffer ?? { high: 20 };
+    this.on = config.on ?? {};
+    this.#read = config.read ?? true;
+    this.#write = config.write ?? true;
+  }
+
+  get read() {
+    return this.#read;
+  }
+
+  set read(v: boolean) {
+    if (v === this.#read) return;
+    this.#read = v;
+  }
+
+  get write() {
+    return this.#write;
+  }
+
+  set write(v: boolean) {
+    if (v === this.#write) return;
+    this.#write = v;
+  }
 }
 
 export interface SubscriptionOptions {
@@ -32,16 +74,18 @@ export interface SubscriptionOptions {
 
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
-  readonly name: string;
-  readonly url: RelayUrl;
+  readonly config: RelayConfig;
 
-  constructor(config: RelayConfig) {
+  constructor(
+    init: RelayUrl | RelayConfig,
+    config?: RelayConfig,
+  ) {
+    const url = typeof init === "string" ? init : init.url;
     super(
-      () => new WebSocket(config.url),
+      () => new WebSocket(url),
       { buffer: { high: 20 }, ...config },
     );
-    this.name = config.name ?? config.url;
-    this.url = config.url;
+    this.config = new RelayConfigImpl(this, { ...config, url });
   }
 
   subscribe(
@@ -83,7 +127,10 @@ export class Relay
         },
         stop: () => this.close(id),
         restart: () => this.send(["REQ", id, ...since(last)]),
-        cancel: () => this.unchannel(writable),
+        cancel: () => {
+          this.unchannel(writable);
+          return this.send(["CLOSE", id]);
+        },
       },
       { high: 20, ...opts.buffer },
     );

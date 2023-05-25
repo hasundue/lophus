@@ -9,6 +9,7 @@
     "run:feed": "deno run -A examples/global.ts",
     "run:publish": "deno run -A examples/publish.ts",
     "run:transfer": "deno run -A examples/transfer.ts",
+    "run:pool": "deno run -A examples/pool.ts",
     "dev": "deno run --watch main.ts"
   },
   "lock": false
