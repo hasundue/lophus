@@ -1,5 +1,4 @@
 import type { NostrMessage } from "../nips/01.ts";
-import { Notify } from "../core/x/async.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
 
 /**
@@ -31,21 +30,20 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
 
     this.notify = {
       ws: this.#ws.notify,
-      msg: { pull: new Notify() },
     };
   }
 
   get messages() {
     return this.#messages ?? new ReadableStream<R>({
-      start: (controller) => {
+      start: (con) => {
         this.#ws.addEventListener("message", (ev) => {
-          controller.enqueue(JSON.parse(ev.data));
-          if (controller.desiredSize && controller.desiredSize <= 0) {
-            this.#ws.close();
+          con.enqueue(JSON.parse(ev.data));
+          if (con.desiredSize && con.desiredSize <= 0) {
+            this.#ws.close(1009);
           }
         });
       },
-      pull: () => this.notify.msg.pull.notifyAll(),
+      pull: () => this.#ws.ready,
       cancel: () => this.#ws.close(),
     }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
   }
