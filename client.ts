@@ -7,30 +7,35 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
+import type { Brand, Replace, Require } from "./core/types.ts";
 import type { WebSocketEventHooks } from "./core/websockets.ts";
 import {
   InternalMessage,
   MessageBufferConfig,
   NostrNode,
 } from "./core/nodes.ts";
-import { createDwReadableStream } from "./core/streams.ts";
-import { Brand } from "./core/types.ts";
+import { createDualMarkReadableStream } from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
 export interface RelayConfig {
   url: RelayUrl;
-  name?: string;
-  read?: boolean;
-  write?: boolean;
-  on?: WebSocketEventHooks;
-  buffer?: MessageBufferConfig;
+  name: RelayName;
+  read: boolean;
+  write: boolean;
+  on: WebSocketEventHooks;
+  buffer: MessageBufferConfig;
 }
 
 export type RelayName = Brand<string, "RelayName">;
 
-export class RelayConfigImpl implements Required<RelayConfig> {
-  readonly name: string;
+export type RelayInit = Require<
+  Partial<Replace<RelayConfig, "name", string>>,
+  "url"
+>;
+
+class RelayConfigImpl implements Required<RelayConfig> {
+  readonly name: RelayName;
   readonly url: RelayUrl;
   readonly buffer: MessageBufferConfig;
   readonly on: WebSocketEventHooks;
@@ -38,13 +43,13 @@ export class RelayConfigImpl implements Required<RelayConfig> {
   #read: boolean;
   #write: boolean;
 
-  constructor(_relay: Relay, config: RelayConfig) {
-    this.name = config.name ?? config.url.slice(6).split("/")[0];
-    this.url = config.url as RelayUrl;
-    this.buffer = config.buffer ?? { high: 20 };
-    this.on = config.on ?? {};
-    this.#read = config.read ?? true;
-    this.#write = config.write ?? true;
+  constructor(_relay: Relay, init: RelayInit) {
+    this.name = (init.name ?? init.url.slice(6).split("/")[0]) as RelayName;
+    this.url = init.url as RelayUrl;
+    this.buffer = init.buffer ?? { high: 20 };
+    this.on = init.on ?? {};
+    this.#read = init.read ?? true;
+    this.#write = init.write ?? true;
   }
 
   get read() {
@@ -77,7 +82,7 @@ export class Relay
   readonly config: RelayConfig;
 
   constructor(
-    init: RelayUrl | RelayConfig,
+    init: RelayInit | RelayUrl,
     config?: RelayConfig,
   ) {
     const url = typeof init === "string" ? init : init.url;
@@ -101,7 +106,7 @@ export class Relay
 
     const since = (since: EventTimestamp) => fs.map((f) => ({ since, ...f }));
 
-    const writable = new WritableStream<
+    const ch = new WritableStream<
       RelayToClientMessage | InternalMessage
     >({
       write: (msg) => {
@@ -118,24 +123,23 @@ export class Relay
       },
     });
 
-    const readable = createDwReadableStream<SignedEvent>(
+    return createDualMarkReadableStream<SignedEvent>(
       {
-        start: (controller) => {
-          cntr_read = controller;
-          this.channel(writable);
+        start: (cntr) => {
+          cntr_read = cntr;
+          this.channel(ch);
           this.send(["REQ", id, ...fs]);
         },
         stop: () => this.close(id),
         restart: () => this.send(["REQ", id, ...since(last)]),
         cancel: () => {
-          this.unchannel(writable);
+          ch.close();
+          this.unchannel(ch);
           return this.send(["CLOSE", id]);
         },
       },
       { high: 20, ...opts.buffer },
     );
-
-    return readable;
   }
 
   publish(event: SignedEvent): Promise<void> {

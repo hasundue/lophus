@@ -1,7 +1,7 @@
 import {
   ClientToRelayMessage,
   Relay,
-  RelayConfig,
+  RelayInit,
   SignedEvent,
   SubscriptionFilter,
   SubscriptionId,
@@ -13,7 +13,7 @@ import { distinctBy, merge } from "../lib/./streams.ts";
 export class RelayPool implements Omit<Relay, "config"> {
   #relays: Relay[];
 
-  constructor(...init: RelayConfig[]) {
+  constructor(...init: RelayInit[]) {
     this.#relays = init.map((i) => new Relay(i));
   }
 

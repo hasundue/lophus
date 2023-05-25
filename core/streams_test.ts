@@ -1,6 +1,6 @@
 import { assertEquals, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { collect } from "../lib/x/streamtools.ts";
-import { broadcast, createDwReadableStream } from "./streams.ts";
+import { broadcast, createDualMarkReadableStream } from "./streams.ts";
 
 describe("broadcast", () => {
   it("should broadcast messages to multiple targets", async () => {
@@ -39,7 +39,7 @@ describe("ImpatientReadableStream", () => {
   let restarts = 0;
 
   beforeAll(async () => {
-    const stream = createDwReadableStream<number>({
+    const stream = createDualMarkReadableStream<number>({
       start: (controller) => {
         controller.enqueue(1);
         controller.enqueue(2);

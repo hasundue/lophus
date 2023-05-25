@@ -22,35 +22,34 @@ export function broadcast<T = unknown>(
   );
 }
 
-export type DwStreamWatermarks = {
+export type DualMarkStreamWatermarks = {
   high: number;
   low?: number;
 };
 
-export type DwUnderlyingSource<R extends unknown> = {
+export type DualMarkStreamUnderlyingSource<R extends unknown> = {
   start: (
-    controller: DwReadableStreamController<R>,
+    controller: DualMarkReadableStreamController<R>,
   ) => void | Promise<void>;
   stop?: (
-    chunk: R,
-    controller: DwReadableStreamController<R>,
+    controller: DualMarkReadableStreamController<R>,
   ) => void | Promise<void>;
   restart?: (
     contoller: TransformStreamDefaultController<R>,
-  ) => void;
+  ) => void | Promise<void>;
   cancel?: UnderlyingSource<R>["cancel"];
 };
 
-export function createDwReadableStream<R extends unknown>(
-  source: DwUnderlyingSource<R>,
-  marks: DwStreamWatermarks,
+export function createDualMarkReadableStream<R extends unknown>(
+  source: DualMarkStreamUnderlyingSource<R>,
+  marks: DualMarkStreamWatermarks,
 ): ReadableStream<R> {
   const low = marks?.low ?? Math.floor(marks.high / 2);
 
   const readable = new ReadableStream<R>({
     start(controller) {
-      source.start?.(
-        new DwReadableStreamController<R>(controller, source.stop),
+      return source.start?.(
+        new DualMarkReadableStreamController<R>(controller, source.stop),
       );
     },
     cancel: source.cancel,
@@ -58,7 +57,7 @@ export function createDwReadableStream<R extends unknown>(
 
   const buffer = new TransformStream<R, R>({
     flush(controller) {
-      source.restart?.(controller);
+      return source.restart?.(controller);
     },
   }, new CountQueuingStrategy({ highWaterMark: marks.high - low }));
 
@@ -67,14 +66,14 @@ export function createDwReadableStream<R extends unknown>(
   return buffer.readable;
 }
 
-class DwReadableStreamController<R extends unknown>
+class DualMarkReadableStreamController<R extends unknown>
   implements ReadableStreamDefaultController<R> {
   close: ReadableStreamDefaultController["close"];
   error: ReadableStreamDefaultController["error"];
 
   constructor(
     protected controller: ReadableStreamDefaultController<R>,
-    protected stop: DwUnderlyingSource<R>["stop"],
+    protected stop: DualMarkStreamUnderlyingSource<R>["stop"],
   ) {
     this.close = controller.close.bind(controller);
     this.error = controller.error.bind(controller);
@@ -84,11 +83,11 @@ class DwReadableStreamController<R extends unknown>
     return this.controller.desiredSize;
   }
 
-  async enqueue(chunk: R) {
+  enqueue(chunk: R) {
     this.controller.enqueue(chunk);
 
     if (this.desiredSize && this.desiredSize <= 0) {
-      await this.stop?.(chunk, this);
+      return this.stop?.(this);
     }
   }
 }

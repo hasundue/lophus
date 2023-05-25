@@ -1,9 +1,9 @@
 import type { NostrMessage } from "../nips/01.ts";
-import { WebSocketEventHooks, LazyWebSocket } from "./websockets.ts";
+import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
 import {
   broadcast,
-  createDwReadableStream,
-  DwStreamWatermarks,
+  createDualMarkReadableStream,
+  DualMarkStreamWatermarks,
 } from "./streams.ts";
 import { push } from "./x/streamtools.ts";
 
@@ -13,10 +13,10 @@ import { push } from "./x/streamtools.ts";
 export type InternalMessage = RestartMessage;
 export type RestartMessage = ["RESTART"];
 
-export type MessageBufferConfig = DwStreamWatermarks;
+export type MessageBufferConfig = DualMarkStreamWatermarks;
 
 export interface NostrNodeConfig {
-  buffer: DwStreamWatermarks;
+  buffer: DualMarkStreamWatermarks;
   on?: WebSocketEventHooks;
 }
 
@@ -34,27 +34,27 @@ export class NostrNode<R extends NostrMessage, W extends NostrMessage> {
   ) {
     this.#ws = new LazyWebSocket(createWebSocket, config.on ?? {});
 
-    const messages = createDwReadableStream<R | InternalMessage>({
-      start: (controller) => {
+    const msgs = createDualMarkReadableStream<R | InternalMessage>({
+      start: (cnt) => {
         this.#ws.addEventListener("message", (ev) => {
           const msg = JSON.parse(ev.data) as R;
-          controller.enqueue(msg);
+          cnt.enqueue(msg);
         });
         this.#ws.addEventListener("close", () => {
-          controller.enqueue(["RESTART"]);
+          cnt.enqueue(["RESTART"]);
         });
       },
       stop: async () => {
         // TODO: let other listeners wait until restart?
         await this.#ws.close();
       },
-      restart: (controller) => {
+      restart: (cnt) => {
         // TODO: notify other listeners?
-        controller.enqueue(["RESTART"]);
+        cnt.enqueue(["RESTART"]);
       },
     }, config.buffer);
 
-    broadcast(messages, this.#channels, "any");
+    broadcast(msgs, this.#channels, "any");
   }
 
   protected channel(writable: WritableStream<R | InternalMessage>) {
