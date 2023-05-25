@@ -27,6 +27,15 @@ export type DualMarkStreamWatermarks = {
   low?: number;
 };
 
+export const DualMarkStreamWatermarks = {
+  default(marks: DualMarkStreamWatermarks): Required<DualMarkStreamWatermarks> {
+    return {
+      low: Math.floor(marks.high / 2),
+      ...marks,
+    };
+  },
+};
+
 export type DualMarkStreamUnderlyingSource<R extends unknown> = {
   start: (
     controller: DualMarkReadableStreamController<R>,
@@ -44,7 +53,7 @@ export function createDualMarkReadableStream<R extends unknown>(
   source: DualMarkStreamUnderlyingSource<R>,
   marks: DualMarkStreamWatermarks,
 ): ReadableStream<R> {
-  const low = marks?.low ?? Math.floor(marks.high / 2);
+  const { high, low } = DualMarkStreamWatermarks.default(marks);
 
   const readable = new ReadableStream<R>({
     start(controller) {
@@ -53,13 +62,13 @@ export function createDualMarkReadableStream<R extends unknown>(
       );
     },
     cancel: source.cancel,
-  }, new CountQueuingStrategy({ highWaterMark: marks.high }));
+  }, new CountQueuingStrategy({ highWaterMark: high }));
 
   const buffer = new TransformStream<R, R>({
     flush(controller) {
       return source.restart?.(controller);
     },
-  }, new CountQueuingStrategy({ highWaterMark: marks.high - low }));
+  }, new CountQueuingStrategy({ highWaterMark: high - low }));
 
   readable.pipeTo(buffer.writable);
 

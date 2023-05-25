@@ -1,5 +1,4 @@
 // @ts-nocheck - allow access to protected field
-
 import {
   afterEach,
   assert,

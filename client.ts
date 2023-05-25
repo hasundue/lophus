@@ -7,69 +7,29 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
-import type { Brand, Replace, Require } from "./core/types.ts";
 import type { WebSocketEventHooks } from "./core/websockets.ts";
 import {
+  ChannelId,
   InternalMessage,
   MessageBufferConfig,
   NostrNode,
 } from "./core/nodes.ts";
-import { createDualMarkReadableStream } from "./core/streams.ts";
+import {
+  createDualMarkReadableStream,
+  DualMarkStreamWatermarks,
+} from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
 export interface RelayConfig {
-  url: RelayUrl;
-  name: RelayName;
+  name: string;
   read: boolean;
   write: boolean;
   on: WebSocketEventHooks;
   buffer: MessageBufferConfig;
 }
 
-export type RelayName = Brand<string, "RelayName">;
-
-export type RelayInit = Require<
-  Partial<Replace<RelayConfig, "name", string>>,
-  "url"
->;
-
-class RelayConfigImpl implements Required<RelayConfig> {
-  readonly name: RelayName;
-  readonly url: RelayUrl;
-  readonly buffer: MessageBufferConfig;
-  readonly on: WebSocketEventHooks;
-
-  #read: boolean;
-  #write: boolean;
-
-  constructor(_relay: Relay, init: RelayInit) {
-    this.name = (init.name ?? init.url.slice(6).split("/")[0]) as RelayName;
-    this.url = init.url as RelayUrl;
-    this.buffer = init.buffer ?? { high: 20 };
-    this.on = init.on ?? {};
-    this.#read = init.read ?? true;
-    this.#write = init.write ?? true;
-  }
-
-  get read() {
-    return this.#read;
-  }
-
-  set read(v: boolean) {
-    if (v === this.#read) return;
-    this.#read = v;
-  }
-
-  get write() {
-    return this.#write;
-  }
-
-  set write(v: boolean) {
-    if (v === this.#write) return;
-    this.#write = v;
-  }
-}
+export type RelayOptions = Partial<RelayConfig>;
 
 export interface SubscriptionOptions {
   id?: string;
@@ -79,18 +39,19 @@ export interface SubscriptionOptions {
 
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
+  readonly url: RelayUrl;
   readonly config: RelayConfig;
 
   constructor(
-    init: RelayInit | RelayUrl,
-    config?: RelayConfig,
+    url: RelayUrl,
+    opts?: RelayOptions,
   ) {
-    const url = typeof init === "string" ? init : init.url;
     super(
       () => new WebSocket(url),
-      { buffer: { high: 20 }, ...config },
+      { buffer: { high: 20 }, ...opts },
     );
-    this.config = new RelayConfigImpl(this, { ...config, url });
+    this.url = url;
+    this.config = new RelayConfigImpl(this, url, opts ?? {});
   }
 
   subscribe(
@@ -101,6 +62,7 @@ export class Relay
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     const realtime = opts.realtime ?? true;
 
+    let ch_id: ChannelId;
     let cntr_read: ReadableStreamDefaultController<SignedEvent>;
     let last: EventTimestamp;
 
@@ -127,14 +89,14 @@ export class Relay
       {
         start: (cntr) => {
           cntr_read = cntr;
-          this.channel(ch);
+          ch_id = this.channel(ch);
           this.send(["REQ", id, ...fs]);
         },
         stop: () => this.close(id),
         restart: () => this.send(["REQ", id, ...since(last)]),
         cancel: () => {
           ch.close();
-          this.unchannel(ch);
+          this.unchannel(ch_id);
           return this.send(["CLOSE", id]);
         },
       },
@@ -157,5 +119,46 @@ export class Relay
       return super.close();
     }
     return this.send(["CLOSE", sid]);
+  }
+}
+
+class RelayConfigImpl implements Required<RelayOptions> {
+  readonly name: string;
+  readonly buffer: MessageBufferConfig;
+  readonly on: WebSocketEventHooks;
+
+  #relay: Relay;
+  #read: boolean;
+  #write: boolean;
+
+  constructor(
+    relay: Relay,
+    url: RelayUrl,
+    opts: RelayOptions,
+  ) {
+    this.#relay = relay;
+    this.name = opts.name ?? url.slice(6).split("/")[0];
+    this.#read = opts.read ?? true;
+    this.#write = opts.write ?? true;
+    this.on = opts.on ?? {};
+    this.buffer = DualMarkStreamWatermarks.default(opts.buffer ?? { high: 20 });
+  }
+
+  get read() {
+    return this.#read;
+  }
+
+  set read(v: boolean) {
+    if (v === this.#read) return;
+    this.#read = v;
+  }
+
+  get write() {
+    return this.#write;
+  }
+
+  set write(v: boolean) {
+    if (v === this.#write) return;
+    this.#write = v;
   }
 }
