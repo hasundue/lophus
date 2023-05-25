@@ -2,9 +2,9 @@
 
 import {
   afterEach,
-  assertFalse,
   assert,
   assertEquals,
+  assertFalse,
   beforeEach,
   describe,
   it,
@@ -60,14 +60,18 @@ describe("NostrNode", () => {
 
   it("should be recieve messages from the WebSocket", async () => {
     const msgs: string[] = [];
-    node.channel(new WritableStream({
-      write: (msg) => {
-        msgs.push(msg);
-      },
-    }));
-    ws.dispatchEvent(new MessageEvent("message", {
-      data: JSON.stringify(["NOTICE", "test"]),
-    }));
+    node.channel(
+      new WritableStream({
+        write: (msg) => {
+          msgs.push(msg);
+        },
+      }),
+    );
+    ws.dispatchEvent(
+      new MessageEvent("message", {
+        data: JSON.stringify(["NOTICE", "test"]),
+      }),
+    );
     await new Promise((resolve) => {
       setTimeout(resolve, 100);
     });

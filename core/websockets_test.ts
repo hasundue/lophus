@@ -1,6 +1,6 @@
 import {
-  assert,
   afterEach,
+  assert,
   assertEquals,
   beforeEach,
   describe,
