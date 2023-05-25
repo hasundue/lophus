@@ -17,7 +17,7 @@ export class LazyWebSocket {
     protected on?: WebSocketEventHooks,
   ) {}
 
-  protected created(): WebSocket {
+  #created(): WebSocket {
     if (this.#ws) return this.#ws;
 
     this.#ws = this.createWebSocket();
@@ -35,8 +35,8 @@ export class LazyWebSocket {
     return this.#ws;
   }
 
-  protected async ready(): Promise<WebSocket> {
-    this.#ws = this.created();
+  async #ready(): Promise<WebSocket> {
+    this.#ws = this.#created();
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
@@ -55,8 +55,12 @@ export class LazyWebSocket {
     return this.#ws;
   }
 
+  get ready(): Promise<void> {
+    return this.#ready().then(() => {});
+  }
+
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
-    this.#ws = await this.ready();
+    this.#ws = await this.#ready();
     this.#ws.send(data);
   }
 
@@ -65,7 +69,7 @@ export class LazyWebSocket {
     listener: (this: WebSocket, ev: WebSocketEventMap[T]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ) {
-    this.#ws = this.created();
+    this.#ws = this.#created();
     this.#ws.addEventListener(type, listener, options);
   }
 
