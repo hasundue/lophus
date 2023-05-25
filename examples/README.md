@@ -14,7 +14,7 @@ new Relay({ url: "wss://nos.lol" })
 ### Stream from multiple relays with a relay pool
 
 ```ts
-import { RelayPool } from "../lib/pool.ts";
+import { RelayPool } from "../lib/pools.ts";
 import { Timestamp } from "../lib/times.ts";
 
 new RelayPool(
