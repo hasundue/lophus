@@ -1,4 +1,5 @@
 import { Relay } from "../client.ts";
+import { pop, push } from "../core/x/streamtools.ts";
 import {
   afterEach,
   assert,
@@ -8,6 +9,7 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
+
 
 describe("Relay constructor", () => {
   let relay: Relay;
@@ -115,5 +117,27 @@ describe("Relay", () => {
     assert(sub instanceof ReadableStream);
     await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
+  });
+
+  it("should receive text notes", async () => {
+    const sub = relay.subscribe({ kinds: [1] });
+    const note = await pop(sub);
+    assert(note);
+  });
+
+  it("should be able to open multiple subscriptions", () => {
+    const metas = relay.subscribe({ kinds: [0] });
+    const notes = relay.subscribe({ kinds: [1] });
+    assert(metas);
+    assert(notes);
+  });
+
+  it("should recieve metas and notes simultaneously", async () => {
+    const metas = relay.subscribe({ kinds: [0] });
+    const notes = relay.subscribe({ kinds: [1] });
+    const meta = await pop(metas);
+    const note = await pop(notes);
+    assert(meta);
+    assert(note);
   });
 });

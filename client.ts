@@ -8,9 +8,10 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
-import { LazyWebSocket, WebSocketEventHooks } from "./core/websockets.ts";
+import { WebSocketEventHooks } from "./core/websockets.ts";
 import { NostrNode } from "./core/nodes.ts";
 import { broadcast } from "./core/streams.ts";
+import { push } from "./core/x/streamtools.ts";
 
 export * from "./nips/01.ts";
 
@@ -21,7 +22,12 @@ export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   readonly config: Readonly<RelayConfig>;
 
-  #chs: WritableStream<RelayToClientMessage>[] = [];
+  // Writable ends of branched streams of messages from the relay.
+  #receivers: WritableStream<RelayToClientMessage>[] = [];
+
+  // Readable ends of messages to the relay.
+  #senders: ReadableStream<ClientToRelayMessage>[] = [];
+
   #subs = new Map<SubscriptionId, SubscriptionProvider>();
   #notices?: TransformStream<RelayToClientMessage, NoticeBody>;
 
@@ -50,14 +56,19 @@ export class Relay
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
-    const sub = new SubscriptionProvider(this, [filter].flat(), {
+    const ch = new TransformStream<
+      ClientToRelayMessage,
+      RelayToClientMessage
+    >();
+
+    const sub = new SubscriptionProvider(ch.writable, [filter].flat(), {
       id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
     });
 
     this.#subs.set(sub.id, sub);
-    this.#chs.push(sub.ch);
+    this.#receivers.push(sub.reciever);
     this.#broadcast(); // async
 
     return sub;
@@ -77,7 +88,7 @@ export class Relay
       flush: () => this.#notices!.readable.cancel(),
     });
 
-    this.#chs.push(this.#notices.writable);
+    this.#receivers.push(this.#notices.writable);
     this.#broadcast(); // async
 
     return this.#notices.readable;
@@ -87,11 +98,11 @@ export class Relay
     if (this.messages.locked) {
       return; // already broadcasting
     }
-    await broadcast(this.messages, this.#chs);
+    await broadcast(this.messages, this.#receivers);
   }
 
   async close() {
-    await Promise.all(this.#chs.map((ch) => ch.close()));
+    await Promise.all(this.#receivers.map((ch) => ch.close()));
     await super.close();
   }
 }
@@ -127,42 +138,42 @@ export interface Subscription extends ReadableStream<SignedEvent> {
 class SubscriptionProvider extends ReadableStream<SignedEvent>
   implements Subscription {
   readonly id: SubscriptionId;
-  readonly ch: WritableStream<RelayToClientMessage>;
+  readonly reciever: WritableStream<RelayToClientMessage>;
 
   constructor(
-    relay: Relay,
+    sender: WritableStream<ClientToRelayMessage>,
     readonly filter: SubscriptionFilter[],
     readonly opts: SubscriptionOptions,
   ) {
     const id = opts.id as SubscriptionId;
 
-    let controller_read: ReadableStreamDefaultController<SignedEvent>;
-    let last: EventTimestamp;
+    let this_controller: ReadableStreamDefaultController<SignedEvent>;
+    // let last: EventTimestamp;
 
-    const since = (since?: EventTimestamp) =>
-      filter.map((f) => ({ since, ...f }));
+    // const since = (since?: EventTimestamp) =>
+    //   filter.map((f) => ({ since, ...f }));
 
     super({ // new ReadableStream({
       start(controller) {
-        controller_read = controller;
-        relay.send(["REQ", id, ...filter]);
+        this_controller = controller;
+        push(sender, ["REQ", id, ...filter]);
       },
-      pull: () => relay.connected,
-      cancel: () => relay.send(["CLOSE", id]),
+      // pull: () => relay.connected,
+      cancel: () => push(sender, ["CLOSE", id]),
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
 
     this.id = opts.id as SubscriptionId;
 
-    this.ch = new WritableStream<RelayToClientMessage>({
+    this.reciever = new WritableStream<RelayToClientMessage>({
       write: (msg) => {
         if (msg[0] === "EOSE" && msg[1] === id && !opts.realtime) {
-          controller_read!.close();
+          this_controller!.close();
         } else if (msg[0] === "EVENT" && msg[1] === id) {
-          last = msg[2].created_at;
-          controller_read!.enqueue(msg[2]);
+          // last = msg[2].created_at;
+          this_controller!.enqueue(msg[2]);
         }
       },
-      abort: () => this.cancel(),
+      close: () => this.cancel(),
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
   }
 }

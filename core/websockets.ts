@@ -7,10 +7,7 @@ import { Notify } from "./x/async.ts";
 export class LazyWebSocket {
   #ws?: WebSocket;
 
-  #notifier = {
-    opened: new Notify(),
-    closed: new Notify(),
-  };
+  #notifier = new Notify();
 
   constructor(
     protected createWebSocket: () => WebSocket,
@@ -24,11 +21,11 @@ export class LazyWebSocket {
 
     this.#ws.onopen = (ev) => {
       this.on?.open?.(ev);
-      this.#notifier.opened.notifyAll();
+      this.#notifier.notifyAll();
     };
     this.#ws.onclose = (ev) => {
       this.on?.close?.(ev);
-      this.#notifier.closed.notifyAll();
+      this.#notifier.notifyAll();
     };
     this.#ws.onerror = this.on?.error ?? null;
 
@@ -40,17 +37,17 @@ export class LazyWebSocket {
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.#notifier.opened.notified();
+        await this.#notifier.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
 
       case WebSocket.CLOSING:
-        await this.#notifier.closed.notified();
+        await this.#notifier.notified();
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.createWebSocket();
-        await this.#notifier.opened.notified();
+        await this.#notifier.notified();
     }
     return this.#ws;
   }
@@ -79,12 +76,21 @@ export class LazyWebSocket {
 
   async close(code?: number, reason?: string): Promise<void> {
     if (!this.#ws || this.#ws.readyState === WebSocket.CLOSED) {
-      return Promise.resolve();
+      return;
     }
-    if (this.#ws.readyState < WebSocket.CLOSING) {
-      this.#ws.close(code, reason);
+    switch (this.#ws.readyState) {
+      case WebSocket.CONNECTING:
+        await this.#notifier.notified();
+        /* falls through */
+      case WebSocket.OPEN:
+        this.#ws.close(code, reason);
+        /* falls through */
+      case WebSocket.CLOSING:
+        await this.#notifier.notified();
+        /* falls through */
+      case WebSocket.CLOSED:
+        return;
     }
-    await this.#notifier.closed.notified();
   }
 }
 
