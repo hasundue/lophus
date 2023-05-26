@@ -1,4 +1,6 @@
 import { push } from "./x/streamtools.ts";
+import { Mutex } from "./x/async.ts";
+import { allof } from "./utils.ts";
 
 export type BroadcastPromise<T> = keyof Pick<
   typeof Promise<T>,
@@ -8,13 +10,11 @@ export type BroadcastPromise<T> = keyof Pick<
 export function broadcast<T = unknown>(
   source: ReadableStream<T>,
   targets: WritableStream<T>[],
-  promise: BroadcastPromise<T> = "all",
 ) {
   return source.pipeTo(
     new WritableStream({
       write: (msg) => {
-        // deno-lint-ignore no-explicit-any
-        return (Promise[promise] as any)(
+        return Promise.race(
           targets.map((target) => push(target, msg)),
         );
       },
@@ -22,39 +22,18 @@ export function broadcast<T = unknown>(
   );
 }
 
-/**
- * Merge multiple streams into one.
- */
-export function merge<R extends unknown>(
-  streams: ReadableStream<R>[],
-) {
-  const readers = streams.map((st) => st.getReader());
-  return new ReadableStream<R>({
-    pull(controller) {
-      Promise.race(readers.map(async (r) => {
-        const { value, done } = await r.read();
-        if (value) controller.enqueue(value);
-        if (done) throw done;
-      }));
-    },
-  });
-}
-
 export class NonExclusiveWritableStream<W = unknown>
   implements WritableStream<W> {
   readonly locked = false;
 
-  #aggregator: WritableStream<W>;
-  #channels = new Map<string, ReadableStream<W>>();
+  readonly #aggregator: WritableStream<W>;
+  readonly #channels = new Set<WritableStream<W>>();
+  readonly #mutex = new Mutex();
 
   constructor(
     protected underlyingSink: UnderlyingSink<W>,
     protected strategy?: QueuingStrategy<W>,
   ) {
-    this.#aggregator = this.#update();
-  }
-
-  #update() {
     this.#aggregator = new WritableStream<W>({
       write: (chunk, controller) => {
         this.underlyingSink.write?.(chunk, controller);
@@ -62,39 +41,37 @@ export class NonExclusiveWritableStream<W = unknown>
       close: this.underlyingSink.close,
       abort: this.underlyingSink.abort,
     }, this.strategy);
-
-    merge(Array.from(this.#channels.values())).pipeTo(this.#aggregator);
-
-    return this.#aggregator;
   }
 
   getWriter() {
-    const key = crypto.randomUUID();
-    const channel = new TransformStream<W, W>({
-      flush: (controller) => {
-        controller.terminate();
-        this.#channels.delete(key);
-        this.#update();
+    const channel = new WritableStream<W>({
+      write: async (chunk) => {
+        await this.#mutex.acquire();
+        await push(this.#aggregator, chunk);
+        this.#mutex.release();
+      },
+      close: () => {
+        this.#channels.delete(channel);
+      },
+      abort: () => {
+        this.#channels.delete(channel);
       },
     });
-    this.#channels.set(key, channel.readable);
-    this.#update();
-    return channel.writable.getWriter();
+    this.#channels.add(channel);
+    return channel.getWriter();
   }
 
-  // TODO: Make this parallel
-  async abort() {
-    for (const ch of this.#channels.values()) {
-      await ch.cancel();
-    }
-    await this.#aggregator.abort();
+  abort(): Promise<void> {
+    return allof(
+      ...Array.from(this.#channels).map((ch) => ch.abort()),
+      this.#aggregator.abort(),
+    );
   }
 
-  // TODO: Make this parallel
-  async close() {
-    for (const ch of this.#channels.values()) {
-      await ch.cancel();
-    }
-    await this.#aggregator.close();
+  close(): Promise<void> {
+    return allof(
+      ...Array.from(this.#channels).map((ch) => ch.close()),
+      this.#aggregator.close(),
+    );
   }
 }
