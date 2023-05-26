@@ -7,9 +7,9 @@ import { Notify } from "./x/async.ts";
 export class LazyWebSocket {
   #ws?: WebSocket;
 
-  readonly notify = {
-    open: new Notify(),
-    close: new Notify(),
+  readonly notifier = {
+    opened: new Notify(),
+    closed: new Notify(),
   };
 
   constructor(
@@ -24,11 +24,11 @@ export class LazyWebSocket {
 
     this.#ws.onopen = (ev) => {
       this.on?.open?.(ev);
-      this.notify.open.notifyAll();
+      this.notifier.opened.notifyAll();
     };
     this.#ws.onclose = (ev) => {
       this.on?.close?.(ev);
-      this.notify.close.notifyAll();
+      this.notifier.closed.notifyAll();
     };
     this.#ws.onerror = this.on?.error ?? null;
 
@@ -40,23 +40,27 @@ export class LazyWebSocket {
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.notify.open.notified();
+        await this.notifier.opened.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
 
       case WebSocket.CLOSING:
-        await this.notify.close.notified();
+        await this.notifier.closed.notified();
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.createWebSocket();
-        await this.notify.open.notified();
+        await this.notifier.opened.notified();
     }
     return this.#ws;
   }
 
   get ready(): Promise<void> {
     return this.#ready().then(() => {});
+  }
+
+  get status(): WebSocketReadyState {
+    return this.#ws?.readyState ?? WebSocket.CLOSED;
   }
 
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
@@ -80,7 +84,7 @@ export class LazyWebSocket {
     if (this.#ws.readyState < WebSocket.CLOSING) {
       this.#ws.close(code, reason);
     }
-    await this.notify.close.notified();
+    await this.notifier.closed.notified();
   }
 }
 
@@ -89,3 +93,10 @@ export type WebSocketEventHooks = {
     ev: WebSocketEventMap[K],
   ) => void;
 };
+
+export enum WebSocketReadyState {
+  CONNECTING = 0,
+  OPEN = 1,
+  CLOSING = 2,
+  CLOSED = 3,
+}

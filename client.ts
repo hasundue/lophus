@@ -1,7 +1,7 @@
 import type {
-  NoticeBody,
   ClientToRelayMessage,
   EventTimestamp,
+  NoticeBody,
   RelayToClientMessage,
   RelayUrl,
   SignedEvent,
@@ -51,7 +51,7 @@ export class Relay
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
     const sub = new SubscriptionProvider(this.ws, this, [filter].flat(), {
-      id: opts.id ?? crypto.randomUUID(),
+      id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
     });
@@ -74,6 +74,7 @@ export class Relay
           con.enqueue(msg[1]);
         }
       },
+      flush: () => this.#notices!.readable.cancel(),
     });
 
     this.#chs.push(this.#notices.writable);
@@ -83,10 +84,15 @@ export class Relay
   }
 
   async #broadcast(): Promise<void> {
-    if (this.#chs.length > 0) {
+    if (this.messages.locked) {
       return; // already broadcasting
     }
     await broadcast(this.messages, this.#chs);
+  }
+
+  async close() {
+    await Promise.all(this.#chs.map((ch) => ch.close()));
+    await super.close();
   }
 }
 
@@ -123,43 +129,48 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
   readonly id: SubscriptionId;
   readonly ch: WritableStream<RelayToClientMessage>;
 
-  #controller?: ReadableStreamDefaultController<SignedEvent>;
-  #last?: EventTimestamp;
-
   constructor(
     ws: LazyWebSocket,
     relay: Relay,
     readonly filter: SubscriptionFilter[],
     readonly opts: SubscriptionOptions,
   ) {
+    const id = opts.id as SubscriptionId;
+
+    let con_this: ReadableStreamDefaultController<SignedEvent>;
+    let last: EventTimestamp;
+
     const since = (since?: EventTimestamp) =>
       filter.map((f) => ({ since, ...f }));
 
     super({
-      start: (con) => {
-        relay.send(["REQ", this.id, ...filter]);
-        this.#controller = con;
+      start: async (con) => {
+        // Expose controller for later use
+        con_this = con;
+
+        await relay.send(["REQ", id, ...filter]);
+
+        // Try resuming subscription on reconnect
+        ws.addEventListener("open", async () => {
+          await relay.send(["REQ", id, ...since(last)]);
+        });
       },
       pull: () => ws.ready,
-      cancel: () => relay.send(["CLOSE", this.id]),
+      cancel: () => relay.send(["CLOSE", id]),
     }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
 
     this.id = opts.id as SubscriptionId;
 
     this.ch = new WritableStream<RelayToClientMessage>({
       write: (msg) => {
-        if (msg[0] === "EOSE" && msg[1] === this.id && !this.opts.realtime) {
-          this.#controller!.close();
-        } else if (msg[0] === "EVENT" && msg[1] === this.id) {
-          this.#last = msg[2].created_at;
-          this.#controller!.enqueue(msg[2]);
+        if (msg[0] === "EOSE" && msg[1] === id && !opts.realtime) {
+          con_this!.close();
+        } else if (msg[0] === "EVENT" && msg[1] === id) {
+          last = msg[2].created_at;
+          con_this!.enqueue(msg[2]);
         }
       },
+      abort: () => this.cancel(),
     }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
-
-    // Try resuming subscription when the connection is closed.
-    ws.addEventListener("close", () => {
-      relay.send(["REQ", this.id, ...since(this.#last)]);
-    });
   }
 }

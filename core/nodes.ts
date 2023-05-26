@@ -8,6 +8,8 @@ import { push } from "./x/streamtools.ts";
 export class NostrNode<R = NostrMessage, W = NostrMessage>
   extends WritableStream<W> {
   protected ws: LazyWebSocket;
+  readonly notifier: LazyWebSocket["notifier"];
+
   #messages?: ReadableStream<R>;
 
   constructor(
@@ -26,6 +28,11 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
     });
 
     this.ws = new LazyWebSocket(createWebSocket, config?.on ?? {});
+    this.notifier = this.ws.notifier;
+  }
+
+  get status() {
+    return this.ws.status;
   }
 
   get messages() {
@@ -45,6 +52,11 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
 
   async send(msg: W) {
     await push(this, msg);
+  }
+
+  async close() {
+    await this.#messages?.cancel();
+    await super.close();
   }
 }
 

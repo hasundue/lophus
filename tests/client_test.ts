@@ -1,8 +1,8 @@
 import { Relay } from "../client.ts";
 import {
+  afterEach,
   assert,
   assertEquals,
-  assertObjectMatch,
   beforeAll,
   beforeEach,
   describe,
@@ -12,7 +12,7 @@ import {
 describe("Relay constructor", () => {
   let relay: Relay;
 
-  describe("called with url", () => {
+  describe("called with url only", () => {
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net");
     });
@@ -22,7 +22,7 @@ describe("Relay constructor", () => {
     });
 
     it("should have a url", () => {
-      assertEquals(relay.url, "wss://nostr-dev.wellorder.net");
+      assertEquals(relay.config.url, "wss://nostr-dev.wellorder.net");
     });
 
     it("should have a name", () => {
@@ -30,14 +30,10 @@ describe("Relay constructor", () => {
     });
 
     it("should have default options", () => {
-      assertObjectMatch(relay.config.buffer, { high: 20 });
+      assertEquals(relay.config.nbuffer, 10);
       assertEquals(relay.config.read, true);
       assertEquals(relay.config.write, true);
       assertEquals(relay.config.on, {});
-    });
-
-    it("should not have event hooks", () => {
-      assertObjectMatch(relay.config.on, {});
     });
   });
 
@@ -45,9 +41,9 @@ describe("Relay constructor", () => {
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net", {
         name: "test",
-        buffer: { high: 10 },
         read: false,
         write: false,
+        nbuffer: 20,
         on: {
           open: () => {},
           close: () => {},
@@ -65,11 +61,11 @@ describe("Relay constructor", () => {
     });
 
     it("should have a url", () => {
-      assertEquals(relay.url, "wss://nostr-dev.wellorder.net");
+      assertEquals(relay.config.url, "wss://nostr-dev.wellorder.net");
     });
 
     it("should have buffer options", () => {
-      assertObjectMatch(relay.config.buffer, { high: 10 });
+      assertEquals(relay.config.nbuffer, 20);
     });
 
     it("should have read and write options", () => {
@@ -90,5 +86,34 @@ describe("Relay", () => {
 
   beforeEach(() => {
     relay = new Relay("wss://nostr-dev.wellorder.net");
+  });
+
+  afterEach(async () => {
+    await relay.close();
+  });
+
+  it("should not be connected initially", () => {
+    assertEquals(relay.status, WebSocket.CLOSED);
+  });
+
+  it("should connect when notice stream is opened", async () => {
+    const notices = relay.notices;
+    assert(notices instanceof ReadableStream);
+    await relay.notifier.opened.notified();
+    assertEquals(relay.status, WebSocket.OPEN);
+  });
+
+  it("should connect when message stream is opened", async () => {
+    const messages = relay.messages;
+    assert(messages instanceof ReadableStream);
+    await relay.notifier.opened.notified();
+    assertEquals(relay.status, WebSocket.OPEN);
+  });
+
+  it("should connect when a subscription is created", {only:true}, async () => {
+    const sub = relay.subscribe({ kinds: [1] });
+    assert(sub instanceof ReadableStream);
+    await relay.notifier.opened.notified();
+    assertEquals(relay.status, WebSocket.OPEN);
   });
 });
