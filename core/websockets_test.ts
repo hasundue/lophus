@@ -43,12 +43,12 @@ describe("LazyWebSocket", () => {
 
   it("should notify when the WebSocket is opened", async () => {
     lazy.send("test");
-    await lazy.notifier.opened.notified();
+    await lazy.#notifier.opened.notified();
   });
 
   it("should notify when the WebSocket is closed", async () => {
     lazy.addEventListener("open", () => lazy.close());
-    await lazy.notifier.closed.notified();
+    await lazy.#notifier.closed.notified();
   });
 
   it("should trigger the onopen event when the WebSocket is opened", async () => {

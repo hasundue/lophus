@@ -1,6 +1,7 @@
 import type { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
 import { push } from "./x/streamtools.ts";
+import { allof } from "./utils.ts";
 
 /**
  * Common base class for relays and clients.
@@ -8,7 +9,6 @@ import { push } from "./x/streamtools.ts";
 export class NostrNode<R = NostrMessage, W = NostrMessage>
   extends WritableStream<W> {
   protected ws: LazyWebSocket;
-  readonly notifier: LazyWebSocket["notifier"];
 
   #messages?: ReadableStream<R>;
 
@@ -20,19 +20,22 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
       write: (msg) => this.ws.send(JSON.stringify(msg)),
 
       close: async () => {
-        await Promise.all([
+        await allof(
           this.#messages?.cancel(),
           this.ws.close(),
-        ]);
+        );
       },
     });
 
     this.ws = new LazyWebSocket(createWebSocket, config?.on ?? {});
-    this.notifier = this.ws.notifier;
   }
 
   get status() {
     return this.ws.status;
+  }
+
+  get connected() {
+    return this.ws.ready;
   }
 
   get messages() {

@@ -50,7 +50,7 @@ export class Relay
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
-    const sub = new SubscriptionProvider(this.ws, this, [filter].flat(), {
+    const sub = new SubscriptionProvider(this, [filter].flat(), {
       id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
@@ -130,47 +130,39 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
   readonly ch: WritableStream<RelayToClientMessage>;
 
   constructor(
-    ws: LazyWebSocket,
     relay: Relay,
     readonly filter: SubscriptionFilter[],
     readonly opts: SubscriptionOptions,
   ) {
     const id = opts.id as SubscriptionId;
 
-    let con_this: ReadableStreamDefaultController<SignedEvent>;
+    let controller_read: ReadableStreamDefaultController<SignedEvent>;
     let last: EventTimestamp;
 
     const since = (since?: EventTimestamp) =>
       filter.map((f) => ({ since, ...f }));
 
-    super({
-      start: async (con) => {
-        // Expose controller for later use
-        con_this = con;
-
-        await relay.send(["REQ", id, ...filter]);
-
-        // Try resuming subscription on reconnect
-        ws.addEventListener("open", async () => {
-          await relay.send(["REQ", id, ...since(last)]);
-        });
+    super({ // new ReadableStream({
+      start(controller) {
+        controller_read = controller;
+        relay.send(["REQ", id, ...filter]);
       },
-      pull: () => ws.ready,
+      pull: () => relay.connected,
       cancel: () => relay.send(["CLOSE", id]),
-    }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
+    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
 
     this.id = opts.id as SubscriptionId;
 
     this.ch = new WritableStream<RelayToClientMessage>({
       write: (msg) => {
         if (msg[0] === "EOSE" && msg[1] === id && !opts.realtime) {
-          con_this!.close();
+          controller_read!.close();
         } else if (msg[0] === "EVENT" && msg[1] === id) {
           last = msg[2].created_at;
-          con_this!.enqueue(msg[2]);
+          controller_read!.enqueue(msg[2]);
         }
       },
       abort: () => this.cancel(),
-    }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
+    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
   }
 }

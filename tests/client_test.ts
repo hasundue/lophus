@@ -99,21 +99,21 @@ describe("Relay", () => {
   it("should connect when notice stream is opened", async () => {
     const notices = relay.notices;
     assert(notices instanceof ReadableStream);
-    await relay.notifier.opened.notified();
+    await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
   it("should connect when message stream is opened", async () => {
     const messages = relay.messages;
     assert(messages instanceof ReadableStream);
-    await relay.notifier.opened.notified();
+    await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
-  it("should connect when a subscription is created", {only:true}, async () => {
+  it("should connect when a subscription is created",  async () => {
     const sub = relay.subscribe({ kinds: [1] });
     assert(sub instanceof ReadableStream);
-    await relay.notifier.opened.notified();
+    await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 });

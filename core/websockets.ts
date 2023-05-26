@@ -7,7 +7,7 @@ import { Notify } from "./x/async.ts";
 export class LazyWebSocket {
   #ws?: WebSocket;
 
-  readonly notifier = {
+  #notifier = {
     opened: new Notify(),
     closed: new Notify(),
   };
@@ -24,11 +24,11 @@ export class LazyWebSocket {
 
     this.#ws.onopen = (ev) => {
       this.on?.open?.(ev);
-      this.notifier.opened.notifyAll();
+      this.#notifier.opened.notifyAll();
     };
     this.#ws.onclose = (ev) => {
       this.on?.close?.(ev);
-      this.notifier.closed.notifyAll();
+      this.#notifier.closed.notifyAll();
     };
     this.#ws.onerror = this.on?.error ?? null;
 
@@ -40,17 +40,17 @@ export class LazyWebSocket {
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.notifier.opened.notified();
+        await this.#notifier.opened.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
 
       case WebSocket.CLOSING:
-        await this.notifier.closed.notified();
+        await this.#notifier.closed.notified();
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.createWebSocket();
-        await this.notifier.opened.notified();
+        await this.#notifier.opened.notified();
     }
     return this.#ws;
   }
@@ -84,7 +84,7 @@ export class LazyWebSocket {
     if (this.#ws.readyState < WebSocket.CLOSING) {
       this.#ws.close(code, reason);
     }
-    await this.notifier.closed.notified();
+    await this.#notifier.closed.notified();
   }
 }
 
