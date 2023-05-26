@@ -7,45 +7,39 @@ import { push } from "./x/streamtools.ts";
  */
 export class NostrNode<R = NostrMessage, W = NostrMessage>
   extends WritableStream<W> {
-  #ws: LazyWebSocket;
+  protected ws: LazyWebSocket;
   #messages?: ReadableStream<R>;
-
-  protected readonly notify;
 
   constructor(
     createWebSocket: () => WebSocket,
     protected config: NostrNodeConfig = {},
   ) {
     super({
-      write: (msg) => this.#ws.send(JSON.stringify(msg)),
+      write: (msg) => this.ws.send(JSON.stringify(msg)),
 
       close: async () => {
         await Promise.all([
           this.#messages?.cancel(),
-          this.#ws.close(),
+          this.ws.close(),
         ]);
       },
     });
 
-    this.#ws = new LazyWebSocket(createWebSocket, config?.on ?? {});
-
-    this.notify = {
-      ws: this.#ws.notify,
-    };
+    this.ws = new LazyWebSocket(createWebSocket, config?.on ?? {});
   }
 
   get messages() {
     return this.#messages ?? new ReadableStream<R>({
       start: (con) => {
-        this.#ws.addEventListener("message", (ev) => {
+        this.ws.addEventListener("message", (ev) => {
           con.enqueue(JSON.parse(ev.data));
           if (con.desiredSize && con.desiredSize <= 0) {
-            this.#ws.close(1009); // use the 'message is too big' code
+            this.ws.close();
           }
         });
       },
-      pull: () => this.#ws.ready,
-      cancel: () => this.#ws.close(),
+      pull: () => this.ws.ready,
+      cancel: () => this.ws.close(),
     }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
   }
 

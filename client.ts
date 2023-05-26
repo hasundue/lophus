@@ -1,4 +1,5 @@
 import type {
+  NoticeBody,
   ClientToRelayMessage,
   EventTimestamp,
   RelayToClientMessage,
@@ -7,155 +8,158 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
-import type { WebSocketEventHooks } from "./core/websockets.ts";
-import {
-  ChannelId,
-  InternalMessage,
-  MessageBufferConfig,
-  NostrNode,
-} from "./core/nodes.ts";
-import { createDualMarkReadableStream } from "./core/streams.ts";
+import { LazyWebSocket, WebSocketEventHooks } from "./core/websockets.ts";
+import { NostrNode } from "./core/nodes.ts";
+import { broadcast } from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
-export interface RelayConfig {
-  name: string;
-  read: boolean;
-  write: boolean;
-  on: WebSocketEventHooks;
-  buffer: MessageBufferConfig;
-}
-
-export type RelayOptions = Partial<RelayConfig>;
-
-export interface SubscriptionOptions {
-  id?: string;
-  realtime?: boolean;
-  buffer?: MessageBufferConfig;
-}
-
+/**
+ * A class that represents a remote Nostr Relay.
+ */
 export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
-  readonly url: RelayUrl;
-  readonly config: RelayConfig;
+  readonly config: Readonly<RelayConfig>;
+
+  #chs: WritableStream<RelayToClientMessage>[] = [];
+  #subs = new Map<SubscriptionId, SubscriptionProvider>();
+  #notices?: TransformStream<RelayToClientMessage, NoticeBody>;
 
   constructor(
     url: RelayUrl,
-    opts?: RelayOptions,
+    opts?: Partial<RelayOptions>,
   ) {
+    // NostrNode
     super(
       () => new WebSocket(url),
-      { buffer: { high: 20 }, ...opts },
+      { nbuffer: 10, ...opts },
     );
-    this.url = url;
-    this.config = new RelayConfigImpl(this, url, opts ?? {});
+
+    this.config = {
+      url,
+      name: url.slice(6).split("/")[0],
+      read: true,
+      write: true,
+      on: {},
+      nbuffer: 10,
+      ...opts,
+    };
   }
 
   subscribe(
     filter: SubscriptionFilter | SubscriptionFilter[],
-    opts: SubscriptionOptions = {},
-  ): ReadableStream<SignedEvent> {
-    const fs = [filter].flat();
-    const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
-    const realtime = opts.realtime ?? true;
-
-    let ch_id: ChannelId;
-    let cntr_read: ReadableStreamDefaultController<SignedEvent>;
-    let last: EventTimestamp;
-
-    const since = (since: EventTimestamp) => fs.map((f) => ({ since, ...f }));
-
-    const ch = new WritableStream<
-      RelayToClientMessage | InternalMessage
-    >({
-      write: (msg) => {
-        if (msg[0] === "EVENT" && msg[1] === id) {
-          last = msg[2].created_at;
-          return cntr_read.enqueue(msg[2]);
-        }
-        if (msg[0] === "EOSE" && msg[1] === id && !realtime) {
-          return cntr_read.close();
-        }
-        if (msg[0] === "RESTART") {
-          return this.send(["REQ", id, ...since(last)]);
-        }
-      },
+    opts: Partial<SubscriptionOptions> = {},
+  ): Subscription {
+    const sub = new SubscriptionProvider(this.ws, this, [filter].flat(), {
+      id: opts.id ?? crypto.randomUUID(),
+      realtime: opts.realtime ?? true,
+      nbuffer: opts.nbuffer ?? this.config.nbuffer,
     });
 
-    return createDualMarkReadableStream<SignedEvent>(
-      {
-        start: (cntr) => {
-          cntr_read = cntr;
-          ch_id = this.channel(ch);
-          this.send(["REQ", id, ...fs]);
-        },
-        stop: () => this.close(id),
-        restart: () => this.send(["REQ", id, ...since(last)]),
-        cancel: () => {
-          ch.close();
-          this.unchannel(ch_id);
-          return this.send(["CLOSE", id]);
-        },
-      },
-      { high: 20, ...opts.buffer },
-    );
+    this.#subs.set(sub.id, sub);
+    this.#chs.push(sub.ch);
+    this.#broadcast(); // async
+
+    return sub;
   }
 
-  publish(event: SignedEvent): Promise<void> {
-    return this.send(["EVENT", event]);
-  }
-
-  get publisher() {
-    return new WritableStream<SignedEvent>({
-      write: (event) => this.publish(event),
-    });
-  }
-
-  close(sid?: SubscriptionId) {
-    if (!sid) {
-      return super.close();
+  get notices(): ReadableStream<NoticeBody> {
+    if (this.#notices) {
+      return this.#notices.readable;
     }
-    return this.send(["CLOSE", sid]);
+
+    this.#notices = new TransformStream({
+      transform: (msg, con) => {
+        if (msg[0] === "NOTICE") {
+          con.enqueue(msg[1]);
+        }
+      },
+    });
+
+    this.#chs.push(this.#notices.writable);
+    this.#broadcast(); // async
+
+    return this.#notices.readable;
+  }
+
+  async #broadcast(): Promise<void> {
+    if (this.#chs.length > 0) {
+      return; // already broadcasting
+    }
+    await broadcast(this.messages, this.#chs);
   }
 }
 
-class RelayConfigImpl implements Required<RelayOptions> {
-  readonly name: string;
-  readonly buffer: MessageBufferConfig;
-  readonly on: WebSocketEventHooks;
+export interface RelayOptions {
+  name: string;
+  read: boolean;
+  write: boolean;
+  on: WebSocketEventHooks;
+  nbuffer: number;
+}
 
-  #relay: Relay;
-  #read: boolean;
-  #write: boolean;
+export interface RelayConfig extends RelayOptions {
+  url: RelayUrl;
+}
+
+export interface Notice {
+  received_at: EventTimestamp;
+  content: string;
+}
+
+export interface SubscriptionOptions {
+  id: string;
+  realtime: boolean;
+  nbuffer: number;
+}
+
+export interface Subscription extends ReadableStream<SignedEvent> {
+  id: SubscriptionId;
+  // update(filter: SubscriptionFilter | SubscriptionFilter[]): Promise<void>;
+}
+
+class SubscriptionProvider extends ReadableStream<SignedEvent>
+  implements Subscription {
+  readonly id: SubscriptionId;
+  readonly ch: WritableStream<RelayToClientMessage>;
+
+  #controller?: ReadableStreamDefaultController<SignedEvent>;
+  #last?: EventTimestamp;
 
   constructor(
+    ws: LazyWebSocket,
     relay: Relay,
-    url: RelayUrl,
-    opts: RelayOptions,
+    readonly filter: SubscriptionFilter[],
+    readonly opts: SubscriptionOptions,
   ) {
-    this.#relay = relay;
-    this.name = opts.name ?? url.slice(6).split("/")[0];
-    this.#read = opts.read ?? true;
-    this.#write = opts.write ?? true;
-    this.on = opts.on ?? {};
-    this.buffer = opts.buffer ?? { high: 20 };
-  }
+    const since = (since?: EventTimestamp) =>
+      filter.map((f) => ({ since, ...f }));
 
-  get read() {
-    return this.#read;
-  }
+    super({
+      start: (con) => {
+        relay.send(["REQ", this.id, ...filter]);
+        this.#controller = con;
+      },
+      pull: () => ws.ready,
+      cancel: () => relay.send(["CLOSE", this.id]),
+    }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
 
-  set read(v: boolean) {
-    if (v === this.#read) return;
-    this.#read = v;
-  }
+    this.id = opts.id as SubscriptionId;
 
-  get write() {
-    return this.#write;
-  }
+    this.ch = new WritableStream<RelayToClientMessage>({
+      write: (msg) => {
+        if (msg[0] === "EOSE" && msg[1] === this.id && !this.opts.realtime) {
+          this.#controller!.close();
+        } else if (msg[0] === "EVENT" && msg[1] === this.id) {
+          this.#last = msg[2].created_at;
+          this.#controller!.enqueue(msg[2]);
+        }
+      },
+    }, new CountQueuingStrategy({ highWaterMark: relay.config.nbuffer }));
 
-  set write(v: boolean) {
-    if (v === this.#write) return;
-    this.#write = v;
+    // Try resuming subscription when the connection is closed.
+    ws.addEventListener("close", () => {
+      relay.send(["REQ", this.id, ...since(this.#last)]);
+    });
   }
 }

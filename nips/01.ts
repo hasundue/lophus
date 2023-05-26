@@ -79,9 +79,10 @@ export type EventMessage<K extends EventKind = EventKind> = [
   SignedEvent<K>,
 ];
 export type EoseMessage = ["EOSE", SubscriptionId];
-export type NoticeMessage = ["NOTICE", string];
+export type NoticeMessage = ["NOTICE", NoticeBody];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
+export type NoticeBody = Brand<string, "NoticeBody">;
 
 export interface SubscriptionFilter {
   ids?: EventId[];
