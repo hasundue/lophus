@@ -1,6 +1,5 @@
 import { NostrNode } from "./nodes.ts";
-import { push } from "./x/streamtools.ts";
-import { NostrMessage } from "../nips/01.ts";
+import { pop, push } from "./x/streamtools.ts";
 import {
   afterEach,
   assert,
@@ -46,21 +45,13 @@ describe("NostrNode", () => {
   });
 
   it("should recieve messages from the WebSocket", async () => {
-    const msgs: NostrMessage[] = [];
-    node.messages.pipeTo(
-      new WritableStream({
-        write(msg) {
-          msgs.push(msg);
-        },
-      }),
-    );
+    const msg = pop(node.messages);
     ws.dispatchEvent(
       new MessageEvent("message", {
         data: JSON.stringify(["NOTICE", "test"]),
       }),
     );
-    await node.messages.cancel();
-    assertEquals(msgs[0], ["NOTICE", "test"]);
+    assertEquals(await msg, ["NOTICE", "test"]);
   });
 
   it("should close the WebSocket when the node is closed", async () => {

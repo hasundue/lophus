@@ -82,7 +82,7 @@ export type EoseMessage = ["EOSE", SubscriptionId];
 export type NoticeMessage = ["NOTICE", NoticeBody];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
-export type NoticeBody = Brand<string, "NoticeBody">;
+export type NoticeBody = string;
 
 export interface SubscriptionFilter {
   ids?: EventId[];
