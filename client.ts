@@ -10,7 +10,6 @@ import type {
 } from "./nips/01.ts";
 import { NostrNode } from "./core/nodes.ts";
 import { WebSocketEventHooks } from "./core/websockets.ts";
-import { allof } from "./core/utils.ts";
 
 export * from "./nips/01.ts";
 
@@ -68,7 +67,7 @@ export class Relay
 
   async close(): Promise<void> {
     await this.#notices?.cancel();
-    await allof(...[...this.#subscriptions.values()].map((s) => s.cancel()));
+    await Promise.all([...this.#subscriptions.values()].map((s) => s.cancel()));
     await super.close();
   }
 }
