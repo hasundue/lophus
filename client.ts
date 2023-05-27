@@ -139,7 +139,7 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
         return messenger.write(["REQ", id, ...filter]);
       },
       // pull: () => relay.connected,
-      cancel: async () => {
+      async cancel() {
         await messenger.write(["CLOSE", id]);
         messenger.releaseLock();
         aborter.abort();
