@@ -27,7 +27,7 @@ export class NonExclusiveWritableStream<W = unknown>
   readonly locked = false;
 
   readonly #aggregator: WritableStream<W>;
-  readonly #channels = new Set<WritableStream<W>>();
+  readonly #writers = new Set<WritableStreamDefaultWriter<W>>();
   readonly #mutex = new Mutex();
 
   constructor(
@@ -35,6 +35,7 @@ export class NonExclusiveWritableStream<W = unknown>
     protected strategy?: QueuingStrategy<W>,
   ) {
     this.#aggregator = new WritableStream<W>({
+      start: this.underlyingSink.start,
       write: (chunk, controller) => {
         this.underlyingSink.write?.(chunk, controller);
       },
@@ -51,27 +52,35 @@ export class NonExclusiveWritableStream<W = unknown>
         this.#mutex.release();
       },
       close: () => {
-        this.#channels.delete(channel);
+        this.#writers.delete(writer);
       },
       abort: () => {
-        this.#channels.delete(channel);
+        this.#writers.delete(writer);
       },
     });
-    this.#channels.add(channel);
-    return channel.getWriter();
-  }
 
-  abort(): Promise<void> {
-    return allof(
-      ...Array.from(this.#channels).map((ch) => ch.abort()),
-      this.#aggregator.abort(),
-    );
+    const writer = channel.getWriter();
+    this.#writers.add(writer);
+
+    (async () => {
+      await writer.closed;
+      this.#writers.delete(writer);
+    })();
+
+    return writer;
   }
 
   close(): Promise<void> {
     return allof(
-      ...Array.from(this.#channels).map((ch) => ch.close()),
+      ...Array.from(this.#writers).map((w) => w.close()),
       this.#aggregator.close(),
+    );
+  }
+
+  abort(): Promise<void> {
+    return allof(
+      ...Array.from(this.#writers).map((w) => w.abort()),
+      this.#aggregator.abort(),
     );
   }
 }

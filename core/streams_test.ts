@@ -1,6 +1,11 @@
-import { assertEquals, beforeAll, describe, it } from "../lib/std/testing.ts";
-import { collect } from "../lib/x/streamtools.ts";
-import { broadcast, createDualMarkReadableStream } from "./streams.ts";
+import {
+  assert,
+  assertEquals,
+  beforeAll,
+  describe,
+  it,
+} from "../lib/std/testing.ts";
+import { broadcast, NonExclusiveWritableStream } from "./streams.ts";
 
 describe("broadcast", () => {
   it("should broadcast messages to multiple targets", async () => {
@@ -34,34 +39,92 @@ describe("broadcast", () => {
   });
 });
 
-describe("ImpatientReadableStream", () => {
-  let stops = 0;
-  let restarts = 0;
+describe("NonExclusiveWritableStream", () => {
+  let results: number[];
+  let stream: NonExclusiveWritableStream<number>;
+  let writer1: WritableStreamDefaultWriter<number>;
+  let writer2: WritableStreamDefaultWriter<number>;
 
-  beforeAll(async () => {
-    const stream = createDualMarkReadableStream<number>({
-      start: (controller) => {
-        controller.enqueue(1);
-        controller.enqueue(2);
-        controller.enqueue(3);
-        controller.close();
+  beforeAll(() => {
+    stream = new NonExclusiveWritableStream<number>({
+      start() {
+        results = [];
       },
-      stop: () => {
-        stops++;
+      write(msg) {
+        results.push(msg);
       },
-      restart: () => {
-        restarts++;
+      close() {
+        results = [];
       },
-    }, { high: 2, low: 1 });
-
-    await collect(stream);
+      abort() {
+        results = [];
+      },
+    });
   });
 
-  it("should stop after a certain number of messages", () => {
-    assertEquals(stops, 1);
+  it("should be constructable", () => {
+    assert(stream instanceof NonExclusiveWritableStream);
   });
 
-  it("should restart after a certain number of messages", () => {
-    assertEquals(restarts, 1);
+  it("should not be locked after construction", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should call the start method on construction", () => {
+    assertEquals(results, []);
+  });
+
+  it("should provide a writer", () => {
+    writer1 = stream.getWriter();
+    assert(writer1 instanceof WritableStreamDefaultWriter);
+  });
+
+  it("should not be locked after providing a writer", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should write to the underlying sink", async () => {
+    await writer1.write(1);
+    assertEquals(results, [1]);
+  });
+
+  it("should provide multiple writers", async () => {
+    writer2 = stream.getWriter();
+    await writer2.write(2);
+    assertEquals(results, [1, 2]);
+  });
+
+  it("should not be locked after providing multiple writers", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should be writable from multiple writers simultaneously", async () => {
+    await Promise.all([
+      writer1.write(3),
+      writer2.write(4),
+    ]);
+    assertEquals(results, [1, 2, 3, 4]);
+  });
+
+  it("should allow a writer to be closed", async () => {
+    await writer2.close();
+  });
+
+  it("should be writable from the remaining writer", async () => {
+    await writer1.write(5);
+    assertEquals(results, [1, 2, 3, 4, 5]);
+  });
+
+  it("should be closable while a writer is active", async () => {
+    await stream.close();
+  });
+
+  it("should close all writers when closed", async () => {
+    await writer1.closed;
+    await writer2.closed;
+  });
+
+  it("should call the close method on close", () => {
+    assertEquals(results, []);
   });
 });
