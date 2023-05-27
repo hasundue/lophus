@@ -1,6 +1,9 @@
 import type { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
-import { NonExclusiveWritableStream } from "./streams.ts";
+import {
+  NonExclusiveReadableStream,
+  NonExclusiveWritableStream,
+} from "./streams.ts";
 import { allof } from "./utils.ts";
 
 /**
@@ -10,7 +13,7 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
   extends NonExclusiveWritableStream<W> {
   protected ws: LazyWebSocket;
 
-  #messages?: ReadableStream<R>;
+  #messages?: NonExclusiveReadableStream<R>;
 
   constructor(
     createWebSocket: () => WebSocket,
@@ -39,7 +42,7 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
   }
 
   get messages() {
-    return this.#messages ?? new ReadableStream<R>({
+    return this.#messages ??= new NonExclusiveReadableStream<R>({
       start: (con) => {
         this.ws.addEventListener("message", (ev) => {
           con.enqueue(JSON.parse(ev.data));
