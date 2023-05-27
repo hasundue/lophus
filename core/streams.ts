@@ -29,12 +29,15 @@ export class NonExclusiveReadableStream<R = unknown> {
     return reader;
   }
 
-  pipeTo(writable: WritableStream<R>): Promise<void> {
-    return this.#branch().pipeTo(writable);
+  pipeTo(writable: WritableStream<R>, options?: PipeOptions): Promise<void> {
+    return this.#branch().pipeTo(writable, options);
   }
 
-  pipeThrough<T>(transform: TransformStream<R, T>): ReadableStream<T> {
-    return this.#branch().pipeThrough(transform);
+  pipeThrough<T>(
+    transform: TransformStream<R, T>,
+    options?: PipeOptions,
+  ): ReadableStream<T> {
+    return this.#branch().pipeThrough(transform, options);
   }
 
   cancel(): Promise<void> {

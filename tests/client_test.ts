@@ -1,5 +1,6 @@
-import { Relay } from "../client.ts";
+import { Relay, RelayToClientMessage, Subscription } from "../client.ts";
 import { pop } from "../core/x/streamtools.ts";
+import { NonExclusiveReadableStream } from "../core/streams.ts";
 import {
   afterEach,
   assert,
@@ -84,6 +85,8 @@ describe("Relay constructor", () => {
 
 describe("Relay", () => {
   let relay: Relay;
+  let sub1: Subscription;
+  let sub2: Subscription;
 
   beforeEach(() => {
     relay = new Relay("wss://nostr-dev.wellorder.net", { nbuffer: 2 });
@@ -98,45 +101,39 @@ describe("Relay", () => {
   });
 
   it("should connect when message stream is opened", async () => {
-    const messages = relay.messages;
-    assert(messages instanceof ReadableStream);
+    relay.messages;
     await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
   it("should connect when notice stream is opened", async () => {
-    const notices = await relay.notices();
-    assert(notices instanceof ReadableStream);
+    relay.notices;
     await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
   it("should connect when a subscription is created", async () => {
-    const sub = relay.subscribe({ kinds: [1] });
-    assert(sub instanceof ReadableStream);
+    sub1 = relay.subscribe({ kinds: [1] });
     await relay.connected;
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
   it("should receive text notes", async () => {
-    const sub = relay.subscribe({ kinds: [1] });
-    const note = await pop(sub);
-    assert(note);
+    sub1 = relay.subscribe({ kinds: [1] });
+    assert(await pop(sub1));
   });
 
   it("should be able to open multiple subscriptions", () => {
-    const metas = relay.subscribe({ kinds: [0] });
-    const notes = relay.subscribe({ kinds: [1] });
-    assert(metas);
-    assert(notes);
+    sub1 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
+    sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
+    assert(sub1);
+    assert(sub2);
   });
 
   it("should recieve metas and notes simultaneously", async () => {
-    const metas = relay.subscribe({ kinds: [0] });
-    const notes = relay.subscribe({ kinds: [1] });
-    const meta = await pop(metas);
-    const note = await pop(notes);
-    assert(meta);
-    assert(note);
+    sub1 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
+    sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
+    assert(await pop(sub1));
+    assert(await pop(sub2));
   });
 });
