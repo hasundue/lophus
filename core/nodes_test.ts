@@ -1,5 +1,4 @@
 import { NostrNode } from "./nodes.ts";
-import { pop } from "./x/streamtools.ts";
 import {
   afterEach,
   assert,
@@ -49,13 +48,15 @@ describe("NostrNode", () => {
   });
 
   it("should recieve messages from the WebSocket", async () => {
-    const msg = pop(node.messages);
+    const reader = node.messages.getReader();
     ws.dispatchEvent(
       new MessageEvent("message", {
         data: JSON.stringify(["NOTICE", "test"]),
       }),
     );
-    assertEquals(await msg, ["NOTICE", "test"]);
+    const res = await reader.read();
+    reader.releaseLock();
+    assertEquals(res.value, ["NOTICE", "test"]);
   });
 
   it("should close the WebSocket when the node is closed", async () => {

@@ -51,8 +51,6 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
           }
         });
       },
-      pull: () => this.ws.ready,
-      cancel: () => this.ws.close(),
     }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
   }
 
