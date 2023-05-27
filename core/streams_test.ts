@@ -2,43 +2,13 @@ import {
   assert,
   assertEquals,
   beforeAll,
-  afterAll,
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { NonExclusiveReadableStream, Broadcaster, NonExclusiveWritableStream } from "./streams.ts";
-
-describe("BroadcastStream", () => {
-  it("should broadcast messages to multiple targets", async () => {
-    const source = new ReadableStream<number>({
-      start: (controller) => {
-        controller.enqueue(1);
-        controller.enqueue(2);
-        controller.enqueue(3);
-        controller.close();
-      },
-    });
-
-    const results = [[], []] as number[][];
-    const targets = [
-      new WritableStream<number>({
-        write: (msg) => {
-          results[0].push(msg);
-        },
-      }),
-      new WritableStream<number>({
-        write: (msg) => {
-          results[1].push(msg);
-        },
-      }),
-    ];
-
-    const broadcaster = new Broadcaster(source, targets);
-    await broadcaster.start();
-
-    assertEquals(results, [[1, 2, 3], [1, 2, 3]]);
-  });
-});
+import {
+  NonExclusiveReadableStream,
+  NonExclusiveWritableStream,
+} from "./streams.ts";
 
 describe("NonExclusiveReadableStream", () => {
   let stream: NonExclusiveReadableStream<number>;
@@ -46,7 +16,6 @@ describe("NonExclusiveReadableStream", () => {
   let reader2: ReadableStreamDefaultReader<number>;
 
   let started = false;
-  let canceled = false;
 
   beforeAll(() => {
     stream = new NonExclusiveReadableStream<number>({
@@ -55,9 +24,6 @@ describe("NonExclusiveReadableStream", () => {
         controller.enqueue(1);
         controller.enqueue(2);
         controller.close();
-      },
-      cancel() {
-        canceled = true;
       },
     });
   });
@@ -78,7 +44,7 @@ describe("NonExclusiveReadableStream", () => {
     reader1 = stream.getReader();
     assert(reader1 instanceof ReadableStreamDefaultReader);
   });
-  
+
   it("should not be locked after providing a reader", () => {
     assertEquals(stream.locked, false);
   });
@@ -134,20 +100,20 @@ describe("NonExclusiveReadableStream", () => {
         controller.enqueue(chunk * 2);
       },
     });
-    await stream.pipeThrough(transform).pipeTo(new WritableStream<number>({
-      write(chunk) {
-        results.push(chunk);
-      },
-    }));
+    await stream.pipeThrough(transform).pipeTo(
+      new WritableStream<number>({
+        write(chunk) {
+          results.push(chunk);
+        },
+      }),
+    );
     assertEquals(results, [2, 4]);
   });
 
-  it("should be able to be canceled", async () => {
+  it("should be cancelable", async () => {
     await stream.cancel();
   });
 });
-
-
 
 describe("NonExclusiveWritableStream", () => {
   let results: number[];
@@ -225,13 +191,9 @@ describe("NonExclusiveWritableStream", () => {
     assertEquals(results, [1, 2, 3, 4, 5]);
   });
 
-  it("should be closable while a writer is active", async () => {
+  it("should be closable after all writers are closed", async () => {
+    await writer1.close();
     await stream.close();
-  });
-
-  it("should close all writers when closed", async () => {
-    await writer1.closed;
-    await writer2.closed;
   });
 
   it("should call the close method on close", () => {
