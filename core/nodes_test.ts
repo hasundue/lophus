@@ -1,5 +1,5 @@
 import { NostrNode } from "./nodes.ts";
-import { pop, push } from "./x/streamtools.ts";
+import { pop } from "./x/streamtools.ts";
 import {
   afterEach,
   assert,
@@ -18,11 +18,15 @@ describe("NostrNode", () => {
     node = new NostrNode(() => {
       ws = new WebSocket("wss://nostr-dev.wellorder.net");
       return ws;
-    });
+    }, { on: { error: console.error } });
   });
 
   afterEach(async () => {
-    await node.close().catch(() => {});
+    await node.close().catch((err) => {
+      if (err.message !== "Writable stream is closed or errored.") {
+        throw err;
+      }
+    });
   });
 
   it("should be able to create a NostrNode instance", () => {
@@ -39,7 +43,7 @@ describe("NostrNode", () => {
   });
 
   it("should connect to the WebSocket when a message is sent", async () => {
-    await push(node, ["NOTICE", "test"]);
+    await node.send(["NOTICE", "test"]);
     assert(ws instanceof WebSocket);
     assertEquals(ws.readyState, WebSocket.OPEN);
   });
@@ -55,7 +59,7 @@ describe("NostrNode", () => {
   });
 
   it("should close the WebSocket when the node is closed", async () => {
-    await push(node, ["NOTICE", "test"]);
+    await node.send(["NOTICE", "test"]);
     await node.close();
     assertEquals(ws.readyState, WebSocket.CLOSED);
   });

@@ -1,7 +1,6 @@
 import type { NostrMessage } from "../nips/01.ts";
 import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
-import { push } from "./x/streamtools.ts";
 import { allof } from "./utils.ts";
 
 /**
@@ -54,8 +53,10 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
     }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
   }
 
-  async send(msg: W) {
-    await push(this, msg);
+  async send(msg: W): Promise<void> {
+    const writer = this.getWriter();
+    await writer.write(msg);
+    await writer.close();
   }
 }
 
