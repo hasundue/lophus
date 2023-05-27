@@ -1,4 +1,4 @@
-import { Mutex } from "./x/async.ts";
+import { Lock } from "./x/async.ts";
 import { push } from "./x/streamtools.ts";
 
 export class NonExclusiveReadableStream<R = unknown> {
@@ -49,23 +49,20 @@ export class NonExclusiveWritableStream<W = unknown>
   implements WritableStream<W> {
   readonly locked = false;
 
-  readonly #aggregator: WritableStream<W>;
-  readonly #mutex = new Mutex();
+  readonly #sink: Lock<WritableStream<W>>;
 
   constructor(
     underlyingSink: UnderlyingSink<W>,
     strategy?: QueuingStrategy<W>,
   ) {
-    this.#aggregator = new WritableStream<W>(underlyingSink, strategy);
+    this.#sink = new Lock(
+      new WritableStream<W>(underlyingSink, strategy),
+    );
   }
 
   getWriter() {
     const channel = new WritableStream<W>({
-      write: async (chunk) => {
-        await this.#mutex.acquire();
-        await push(this.#aggregator, chunk);
-        this.#mutex.release();
-      },
+      write: (chunk) => this.#sink.lock((sink) => push(sink, chunk)),
     });
     const writer = channel.getWriter();
 
@@ -76,10 +73,10 @@ export class NonExclusiveWritableStream<W = unknown>
   }
 
   close(): Promise<void> {
-    return this.#aggregator.close();
+    return this.#sink.lock((sink) => sink.close());
   }
 
   abort(): Promise<void> {
-    return this.#aggregator.abort();
+    return this.#sink.lock((sink) => sink.abort());
   }
 }
