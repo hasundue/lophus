@@ -9,7 +9,7 @@ import type {
   SubscriptionId,
 } from "./nips/01.ts";
 import { NostrNode } from "./core/nodes.ts";
-import { WebSocketEventHooks } from "./core/websockets.ts";
+import type { WebSocketEventHooks } from "./core/websockets.ts";
 
 export * from "./nips/01.ts";
 
