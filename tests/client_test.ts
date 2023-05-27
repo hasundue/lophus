@@ -1,5 +1,5 @@
 import { Relay, Subscription } from "../client.ts";
-import { pop } from "../core/x/streamtools.ts";
+import { pop } from "../lib/x/streamtools.ts";
 import {
   afterEach,
   assert,
