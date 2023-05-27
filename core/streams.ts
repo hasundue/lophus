@@ -31,17 +31,10 @@ export class NonExclusiveWritableStream<W = unknown>
   readonly #mutex = new Mutex();
 
   constructor(
-    protected underlyingSink: UnderlyingSink<W>,
-    protected strategy?: QueuingStrategy<W>,
+    underlyingSink: UnderlyingSink<W>,
+    strategy?: QueuingStrategy<W>,
   ) {
-    this.#aggregator = new WritableStream<W>({
-      start: this.underlyingSink.start,
-      write: (chunk, controller) => {
-        this.underlyingSink.write?.(chunk, controller);
-      },
-      close: this.underlyingSink.close,
-      abort: this.underlyingSink.abort,
-    }, this.strategy);
+    this.#aggregator = new WritableStream<W>(underlyingSink, strategy);
   }
 
   getWriter() {
