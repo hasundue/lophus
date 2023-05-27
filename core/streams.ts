@@ -1,25 +1,32 @@
-import { push } from "./x/streamtools.ts";
 import { Mutex } from "./x/async.ts";
+import { push } from "./x/streamtools.ts";
 import { allof } from "./utils.ts";
 
-export type BroadcastPromise<T> = keyof Pick<
-  typeof Promise<T>,
-  "all" | "race" | "any"
->;
+export class BroadcastStream<T = unknown> extends WritableStream<T> {
+  readonly #writers = new Set<WritableStreamDefaultWriter<T>>();
 
-export function broadcast<T = unknown>(
-  source: ReadableStream<T>,
-  targets: WritableStream<T>[],
-) {
-  return source.pipeTo(
-    new WritableStream({
+  constructor(
+    readonly targets: WritableStream<T>[],
+    readonly strategy?: QueuingStrategy<T>,
+  ) {
+    super({
       write: (msg) => {
-        return Promise.race(
-          targets.map((target) => push(target, msg)),
-        );
+        this.#writers.forEach((w) => w.write(msg));
       },
-    }),
-  );
+      close: () => {
+        this.#writers.forEach((w) => w.close());
+      },
+      abort: () => {
+        this.#writers.forEach((w) => w.abort());
+      },
+    }, strategy);
+
+    targets.forEach((t) => this.addTarget(t));
+  }
+
+  addTarget(target: WritableStream<T>) {
+    this.#writers.add(target.getWriter());
+  }
 }
 
 export class NonExclusiveWritableStream<W = unknown>

@@ -5,9 +5,9 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { broadcast, NonExclusiveWritableStream } from "./streams.ts";
+import { BroadcastStream, NonExclusiveWritableStream } from "./streams.ts";
 
-describe("broadcast", () => {
+describe("BroadcastStream", () => {
   it("should broadcast messages to multiple targets", async () => {
     const source = new ReadableStream<number>({
       start: (controller) => {
@@ -19,7 +19,6 @@ describe("broadcast", () => {
     });
 
     const results = [[], []] as number[][];
-
     const targets = [
       new WritableStream<number>({
         write: (msg) => {
@@ -33,7 +32,8 @@ describe("broadcast", () => {
       }),
     ];
 
-    await broadcast(source, targets);
+    const broadcaster = new BroadcastStream(targets);
+    await source.pipeTo(broadcaster);
 
     assertEquals(results, [[1, 2, 3], [1, 2, 3]]);
   });
