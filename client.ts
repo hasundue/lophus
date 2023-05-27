@@ -68,7 +68,7 @@ export class Relay
   async close(): Promise<void> {
     await this.#notices?.cancel();
     await Promise.all([...this.#subscriptions.values()].map((s) => s.cancel()));
-    await super.close();
+    return super.close();
   }
 }
 
