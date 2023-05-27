@@ -8,10 +8,10 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
-import { WebSocketEventHooks } from "./core/websockets.ts";
 import { NostrNode } from "./core/nodes.ts";
-import { broadcast } from "./core/streams.ts";
-import { push } from "./core/x/streamtools.ts";
+import { WebSocketEventHooks } from "./core/websockets.ts";
+import { Broadcaster } from "./core/streams.ts";
+// import { allof } from "./core/utils.ts";
 
 export * from "./nips/01.ts";
 
@@ -22,14 +22,9 @@ export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   readonly config: Readonly<RelayConfig>;
 
-  // Writable ends of branched streams of messages from the relay.
-  #receivers: WritableStream<RelayToClientMessage>[] = [];
-
-  // Readable ends of messages to the relay.
-  #senders: ReadableStream<ClientToRelayMessage>[] = [];
-
-  #subs = new Map<SubscriptionId, SubscriptionProvider>();
+  #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
   #notices?: TransformStream<RelayToClientMessage, NoticeBody>;
+  #broadcaster?: Broadcaster<RelayToClientMessage>;
 
   constructor(
     url: RelayUrl,
@@ -52,29 +47,27 @@ export class Relay
     };
   }
 
+  protected get broadcaster(): Broadcaster<RelayToClientMessage> {
+    return this.#broadcaster ??= new Broadcaster(this.messages);
+  }
+
   subscribe(
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
-    const ch = new TransformStream<
-      ClientToRelayMessage,
-      RelayToClientMessage
-    >();
-
-    const sub = new SubscriptionProvider(ch.writable, [filter].flat(), {
+    const sub = new SubscriptionProvider(this, [filter].flat(), {
       id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
     });
 
-    this.#subs.set(sub.id, sub);
-    this.#receivers.push(sub.reciever);
-    this.#broadcast(); // async
+    this.#subscriptions.set(sub.id, sub);
+    this.broadcaster.addTarget(sub.channel).start();
 
     return sub;
   }
 
-  get notices(): ReadableStream<NoticeBody> {
+  async notices() {
     if (this.#notices) {
       return this.#notices.readable;
     }
@@ -88,21 +81,13 @@ export class Relay
       flush: () => this.#notices!.readable.cancel(),
     });
 
-    this.#receivers.push(this.#notices.writable);
-    this.#broadcast(); // async
+    await this.broadcaster.addTarget(this.#notices.writable).start();
 
     return this.#notices.readable;
   }
 
-  async #broadcast(): Promise<void> {
-    if (this.messages.locked) {
-      return; // already broadcasting
-    }
-    await broadcast(this.messages, this.#receivers);
-  }
-
   async close() {
-    await Promise.all(this.#receivers.map((ch) => ch.close()));
+    await this.#broadcaster?.close();
     await super.close();
   }
 }
@@ -138,15 +123,16 @@ export interface Subscription extends ReadableStream<SignedEvent> {
 class SubscriptionProvider extends ReadableStream<SignedEvent>
   implements Subscription {
   readonly id: SubscriptionId;
-  readonly reciever: WritableStream<RelayToClientMessage>;
+  readonly channel: WritableStream<RelayToClientMessage>;
 
   constructor(
-    sender: WritableStream<ClientToRelayMessage>,
+    relay: Relay,
     readonly filter: SubscriptionFilter[],
     readonly opts: SubscriptionOptions,
   ) {
     const id = opts.id as SubscriptionId;
 
+    const writer = relay.getWriter();
     let this_controller: ReadableStreamDefaultController<SignedEvent>;
     // let last: EventTimestamp;
 
@@ -156,15 +142,18 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
     super({ // new ReadableStream({
       start(controller) {
         this_controller = controller;
-        push(sender, ["REQ", id, ...filter]);
+        return writer.write(["REQ", id, ...filter]);
       },
       // pull: () => relay.connected,
-      cancel: () => push(sender, ["CLOSE", id]),
+      cancel: async () => {
+        await writer.write(["CLOSE", id]),
+        await writer.close();
+      },
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
 
     this.id = opts.id as SubscriptionId;
 
-    this.reciever = new WritableStream<RelayToClientMessage>({
+    this.channel = new WritableStream<RelayToClientMessage>({
       write: (msg) => {
         if (msg[0] === "EOSE" && msg[1] === id && !opts.realtime) {
           this_controller!.close();

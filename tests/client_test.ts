@@ -1,5 +1,5 @@
 import { Relay } from "../client.ts";
-import { pop, push } from "../core/x/streamtools.ts";
+import { pop } from "../core/x/streamtools.ts";
 import {
   afterEach,
   assert,
@@ -9,7 +9,6 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
-
 
 describe("Relay constructor", () => {
   let relay: Relay;
@@ -87,7 +86,7 @@ describe("Relay", () => {
   let relay: Relay;
 
   beforeEach(() => {
-    relay = new Relay("wss://nostr-dev.wellorder.net");
+    relay = new Relay("wss://nostr-dev.wellorder.net", { nbuffer: 2 });
   });
 
   afterEach(async () => {
@@ -98,13 +97,6 @@ describe("Relay", () => {
     assertEquals(relay.status, WebSocket.CLOSED);
   });
 
-  it("should connect when notice stream is opened", async () => {
-    const notices = relay.notices;
-    assert(notices instanceof ReadableStream);
-    await relay.connected;
-    assertEquals(relay.status, WebSocket.OPEN);
-  });
-
   it("should connect when message stream is opened", async () => {
     const messages = relay.messages;
     assert(messages instanceof ReadableStream);
@@ -112,7 +104,14 @@ describe("Relay", () => {
     assertEquals(relay.status, WebSocket.OPEN);
   });
 
-  it("should connect when a subscription is created",  async () => {
+  it("should connect when notice stream is opened", async () => {
+    const notices = await relay.notices();
+    assert(notices instanceof ReadableStream);
+    await relay.connected;
+    assertEquals(relay.status, WebSocket.OPEN);
+  });
+
+  it("should connect when a subscription is created", async () => {
     const sub = relay.subscribe({ kinds: [1] });
     assert(sub instanceof ReadableStream);
     await relay.connected;

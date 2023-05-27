@@ -2,10 +2,11 @@ import {
   assert,
   assertEquals,
   beforeAll,
+  afterAll,
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { BroadcastStream, NonExclusiveWritableStream } from "./streams.ts";
+import { NonExclusiveReadableStream, Broadcaster, NonExclusiveWritableStream } from "./streams.ts";
 
 describe("BroadcastStream", () => {
   it("should broadcast messages to multiple targets", async () => {
@@ -32,12 +33,91 @@ describe("BroadcastStream", () => {
       }),
     ];
 
-    const broadcaster = new BroadcastStream(targets);
-    await source.pipeTo(broadcaster);
+    const broadcaster = new Broadcaster(source, targets);
+    await broadcaster.start();
 
     assertEquals(results, [[1, 2, 3], [1, 2, 3]]);
   });
 });
+
+describe("NonExclusiveReadableStream", () => {
+  let results: number[];
+  let stream: NonExclusiveReadableStream<number>;
+  let reader1: ReadableStreamDefaultReader<number>;
+  let reader2: ReadableStreamDefaultReader<number>;
+
+  beforeAll(() => {
+    stream = new NonExclusiveReadableStream<number>({
+      start() {
+        results = [];
+      },
+      pull(controller) {
+        controller.enqueue(1);
+      },
+      cancel() {
+        results = [];
+      },
+    });
+  });
+
+  afterAll(async () => {
+    // await stream.cancel();
+  });
+
+  it("should be constructable", () => {
+    assert(stream instanceof NonExclusiveReadableStream);
+  });
+
+  it("should not be locked after construction", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should call the start method on construction", () => {
+    assertEquals(results, []);
+  });
+
+  it("should provide a reader", () => {
+    reader1 = stream.getReader();
+    assert(reader1 instanceof ReadableStreamDefaultReader);
+  });
+  
+  it("should not be locked after providing a reader", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should read from the underlying source", async () => {
+    const { value, done } = await reader1.read();
+    assertEquals(value, 1);
+    assertEquals(done, false);
+  });
+
+  it("should provide multiple readers", async () => {
+    reader2 = stream.getReader();
+    const { value, done } = await reader2.read();
+    assertEquals(value, 1);
+    assertEquals(done, false);
+  });
+
+  it("should not be locked after providing multiple readers", () => {
+    assertEquals(stream.locked, false);
+  });
+
+  it("should allow a reader to be canceled", () => {
+    reader1.releaseLock();
+  });
+
+  it("should read from the underlying source after canceling a reader", async () => {
+    const { value, done } = await reader2.read();
+    assertEquals(value, 1);
+    assertEquals(done, false);
+  });
+
+  it("should be able to be canceled", async () => {
+    await stream.cancel();
+  });
+});
+
+
 
 describe("NonExclusiveWritableStream", () => {
   let results: number[];
