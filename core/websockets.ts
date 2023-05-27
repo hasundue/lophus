@@ -49,6 +49,7 @@ export class LazyWebSocket {
         this.#ws = this.createWebSocket();
         await this.#notifier.notified();
     }
+
     return this.#ws;
   }
 
@@ -75,9 +76,8 @@ export class LazyWebSocket {
   }
 
   async close(code?: number, reason?: string): Promise<void> {
-    if (!this.#ws || this.#ws.readyState === WebSocket.CLOSED) {
-      return;
-    }
+    if (!this.#ws) return;
+
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
         await this.#notifier.notified();
