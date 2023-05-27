@@ -4,7 +4,6 @@ import {
   NonExclusiveReadableStream,
   NonExclusiveWritableStream,
 } from "./streams.ts";
-import { allof } from "./utils.ts";
 
 /**
  * Common base class for relays and clients.
@@ -23,10 +22,8 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
       write: (msg) => this.ws.send(JSON.stringify(msg)),
 
       close: async () => {
-        await allof(
-          this.#messages?.cancel(),
-          this.ws.close(),
-        );
+        await this.#messages?.cancel();
+        await this.ws.close();
       },
     });
 
@@ -57,7 +54,7 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
   async send(msg: W): Promise<void> {
     const writer = this.getWriter();
     await writer.write(msg);
-    await writer.close();
+    writer.releaseLock();
   }
 }
 

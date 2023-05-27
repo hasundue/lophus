@@ -1,6 +1,5 @@
-import { Relay, RelayToClientMessage, Subscription } from "../client.ts";
+import { Relay, Subscription } from "../client.ts";
 import { pop } from "../core/x/streamtools.ts";
-import { NonExclusiveReadableStream } from "../core/streams.ts";
 import {
   afterEach,
   assert,

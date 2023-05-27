@@ -11,7 +11,6 @@ import type {
 import { NostrNode } from "./core/nodes.ts";
 import { WebSocketEventHooks } from "./core/websockets.ts";
 import { allof } from "./core/utils.ts";
-import { noop } from "./core/utils.ts";
 
 export * from "./nips/01.ts";
 
@@ -121,13 +120,14 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
     //   filter.map((f) => ({ since, ...f }));
 
     const writable = new WritableStream<RelayToClientMessage>({
-      write(msg) {
-        if (msg[0] === "EOSE" && msg[1] === id && !opts.realtime) {
-          return controller_reader!.close();
-        }
-        if (msg[0] === "EVENT" && msg[1] === id) {
-          // last = msg[2].created_at;
-          return controller_reader!.enqueue(msg[2]);
+      write: (msg) => {
+        if (msg[1] === id) {
+          if (msg[0] === "EOSE" && !opts.realtime) {
+            return this.cancel();
+          } else if (msg[0] === "EVENT") {
+            // last = msg[2].created_at;
+            controller_reader!.enqueue(msg[2]);
+          }
         }
       },
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
