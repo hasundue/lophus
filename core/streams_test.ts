@@ -41,27 +41,25 @@ describe("BroadcastStream", () => {
 });
 
 describe("NonExclusiveReadableStream", () => {
-  let results: number[];
   let stream: NonExclusiveReadableStream<number>;
   let reader1: ReadableStreamDefaultReader<number>;
   let reader2: ReadableStreamDefaultReader<number>;
 
+  let started = false;
+  let canceled = false;
+
   beforeAll(() => {
     stream = new NonExclusiveReadableStream<number>({
-      start() {
-        results = [];
-      },
-      pull(controller) {
+      start(controller) {
+        started = true;
         controller.enqueue(1);
+        controller.enqueue(2);
+        controller.close();
       },
       cancel() {
-        results = [];
+        canceled = true;
       },
     });
-  });
-
-  afterAll(async () => {
-    // await stream.cancel();
   });
 
   it("should be constructable", () => {
@@ -73,7 +71,7 @@ describe("NonExclusiveReadableStream", () => {
   });
 
   it("should call the start method on construction", () => {
-    assertEquals(results, []);
+    assert(started);
   });
 
   it("should provide a reader", () => {
@@ -108,8 +106,40 @@ describe("NonExclusiveReadableStream", () => {
 
   it("should read from the underlying source after canceling a reader", async () => {
     const { value, done } = await reader2.read();
-    assertEquals(value, 1);
+    assertEquals(value, 2);
     assertEquals(done, false);
+  });
+
+  it("should be able to be piped to a writable stream", async () => {
+    const results: number[] = [];
+    const writable = new WritableStream<number>({
+      write(chunk) {
+        results.push(chunk);
+      },
+    });
+    await stream.pipeTo(writable);
+    assertEquals(results, [1, 2]);
+  });
+
+  it("should be readable after piping to a writable stream", async () => {
+    const { value, done } = await reader2.read();
+    assertEquals(value, undefined);
+    assertEquals(done, true);
+  });
+
+  it("should be able to piped through a transform stream", async () => {
+    const results: number[] = [];
+    const transform = new TransformStream<number, number>({
+      transform(chunk, controller) {
+        controller.enqueue(chunk * 2);
+      },
+    });
+    await stream.pipeThrough(transform).pipeTo(new WritableStream<number>({
+      write(chunk) {
+        results.push(chunk);
+      },
+    }));
+    assertEquals(results, [2, 4]);
   });
 
   it("should be able to be canceled", async () => {

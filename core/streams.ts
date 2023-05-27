@@ -57,6 +57,7 @@ export class NonExclusiveReadableStream<R = unknown> {
   #source: ReadableStream<R>;
   readonly #branches = new Set<ReadableStream<R>>();
   readonly #readers = new Set<ReadableStreamDefaultReader<R>>();
+  readonly #aborters = new Set<AbortController>();
 
   constructor(
     underlyingSource: UnderlyingSource<R>,
@@ -86,15 +87,12 @@ export class NonExclusiveReadableStream<R = unknown> {
     return reader;
   }
 
-  pipeTo(writable: WritableStream<R>, options?: PipeOptions): Promise<void> {
-    return this.#branch().pipeTo(writable, options);
+  pipeTo(writable: WritableStream<R>): Promise<void> {
+    return this.#branch().pipeTo(writable);
   }
 
-  pipeThrough<T>(
-    transform: TransformStream<R, T>,
-    options?: PipeOptions,
-  ): ReadableStream<T> {
-    return this.#branch().pipeThrough(transform, options);
+  pipeThrough<T>(transform: TransformStream<R, T>): ReadableStream<T> {
+    return this.#branch().pipeThrough(transform);
   }
 
   cancel(): Promise<void> {
