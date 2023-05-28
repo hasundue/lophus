@@ -8,20 +8,19 @@ import { Brand } from "../core/types.ts";
 // Events and signatures
 // ----------------------
 
-export type NostrEvent<K extends EventKind = EventKind> =
-  | UnsignedEvent<K>
-  | SignedEvent<K>;
-
-export interface UnsignedEvent<K extends EventKind = EventKind> {
+export interface NostrEvent<K extends EventKind = EventKind> {
+  id: EventId;
   pubkey: PublicKey;
-  created_at: EventTimestamp;
+  created_at: Timestamp;
   kind: K;
   tags: Tag[];
   content: EventContent<K>;
+  sig: Signature;
 }
 
+export type EventId = Brand<string, "EventId">;
 export type PublicKey = Brand<string, "PublicKey">;
-export type EventTimestamp = Brand<number, "EventTimeStamp">;
+export type Timestamp = Brand<number, "EventTimeStamp">;
 
 export type Tag = EventTag | PubKeyTag;
 export type EventTag = ["e", EventId, RecmRelayUrl];
@@ -29,20 +28,13 @@ export type PubKeyTag = ["p", PublicKey, RecmRelayUrl];
 
 export type RecmRelayUrl = RelayUrl | "";
 
-export interface SignedEvent<K extends EventKind = EventKind>
-  extends UnsignedEvent<K> {
-  id: EventId;
-  sig: EventSignature;
-}
-
-export type EventId = Brand<string, "EventId">;
 export type PrivateKey = Brand<string, "PrivateKey">;
-export type EventSignature = Brand<string, "EventSignature">;
+export type Signature = Brand<string, "EventSignature">;
 
 export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   0,
   PublicKey,
-  EventTimestamp,
+  Timestamp,
   K,
   Tag[],
   EventContent<K>,
@@ -63,7 +55,7 @@ export type ClientToRelayMessage =
 
 export type PublishMessage<K extends EventKind = EventKind> = [
   "EVENT",
-  SignedEvent<K>,
+  NostrEvent<K>,
 ];
 export type SubscribeMessage = ["REQ", SubscriptionId, ...SubscriptionFilter[]];
 export type CloseMessage = ["CLOSE", SubscriptionId];
@@ -76,7 +68,7 @@ export type RelayToClientMessage =
 export type EventMessage<K extends EventKind = EventKind> = [
   "EVENT",
   SubscriptionId,
-  SignedEvent<K>,
+  NostrEvent<K>,
 ];
 export type EoseMessage = ["EOSE", SubscriptionId];
 export type NoticeMessage = ["NOTICE", NoticeBody];
@@ -90,8 +82,8 @@ export interface SubscriptionFilter {
   kinds?: EventKind[];
   "#e"?: EventId[];
   "#p"?: PublicKey[];
-  since?: EventTimestamp;
-  until?: EventTimestamp;
+  since?: Timestamp;
+  until?: Timestamp;
   limit?: number;
 }
 
