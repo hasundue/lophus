@@ -20,7 +20,7 @@ export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   readonly config: Readonly<RelayConfig>;
 
-  #subscriptions = new Map<SubscriptionId, SubscriptionProvider>();
+  #subscriptions = new Map<SubscriptionId, Subscription>();
   #notices?: ReadableStream<NoticeBody>;
 
   constructor(
@@ -44,7 +44,7 @@ export class Relay
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
-    const sub = new SubscriptionProvider(this, [filter].flat(), {
+    const sub = new Subscription(this, [filter].flat(), {
       id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
@@ -95,13 +95,7 @@ export interface SubscriptionOptions {
   nbuffer: number;
 }
 
-export interface Subscription extends ReadableStream<NostrEvent> {
-  readonly id: SubscriptionId;
-  // update(filter: SubscriptionFilter | SubscriptionFilter[]): Promise<void>;
-}
-
-class SubscriptionProvider extends ReadableStream<NostrEvent>
-  implements Subscription {
+export class Subscription extends ReadableStream<NostrEvent> {
   readonly id: SubscriptionId;
 
   constructor(
