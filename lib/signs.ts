@@ -1,14 +1,14 @@
-import {
+import type {
   EventId,
   EventKind,
   EventSerializePrecursor,
   NostrEvent,
   Signature,
 } from "../nips/01.ts";
-import { Brand } from "../core/types.ts";
-import { bytesToHex, schnorr, sha256 } from "../lib/x/noble.ts";
+import type { Brand } from "../core/types.ts";
+import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
-import { EventTemplate } from "./notes.ts";
+import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 
@@ -23,30 +23,19 @@ export const PublicKey = {
     bytesToHex(schnorr.getPublicKey(nsec)) as PublicKey,
 };
 
+/**
+ * An event that has not been signed.
+ */
 export interface UnsignedEvent<K extends EventKind = EventKind>
-  extends EventTemplate<K> {
+  extends EventInit<K> {
   pubkey: PublicKey;
   created_at: Timestamp;
 }
 
-function createPrecursor(ev: UnsignedEvent): EventSerializePrecursor {
-  return [
-    0,
-    ev.pubkey,
-    ev.created_at,
-    ev.kind,
-    ev.tags,
-    ev.content,
-  ];
-}
-
-type SerializedEvent = Brand<string, "SerializedEvent">;
-
-function serialize(event: UnsignedEvent): SerializedEvent {
-  return JSON.stringify(createPrecursor(event)) as SerializedEvent;
-}
-
-export class Signer extends TransformStream<UnsignedEvent, NostrEvent> {
+/**
+ * A transform stream that signs events.
+ */
+export class Signer extends TransformStream<EventInit, NostrEvent> {
   #encoder = new TextEncoder();
 
   constructor(readonly nsec: PrivateKey) {
@@ -57,17 +46,24 @@ export class Signer extends TransformStream<UnsignedEvent, NostrEvent> {
     });
   }
 
-  sign(event: UnsignedEvent): NostrEvent {
-    const hash = sha256(this.#encoder.encode(serialize(event)));
-    const sig = schnorr.sign(hash, this.nsec);
-    return {
+  sign(event: EventInit): NostrEvent {
+    const unsigned = {
       ...event,
+      pubkey: PublicKey.from(this.nsec),
+      created_at: Timestamp.now,
+    };
+    const hash = sha256(this.#encoder.encode(serialize(unsigned)));
+    return {
+      ...unsigned,
       id: bytesToHex(hash) as EventId,
-      sig: bytesToHex(sig) as Signature,
+      sig: bytesToHex(schnorr.sign(hash, this.nsec)) as Signature,
     };
   }
 }
 
+/**
+ * A transform stream that verifies events.
+ */
 export class Verifier extends TransformStream<NostrEvent, NostrEvent> {
   constructor() {
     super({
@@ -83,3 +79,22 @@ export class Verifier extends TransformStream<NostrEvent, NostrEvent> {
     return schnorr.verify(ev.sig, hash, ev.pubkey);
   }
 }
+
+// A helper function that creates a precursor to a serialized event.
+function createPrecursor(ev: UnsignedEvent): EventSerializePrecursor {
+  return [
+    0,
+    ev.pubkey,
+    ev.created_at,
+    ev.kind,
+    ev.tags,
+    ev.content,
+  ];
+}
+
+// A helper function that serializes an event.
+function serialize(event: UnsignedEvent): SerializedEvent {
+  return JSON.stringify(createPrecursor(event)) as SerializedEvent;
+}
+
+type SerializedEvent = Brand<string, "SerializedEvent">;

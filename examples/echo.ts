@@ -12,7 +12,7 @@ relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
     new DefaultAgent((event) =>
       new ReplyComposer(env.PUBLIC_KEY).compose(
         { content: event.content },
-        { replyTo: event },
+        { reply_to: event },
       )
     ),
   )

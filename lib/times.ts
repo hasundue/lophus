@@ -1,7 +1,9 @@
-import { EventTimestamp } from "../nips/01.ts";
+import { Brand } from "../core/types.ts";
 
-export class Timestamp {
-  static get now() {
-    return Math.floor(Date.now() / 1000) as EventTimestamp;
-  }
-}
+export type Timestamp = Brand<number, "EventTimeStamp">;
+
+export const Timestamp = {
+  get now() {
+    return Math.floor(Date.now() / 1000) as Timestamp;
+  },
+};

@@ -2,7 +2,7 @@ import {
   ClientToRelayMessage,
   Relay,
   RelayInit,
-  SignedEvent,
+  NostrEvent,
   SubscriptionFilter,
   SubscriptionId,
   SubscriptionOptions,
@@ -48,14 +48,14 @@ export class RelayPool implements Omit<Relay, "config"> {
     return merge(chs).pipeThrough(distinctBy((m) => m.id));
   }
 
-  publish(event: SignedEvent) {
+  publish(event: NostrEvent) {
     return Promise.race(
       this.relays_write.map((r) => r.publish(event)),
     );
   }
 
   get publisher() {
-    const ch = new TransformStream<SignedEvent, SignedEvent>();
+    const ch = new TransformStream<NostrEvent, NostrEvent>();
     broadcast(ch.readable, this.relays_write.map((r) => r.publisher));
     return ch.writable;
   }

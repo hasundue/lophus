@@ -1,35 +1,16 @@
-import {
-  EventId,
-  EventKind,
-  EventTag,
-  PubKeyTag,
-  PublicKey,
-  RelayUrl,
-  SignedEvent,
-  UnsignedEvent,
-} from "../nips/01.ts";
-import { Determined, Optional, Overload, Replace } from "../core/types.ts";
-import { Timestamp } from "./times.ts";
+import { EventKind, NostrEvent, RelayUrl } from "../nips/01.ts";
+import type { Optional } from "../core/types.ts";
+import { EventInit } from "./events.ts";
 
-export type EventTemplate<K extends EventKind> = Overload<
-  Determined<Optional<UnsignedEvent, "created_at" | "pubkey">, "kind", K>,
-  "tags",
-  { erefs?: EventId[]; prefs?: PublicKey[] }
+export type TextNote = Optional<
+  EventInit<EventKind.TextNote>,
+  "kind"
 >;
 
-export type TextNoteEvent = Replace<
-  UnsignedEvent,
-  "kind",
-  EventKind.TextNote
->;
-export type TextNoteTemplate = EventTemplate<EventKind.TextNote>;
-export type TextNoteTemplater = (event: SignedEvent) => TextNoteTemplate;
+export type TextNoteInit = Optional<TextNote, "tags">;
 
-export class TextNoteComposer
-  extends TransformStream<TextNoteTemplate, TextNoteEvent> {
-  constructor(
-    readonly pubkey: PublicKey,
-  ) {
+export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
+  constructor(readonly opts: { relay_recommend?: RelayUrl } = {}) {
     super({
       transform: (event, controller) => {
         controller.enqueue(this.compose(event));
@@ -37,41 +18,20 @@ export class TextNoteComposer
     });
   }
   compose(
-    template: TextNoteTemplate,
-    opts?: { relay_recommend?: RelayUrl },
-  ): TextNoteEvent {
-    const etags: EventTag[] =
-      template.erefs?.map((id) => ["e", id, opts?.relay_recommend ?? ""]) ?? [];
-    const ptags: PubKeyTag[] =
-      template.prefs?.map((id) => ["p", id, opts?.relay_recommend ?? ""]) ?? [];
-    return {
-      ...template,
-      pubkey: this.pubkey,
-      created_at: Timestamp.now,
-      kind: EventKind.TextNote,
-      tags: [...etags, ...ptags, ...(template.tags ?? [])],
-    };
-  }
-}
+    init: TextNoteInit,
+    opts?: {
+      reply_to?: NostrEvent;
+      relay_recommend?: RelayUrl;
+    },
+  ): TextNote {
+    const relay_recommend = opts?.relay_recommend ?? this.opts.relay_recommend;
 
-export class ReplyComposer extends TextNoteComposer {
-  constructor(
-    readonly pubkey: PublicKey,
-  ) {
-    super(pubkey);
-  }
-  compose(
-    template: TextNoteTemplate,
-    opts: { replyTo: SignedEvent; relay_recommend?: RelayUrl },
-  ): TextNoteEvent {
-    const note = super.compose(template, opts);
-    return {
-      ...note,
-      tags: [
-        ...(note.tags ?? []),
-        ["e", opts.replyTo.id, opts?.relay_recommend ?? ""],
-        ["p", opts.replyTo.pubkey, opts?.relay_recommend ?? ""],
-      ],
-    };
+    // deno-fmt-ignore
+    const tags = (init.tags ?? []).concat(opts?.reply_to ? [
+      ["e", opts.reply_to.id, relay_recommend ?? ""],
+      ["p", opts.reply_to.pubkey, relay_recommend ?? ""],
+    ] : []);
+
+    return { ...init, kind: EventKind.TextNote, tags };
   }
 }

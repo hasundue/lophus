@@ -1,10 +1,10 @@
 import type {
   ClientToRelayMessage,
-  EventTimestamp,
+  Timestamp,
   NoticeBody,
   RelayToClientMessage,
   RelayUrl,
-  SignedEvent,
+  NostrEvent,
   SubscriptionFilter,
   SubscriptionId,
 } from "./nips/01.ts";
@@ -85,7 +85,7 @@ export interface RelayConfig extends RelayOptions {
 }
 
 export interface Notice {
-  received_at: EventTimestamp;
+  received_at: Timestamp;
   content: string;
 }
 
@@ -95,12 +95,12 @@ export interface SubscriptionOptions {
   nbuffer: number;
 }
 
-export interface Subscription extends ReadableStream<SignedEvent> {
+export interface Subscription extends ReadableStream<NostrEvent> {
   readonly id: SubscriptionId;
   // update(filter: SubscriptionFilter | SubscriptionFilter[]): Promise<void>;
 }
 
-class SubscriptionProvider extends ReadableStream<SignedEvent>
+class SubscriptionProvider extends ReadableStream<NostrEvent>
   implements Subscription {
   readonly id: SubscriptionId;
 
@@ -112,7 +112,7 @@ class SubscriptionProvider extends ReadableStream<SignedEvent>
     const id = opts.id as SubscriptionId;
 
     const messenger = relay.getWriter();
-    let controller_reader: ReadableStreamDefaultController<SignedEvent>;
+    let controller_reader: ReadableStreamDefaultController<NostrEvent>;
     // let last: EventTimestamp;
 
     // const since = (since?: EventTimestamp) =>
