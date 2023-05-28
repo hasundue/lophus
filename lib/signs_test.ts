@@ -1,6 +1,6 @@
 import { assert, assertEquals, describe, it } from "../lib/std/testing.ts";
 import { Timestamp } from "../lib/times.ts";
-import { PrivateKey, PublicKey, Signer } from "./signs.ts";
+import { PrivateKey, PublicKey, Signer, Verifier } from "./signs.ts";
 
 describe("PrivateKey", () => {
   it("generates a private key", () => {
@@ -17,10 +17,7 @@ describe("PublicKey", () => {
   });
 });
 
-describe("signEvent", () => {
-});
-
-describe("Signer", () => {
+describe("Signer/Verifier", () => {
   const nsec = PrivateKey.generate();
   const signer = new Signer(nsec);
   const event = {
@@ -30,10 +27,16 @@ describe("Signer", () => {
     tags: [],
     content: "lophus",
   };
+  const verifier = new Verifier();
 
   it("signs an event", () => {
     const signedEvent = signer.sign(event);
     assert(signedEvent);
+  });
+
+  it("verifies a signed event", () => {
+    const signedEvent = signer.sign(event);
+    assert(verifier.verify(signedEvent));
   });
 
   it("signs events from a stream", async () => {
