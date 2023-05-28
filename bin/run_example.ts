@@ -11,6 +11,7 @@ const command = new Deno.Command(Deno.execPath(), {
     url.toString(),
   ],
   stdout: "inherit",
+  stderr: "inherit",
 });
 
 const child = command.spawn();
