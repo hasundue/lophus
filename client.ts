@@ -1,12 +1,12 @@
 import type {
   ClientToRelayMessage,
-  Timestamp,
+  NostrEvent,
   NoticeBody,
   RelayToClientMessage,
   RelayUrl,
-  NostrEvent,
   SubscriptionFilter,
   SubscriptionId,
+  Timestamp,
 } from "./nips/01.ts";
 import { NostrNode } from "./core/nodes.ts";
 import type { WebSocketEventHooks } from "./core/websockets.ts";

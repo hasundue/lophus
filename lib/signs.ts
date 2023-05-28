@@ -47,18 +47,30 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
   }
 
   sign(event: EventInit): NostrEvent {
+    if (signed(event)) return event;
+
     const unsigned = {
       ...event,
       pubkey: PublicKey.from(this.nsec),
       created_at: Timestamp.now,
     };
+
     const hash = sha256(this.#encoder.encode(serialize(unsigned)));
+
     return {
+      tags: [],
       ...unsigned,
       id: bytesToHex(hash) as EventId,
       sig: bytesToHex(schnorr.sign(hash, this.nsec)) as Signature,
     };
   }
+}
+
+/**
+ * A type guard that checks if an event has been signed.
+ */
+export function signed(event: EventInit): event is NostrEvent {
+  return "sig" in event;
 }
 
 /**
@@ -87,7 +99,7 @@ function createPrecursor(ev: UnsignedEvent): EventSerializePrecursor {
     ev.pubkey,
     ev.created_at,
     ev.kind,
-    ev.tags,
+    ev.tags ?? [],
     ev.content,
   ];
 }

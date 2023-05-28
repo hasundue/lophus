@@ -6,7 +6,7 @@
 import { Relay } from "../client.ts";
 import { Timestamp } from "../lib/times.ts";
 
-new Relay({ url: "wss://nos.lol" })
+new Relay("wss://nos.lol")
   .subscribe({ kinds: [1], since: Timestamp.now })
   .pipeTo(new WritableStream({ write: (ev) => console.log(ev) }));
 ```
@@ -29,50 +29,45 @@ new RelayPool(
 
 ```ts
 import { Relay } from "../client.ts";
-import { TextNoteComposer } from "../lib/notes.ts";
-import { Signer } from "../lib/signs.ts";
+import { EventKind, EventPublisher } from "../lib/events.ts";
 import { env } from "../lib/env.ts";
 
-new Relay({ url: "wss://nos.lol" })
-  .publish(new Signer(env.PRIVATE_KEY).sign(
-    new TextNoteComposer(env.PUBLIC_KEY).compose({
-      content:
-        "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
-    }),
-  ));
+const relay = new Relay("wss://nos.lol");
+
+new EventPublisher(relay, env.PRIVATE_KEY).publish({
+  kind: EventKind.TextNote,
+  content: "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
+}).then(() => relay.close());
 ```
 
 ### Echo bot
 
 ```ts
 import { Relay } from "../client.ts";
-import { Signer } from "../lib/signs.ts";
 import { DefaultAgent } from "../lib/agents.ts";
-import { ReplyComposer } from "../lib/notes.ts";
+import { EventPublisher } from "../lib/events.ts";
+import { TextNoteComposer } from "../lib/notes.ts";
 import { env } from "../lib/env.ts";
 
-const relay = new Relay({ url: "wss://nos.lol" });
+const relay = new Relay("wss://nos.lol");
 
 relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
-  .pipeThrough(
-    new DefaultAgent((event) =>
-      new ReplyComposer(env.PUBLIC_KEY).compose(
-        { content: event.content },
-        { replyTo: event },
-      )
-    ),
-  )
-  .pipeThrough(new Signer(env.PRIVATE_KEY))
-  .pipeTo(relay.publisher);
+  .pipeThrough(new DefaultAgent((ev) => ({ content: ev.content })))
+  .pipeThrough(new TextNoteComposer())
+  .pipeTo(new EventPublisher(relay, env.PRIVATE_KEY));
 ```
 
 ### Transfer your notes from relay to relay
 
 ```ts
 import { Relay } from "../client.ts";
+import { EventPublisher } from "../lib/events.ts";
 import { env } from "../lib/env.ts";
 
-new Relay({ url: "wss://relay.nostr.band" })
-  .subscribe({ kinds: [1], authors: [env.PUBLIC_KEY] })
-  .pipeTo(new Relay({ url: "wss://nos.lol" }).publisher);
+new Relay("wss://relay.nostr.band")
+  .subscribe({
+    kinds: [1],
+    authors: [env.PUBLIC_KEY],
+  }, { realtime: false })
+  .pipeTo(new EventPublisher(new Relay("wss://nos.lol"), env.PRIVATE_KEY));
 ```

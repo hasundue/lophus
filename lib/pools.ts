@@ -1,8 +1,8 @@
 import {
   ClientToRelayMessage,
+  NostrEvent,
   Relay,
   RelayInit,
-  NostrEvent,
   SubscriptionFilter,
   SubscriptionId,
   SubscriptionOptions,
