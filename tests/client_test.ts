@@ -88,7 +88,7 @@ describe("Relay", () => {
   let sub2: Subscription;
 
   beforeEach(() => {
-    relay = new Relay("wss://nostr-dev.wellorder.net", { nbuffer: 2 });
+    relay = new Relay("wss://nostr-dev.wellorder.net");
   });
 
   afterEach(async () => {
