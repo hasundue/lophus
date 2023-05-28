@@ -15,7 +15,7 @@ export interface EventInit<K extends EventKind = EventKind> {
 
 import { Signer } from "./signs.ts";
 
-export class Publisher<K extends EventKind = EventKind>
+export class EventPublisher<K extends EventKind = EventKind>
   extends WritableStream<EventInit<K>> {
   readonly signer: Signer;
 
