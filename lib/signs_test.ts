@@ -1,12 +1,11 @@
-import { assert, describe, it } from "../lib/std/testing.ts";
+import { assert, assertEquals, describe, it } from "../lib/std/testing.ts";
 import { Timestamp } from "../lib/times.ts";
 import { PrivateKey, PublicKey, Signer } from "./signs.ts";
 
 describe("PrivateKey", () => {
   it("generates a private key", () => {
     const nsec = PrivateKey.generate();
-    console.debug(nsec);
-    assert(nsec);
+    assertEquals(nsec.length, 64);
   });
 });
 
@@ -14,8 +13,7 @@ describe("PublicKey", () => {
   it("generates a public key from a private key", () => {
     const nsec = PrivateKey.generate();
     const pubkey = PublicKey.from(nsec);
-    console.debug(pubkey);
-    assert(pubkey);
+    assertEquals(pubkey.length, 64);
   });
 });
 
@@ -35,7 +33,6 @@ describe("Signer", () => {
 
   it("signs an event", () => {
     const signedEvent = signer.sign(event);
-    console.debug(signedEvent);
     assert(signedEvent);
   });
 
@@ -45,7 +42,6 @@ describe("Signer", () => {
     writer.close();
     const reader = signer.readable.getReader();
     const result = await reader.read();
-    console.debug(result);
     assert(result);
   });
 });
