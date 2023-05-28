@@ -32,7 +32,7 @@ describe("LazyWebSocket", () => {
   });
 
   it("should create a WebSocket when an event listener is added", () => {
-    lazy.addEventListener("open", (ev) => console.log(ev));
+    lazy.addEventListener("open", () => {});
     assert(ws instanceof WebSocket);
   });
 
