@@ -4,9 +4,8 @@ import { EventKind, EventPublisher } from "../lib/events.ts";
 import { env } from "../lib/env.ts";
 
 const relay = new Relay("wss://nos.lol");
-const publisher = new EventPublisher(relay, env.PRIVATE_KEY);
 
-publisher.publish({
+new EventPublisher(relay, env.PRIVATE_KEY).publish({
   kind: EventKind.Metadata,
   content: {
     name: "Lophus",
