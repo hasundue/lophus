@@ -5,6 +5,7 @@ export class NonExclusiveReadableStream<R = unknown> {
   readonly locked = false;
 
   #source: ReadableStream<R>;
+  #aborter = new AbortController();
 
   constructor(
     underlyingSource: UnderlyingSource<R>,
@@ -30,17 +31,24 @@ export class NonExclusiveReadableStream<R = unknown> {
   }
 
   pipeTo(writable: WritableStream<R>, options?: PipeOptions): Promise<void> {
-    return this.#branch().pipeTo(writable, options);
+    return this.#branch().pipeTo(writable, {
+      signal: this.#aborter.signal,
+      ...options,
+    });
   }
 
   pipeThrough<T>(
     transform: TransformStream<R, T>,
     options?: PipeOptions,
   ): ReadableStream<T> {
-    return this.#branch().pipeThrough(transform, options);
+    return this.#branch().pipeThrough(transform, {
+      signal: this.#aborter.signal,
+      ...options,
+    });
   }
 
   cancel(): Promise<void> {
+    this.#aborter.abort();
     return this.#source.cancel();
   }
 }
@@ -50,6 +58,7 @@ export class NonExclusiveWritableStream<W = unknown>
   readonly locked = false;
 
   readonly #sink: Lock<WritableStream<W>>;
+  readonly #aborter = new AbortController();
 
   constructor(
     underlyingSink: UnderlyingSink<W>,
@@ -60,23 +69,42 @@ export class NonExclusiveWritableStream<W = unknown>
     );
   }
 
-  getWriter() {
-    const channel = new WritableStream<W>({
+  #channel() {
+    return new WritableStream<W>({
       write: (chunk) => this.#sink.lock((sink) => push(sink, chunk)),
     });
+  }
+
+  getWriter() {
+    const channel = this.#channel();
     const writer = channel.getWriter();
 
-    // Close the channel when released
+    // Close the channel when the lock gets released
     writer.closed.catch(() => channel.close());
 
     return writer;
   }
 
+  pipedThrough<I>(
+    transform: TransformStream<I, W>,
+    options?: PipeOptions,
+  ): WritableStream<I> {
+    transform.readable.pipeTo(this.#channel(), {
+      signal: this.#aborter.signal,
+      ...options,
+    }).catch((err) => {
+      if (err.name !== "AbortError") throw err;
+    });
+    return transform.writable;
+  }
+
   close(): Promise<void> {
+    this.#aborter.abort();
     return this.#sink.lock((sink) => sink.close());
   }
 
   abort(): Promise<void> {
+    this.#aborter.abort();
     return this.#sink.lock((sink) => sink.abort());
   }
 }

@@ -5,7 +5,7 @@ import type {
   NostrEvent,
   Signature,
 } from "../nips/01.ts";
-import type { Brand } from "../core/types.ts";
+import type { Brand, Require } from "../core/types.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
 import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
@@ -27,7 +27,7 @@ export const PublicKey = {
  * An event that has not been signed.
  */
 export interface UnsignedEvent<K extends EventKind = EventKind>
-  extends EventInit<K> {
+  extends Require<EventInit<K>, "tags"> {
   pubkey: PublicKey;
   created_at: Timestamp;
 }
@@ -50,15 +50,15 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
     if (signed(event)) return event;
 
     const unsigned = {
-      ...event,
       pubkey: PublicKey.from(this.nsec),
       created_at: Timestamp.now,
+      tags: [],
+      ...event,
     };
 
     const hash = sha256(this.#encoder.encode(serialize(unsigned)));
 
     return {
-      tags: [],
       ...unsigned,
       id: bytesToHex(hash) as EventId,
       sig: bytesToHex(schnorr.sign(hash, this.nsec)) as Signature,

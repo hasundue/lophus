@@ -2,6 +2,7 @@ import {
   ClientToRelayMessage,
   NostrEvent,
   Relay,
+  RelayUrl,
   RelayInit,
   SubscriptionFilter,
   SubscriptionId,
@@ -10,19 +11,21 @@ import {
 import { broadcast } from "../core/streams.ts";
 import { distinctBy, merge } from "../lib/streams.ts";
 
+export type RelayLike = Relay | RelayPool;
+
 /**
  * A pool of relays that can be used as a single relay.
  */
 export class RelayPool implements Omit<Relay, "config"> {
   #relays: Relay[];
 
-  constructor(...init: RelayInit[]) {
+  constructor(...init: (RelayUrl | RelayInit)[]) {
     this.#relays = init.map((i) => new Relay(i));
   }
 
-  // ----------------------
+  //-----------------------
   // RelayPool methods
-  // ----------------------
+  //-----------------------
 
   get relays() {
     return this.#relays;
@@ -42,34 +45,22 @@ export class RelayPool implements Omit<Relay, "config"> {
 
   subscribe(
     filter: SubscriptionFilter | SubscriptionFilter[],
-    opts: SubscriptionOptions = {},
+    opts: Partial<SubscriptionOptions> = {},
   ) {
     const chs = this.relays_read.map((r) => r.subscribe(filter, opts));
     return merge(chs).pipeThrough(distinctBy((m) => m.id));
-  }
-
-  publish(event: NostrEvent) {
-    return Promise.race(
-      this.relays_write.map((r) => r.publish(event)),
-    );
-  }
-
-  get publisher() {
-    const ch = new TransformStream<NostrEvent, NostrEvent>();
-    broadcast(ch.readable, this.relays_write.map((r) => r.publisher));
-    return ch.writable;
   }
 
   // ----------------------
   // NostrNode methods
   // ----------------------
 
-  close(sid?: SubscriptionId) {
-    return Promise.race(this.#relays.map((r) => r.close(sid)));
+  async close() {
+    await Promise.all(this.#relays.map((r) => r.close()));
   }
 
-  send(msg: ClientToRelayMessage) {
-    return Promise.race(
+  async send(msg: ClientToRelayMessage) {
+    await Promise.all(
       this.relays_write.map((r) => r.send(msg)),
     );
   }

@@ -24,9 +24,11 @@ export class Relay
   #notices?: ReadableStream<NoticeBody>;
 
   constructor(
-    url: RelayUrl,
+    init: RelayUrl | RelayInit,
     opts?: Partial<RelayOptions>,
   ) {
+    const url = typeof init === "string" ? init : init.url;
+
     // NostrNode
     super(
       () => new WebSocket(url),
@@ -44,13 +46,11 @@ export class Relay
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ): Subscription {
-    const sub = new Subscription(this, [filter].flat(), {
+    return new Subscription(this, [filter].flat(), {
       id: opts.id ?? crypto.randomUUID() as SubscriptionId,
       realtime: opts.realtime ?? true,
       nbuffer: opts.nbuffer ?? this.config.nbuffer,
     });
-    this.#subscriptions.set(sub.id, sub);
-    return sub;
   }
 
   get notices(): ReadableStream<NoticeBody> {
@@ -84,6 +84,10 @@ export interface RelayConfig extends RelayOptions {
   url: RelayUrl;
 }
 
+export type RelayInit = {
+  url: RelayUrl;
+} & Partial<RelayOptions>;
+
 export interface Notice {
   received_at: Timestamp;
   content: string;
@@ -96,12 +100,10 @@ export interface SubscriptionOptions {
 }
 
 export class Subscription extends ReadableStream<NostrEvent> {
-  readonly id: SubscriptionId;
-
   constructor(
     relay: Relay,
-    readonly filter: SubscriptionFilter[],
-    readonly opts: SubscriptionOptions,
+    filter: SubscriptionFilter[],
+    opts: SubscriptionOptions,
   ) {
     const id = opts.id as SubscriptionId;
 
@@ -139,8 +141,6 @@ export class Subscription extends ReadableStream<NostrEvent> {
         aborter.abort();
       },
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
-
-    this.id = opts.id as SubscriptionId;
 
     relay.messages.pipeTo(writable, { signal: aborter.signal }).catch((err) => {
       if (err.name !== "AbortError") throw err;

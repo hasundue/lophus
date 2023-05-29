@@ -2,12 +2,9 @@ import { EventKind, NostrEvent, RelayUrl } from "../nips/01.ts";
 import type { Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 
-export type TextNote = Optional<
-  EventInit<EventKind.TextNote>,
-  "kind"
->;
+export type TextNote = EventInit<EventKind.TextNote>;
 
-export type TextNoteInit = Optional<TextNote, "tags">;
+export type TextNoteInit = Optional<TextNote, "kind">;
 
 export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
   constructor(readonly opts: { relay_recommend?: RelayUrl } = {}) {
