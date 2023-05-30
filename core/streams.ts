@@ -29,10 +29,18 @@ export class NonExclusiveReadableStream<R = unknown> {
     return reader;
   }
 
-  pipeTo(writable: WritableStream<R>, options?: PipeOptions): Promise<void> {
-    return this.#branch().pipeTo(writable, {
+  pipeTo(
+    writable: WritableStream<R>,
+    options?: PipeOptions,
+  ): Promise<void> {
+    const branch = this.#branch();
+
+    return branch.pipeTo(writable, {
       signal: this.#aborter.signal,
       ...options,
+    }).catch((err) => {
+      if (err.name !== "AbortError") throw err;
+      return branch.cancel();
     });
   }
 
@@ -40,10 +48,7 @@ export class NonExclusiveReadableStream<R = unknown> {
     transform: TransformStream<R, T>,
     options?: PipeOptions,
   ): ReadableStream<T> {
-    return this.#branch().pipeThrough(transform, {
-      signal: this.#aborter.signal,
-      ...options,
-    });
+    return this.#branch().pipeThrough(transform, options);
   }
 
   cancel(): Promise<void> {
@@ -88,12 +93,16 @@ export class NonExclusiveWritableStream<W = unknown>
     transform: TransformStream<I, W>,
     options?: PipeOptions,
   ): WritableStream<I> {
-    transform.readable.pipeTo(this.#channel(), {
+    const channel = this.#channel();
+
+    transform.readable.pipeTo(channel, {
       signal: this.#aborter.signal,
       ...options,
     }).catch((err) => {
       if (err.name !== "AbortError") throw err;
+      return channel.abort();
     });
+
     return transform.writable;
   }
 
