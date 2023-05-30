@@ -11,7 +11,7 @@ export class LazyWebSocket {
 
   constructor(
     protected createWebSocket: () => WebSocket,
-    protected on?: WebSocketEventHooks,
+    protected hooks?: Partial<WebSocketEventHooks>,
   ) {}
 
   #created(): WebSocket {
@@ -20,14 +20,15 @@ export class LazyWebSocket {
     this.#ws = this.createWebSocket();
 
     this.#ws.onopen = (ev) => {
-      this.on?.open?.(ev);
+      this.hooks?.onOpen?.(ev);
       this.#notifier.notifyAll();
     };
     this.#ws.onclose = (ev) => {
-      this.on?.close?.(ev);
+      this.hooks?.onClose?.(ev);
       this.#notifier.notifyAll();
     };
-    this.#ws.onerror = this.on?.error ?? null;
+    this.#ws.onerror = this.hooks?.onError ?? null;
+    this.#ws.onmessage = this.hooks?.onMessage ?? null;
 
     return this.#ws;
   }
@@ -95,7 +96,7 @@ export class LazyWebSocket {
 }
 
 export type WebSocketEventHooks = {
-  [K in keyof Omit<WebSocketEventMap, "message">]?: (
+  [K in keyof WebSocketEventMap as `on${Capitalize<K>}`]: (
     ev: WebSocketEventMap[K],
   ) => void;
 };

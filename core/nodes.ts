@@ -10,13 +10,14 @@ import {
  */
 export class NostrNode<R = NostrMessage, W = NostrMessage>
   extends NonExclusiveWritableStream<W> {
+  readonly config: Readonly<NostrNodeConfig>;
   protected ws: LazyWebSocket;
 
   #messages?: NonExclusiveReadableStream<R>;
 
   constructor(
     createWebSocket: () => WebSocket,
-    protected config: NostrNodeConfig = {},
+    config: Partial<NostrNodeConfig> = {},
   ) {
     super({
       write: (msg) => this.ws.send(JSON.stringify(msg)),
@@ -27,7 +28,8 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
       },
     });
 
-    this.ws = new LazyWebSocket(createWebSocket, config?.on ?? {});
+    this.config = { nbuffer: 10, ...config };
+    this.ws = new LazyWebSocket(createWebSocket, config);
   }
 
   get status() {
@@ -48,7 +50,7 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
           }
         });
       },
-    }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer ?? 10 }));
+    }, new CountQueuingStrategy({ highWaterMark: this.config.nbuffer }));
   }
 
   async send(msg: W): Promise<void> {
@@ -58,7 +60,6 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
   }
 }
 
-export interface NostrNodeConfig {
-  on?: WebSocketEventHooks;
-  nbuffer?: number;
-}
+export type NostrNodeConfig = {
+  nbuffer: number;
+} & Partial<WebSocketEventHooks>;

@@ -6,10 +6,8 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-  Timestamp,
 } from "./nips/01.ts";
-import { NostrNode } from "./core/nodes.ts";
-import type { WebSocketEventHooks } from "./core/websockets.ts";
+import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 
 export * from "./nips/01.ts";
 
@@ -20,17 +18,13 @@ export class Relay
   extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
   readonly config: Readonly<RelayConfig>;
 
-  #subscriptions = new Map<SubscriptionId, Subscription>();
-  #notices?: ReadableStream<NoticeBody>;
-
   constructor(
     init: RelayUrl | RelayInit,
-    opts?: Partial<RelayOptions>,
+    opts?: RelayOptions,
   ) {
     const url = typeof init === "string" ? init : init.url;
 
-    // NostrNode
-    super(
+    super( // new NostrNode(
       () => new WebSocket(url),
       { nbuffer: 10, ...opts },
     );
@@ -38,112 +32,81 @@ export class Relay
     // deno-fmt-ignore
     this.config = {
       url, name: url.slice(6).split("/")[0],
-      read: true, write: true, on: {}, nbuffer: 10, ...opts,
+      read: true, write: true, nbuffer: 10, ...opts,
     };
+
+    if (opts?.onNotice) {
+      this.messages.pipeTo(
+        new WritableStream({
+          write(msg) {
+            if (msg[0] === "NOTICE") {
+              return opts.onNotice!(msg[1]);
+            }
+          },
+        }),
+      );
+    }
   }
 
   subscribe(
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
-  ): Subscription {
-    return new Subscription(this, [filter].flat(), {
-      id: opts.id ?? crypto.randomUUID() as SubscriptionId,
-      realtime: opts.realtime ?? true,
-      nbuffer: opts.nbuffer ?? this.config.nbuffer,
-    });
-  }
+  ): ReadableStream<NostrEvent> {
+    const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    opts.realtime ??= true;
+    opts.nbuffer ??= this.config.nbuffer;
 
-  get notices(): ReadableStream<NoticeBody> {
-    return this.#notices ??= this.messages.pipeThrough(
-      new TransformStream<RelayToClientMessage, NoticeBody>({
-        transform: (msg, con) => {
-          if (msg[0] === "NOTICE") {
-            con.enqueue(msg[1]);
+    const messenger = this.getWriter();
+
+    async function terminate(
+      controller: TransformStreamDefaultController<NostrEvent>,
+    ) {
+      await messenger.write(["CLOSE", id]);
+      messenger.releaseLock();
+      return controller.terminate();
+    }
+
+    return this.messages.pipeThrough(
+      new TransformStream<RelayToClientMessage, NostrEvent>({
+        start() {
+          return messenger.write(["REQ", id, ...[filter].flat()]);
+        },
+        transform(msg, controller) {
+          if (msg[1] === id) {
+            if (msg[0] === "EOSE" && !opts.realtime) {
+              return terminate(controller);
+            }
+            if (msg[0] === "EVENT") {
+              return controller.enqueue(msg[2]);
+            }
           }
+        },
+        flush(controller) {
+          return terminate(controller);
         },
       }),
     );
   }
-
-  async close(): Promise<void> {
-    await this.#notices?.cancel();
-    await Promise.all([...this.#subscriptions.values()].map((s) => s.cancel()));
-    return super.close();
-  }
 }
 
-export interface RelayOptions {
+export type RelayConfig = NostrNodeConfig & {
+  url: RelayUrl;
   name: string;
   read: boolean;
   write: boolean;
-  on: WebSocketEventHooks;
-  nbuffer: number;
-}
+  onNotice?: (notice: NoticeBody) => void | Promise<void>;
+};
 
-export interface RelayConfig extends RelayOptions {
-  url: RelayUrl;
-}
+export type RelayOptions = Partial<RelayConfig>;
 
 export type RelayInit = {
   url: RelayUrl;
-} & Partial<RelayOptions>;
+} & RelayOptions;
 
-export interface Notice {
-  received_at: Timestamp;
-  content: string;
-}
-
-export interface SubscriptionOptions {
+export type SubscriptionOptions = {
   id: string;
   realtime: boolean;
   nbuffer: number;
-}
+};
 
-export class Subscription extends ReadableStream<NostrEvent> {
-  constructor(
-    relay: Relay,
-    filter: SubscriptionFilter[],
-    opts: SubscriptionOptions,
-  ) {
-    const id = opts.id as SubscriptionId;
-
-    const messenger = relay.getWriter();
-    let controller_reader: ReadableStreamDefaultController<NostrEvent>;
-    // let last: EventTimestamp;
-
-    // const since = (since?: EventTimestamp) =>
-    //   filter.map((f) => ({ since, ...f }));
-
-    const writable = new WritableStream<RelayToClientMessage>({
-      write: (msg) => {
-        if (msg[1] === id) {
-          if (msg[0] === "EOSE" && !opts.realtime) {
-            return this.cancel();
-          } else if (msg[0] === "EVENT") {
-            // last = msg[2].created_at;
-            controller_reader!.enqueue(msg[2]);
-          }
-        }
-      },
-    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
-
-    const aborter = new AbortController();
-
-    super({ // new ReadableStream({
-      start(controller) {
-        controller_reader = controller;
-        return messenger.write(["REQ", id, ...filter]);
-      },
-      // pull: () => relay.connected,
-      async cancel() {
-        await messenger.write(["CLOSE", id]);
-        messenger.releaseLock();
-        aborter.abort();
-      },
-    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
-
-    relay.messages.pipeTo(writable, { signal: aborter.signal }).catch((err) => {
-      if (err.name !== "AbortError") throw err;
-    });
-  }
-}
+export type RelayLike = Omit<Relay, "config">;
