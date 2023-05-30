@@ -42,7 +42,7 @@ describe("NostrNode", () => {
   });
 
   it("should connect to the WebSocket when a message is sent", async () => {
-    await node.send(["NOTICE", "test"]);
+    await node.getWriter().write(["NOTICE", "test"]);
     assert(ws instanceof WebSocket);
     assertEquals(ws.readyState, WebSocket.OPEN);
   });
@@ -60,7 +60,7 @@ describe("NostrNode", () => {
   });
 
   it("should close the WebSocket when the node is closed", async () => {
-    await node.send(["NOTICE", "test"]);
+    await node.getWriter().write(["NOTICE", "test"]);
     await node.close();
     assertEquals(ws.readyState, WebSocket.CLOSED);
   });

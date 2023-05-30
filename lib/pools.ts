@@ -1,42 +1,44 @@
 import {
   ClientToRelayMessage,
-  NostrEvent,
   Relay,
-  RelayUrl,
   RelayInit,
+  RelayLike,
+  RelayToClientMessage,
+  RelayUrl,
   SubscriptionFilter,
-  SubscriptionId,
   SubscriptionOptions,
 } from "../client.ts";
-import { broadcast } from "../core/streams.ts";
+import {
+  NonExclusiveReadableStream,
+  NonExclusiveWritableStream,
+} from "../core/streams.ts";
 import { distinctBy, merge } from "../lib/streams.ts";
-
-export type RelayLike = Relay | RelayPool;
 
 /**
  * A pool of relays that can be used as a single relay.
  */
-export class RelayPool implements Omit<Relay, "config"> {
-  #relays: Relay[];
+export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
+  implements RelayLike {
+  readonly relays: Relay[];
+
+  #relays_read: Relay[];
 
   constructor(...init: (RelayUrl | RelayInit)[]) {
-    this.#relays = init.map((i) => new Relay(i));
-  }
+    const relays = init.map((i) => new Relay(i));
+    const writers = relays.filter((r) => r.config.write).map((r) =>
+      r.getWriter()
+    );
 
-  //-----------------------
-  // RelayPool methods
-  //-----------------------
+    super({
+      async write(msg) {
+        await Promise.all(
+          writers.map((r) => r.write(msg)),
+        );
+      },
+    }, { highWaterMark: Math.max(...relays.map((r) => r.config.nbuffer)) });
 
-  get relays() {
-    return this.#relays;
-  }
-
-  protected get relays_read() {
-    return this.#relays.filter((r) => r.config.read);
-  }
-
-  protected get relays_write() {
-    return this.#relays.filter((r) => r.config.write);
+    this.relays = init.map((i) => new Relay(i));
+    this.#relays_read = this.relays.filter((r) => r.config.read);
   }
 
   // ----------------------
@@ -47,7 +49,7 @@ export class RelayPool implements Omit<Relay, "config"> {
     filter: SubscriptionFilter | SubscriptionFilter[],
     opts: Partial<SubscriptionOptions> = {},
   ) {
-    const chs = this.relays_read.map((r) => r.subscribe(filter, opts));
+    const chs = this.#relays_read.map((r) => r.subscribe(filter, opts));
     return merge(chs).pipeThrough(distinctBy((m) => m.id));
   }
 
@@ -55,22 +57,11 @@ export class RelayPool implements Omit<Relay, "config"> {
   // NostrNode methods
   // ----------------------
 
+  get messages() {
+    return new NonExclusiveReadableStream<RelayToClientMessage>({});
+  }
+
   async close() {
-    await Promise.all(this.#relays.map((r) => r.close()));
-  }
-
-  async send(msg: ClientToRelayMessage) {
-    await Promise.all(
-      this.relays_write.map((r) => r.send(msg)),
-    );
-  }
-
-  get messenger() {
-    const ch = new TransformStream<
-      ClientToRelayMessage,
-      ClientToRelayMessage
-    >();
-    broadcast(ch.readable, this.relays_write.map((r) => r.messenger));
-    return ch.writable;
+    await Promise.all(this.relays.map((r) => r.close()));
   }
 }

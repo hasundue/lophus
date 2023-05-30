@@ -109,4 +109,4 @@ export type SubscriptionOptions = {
   nbuffer: number;
 };
 
-export type RelayLike = Omit<Relay, "config">;
+export type RelayLike = Omit<Relay, "config" | "connected" | "status">;
