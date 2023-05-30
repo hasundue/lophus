@@ -1,5 +1,4 @@
 import { Lock } from "./x/async.ts";
-import { push } from "./x/streamtools.ts";
 
 export class NonExclusiveReadableStream<R = unknown> {
   readonly locked = false;
@@ -57,21 +56,21 @@ export class NonExclusiveWritableStream<W = unknown>
   implements WritableStream<W> {
   readonly locked = false;
 
-  readonly #sink: Lock<WritableStream<W>>;
+  readonly #writer: Lock<WritableStreamDefaultWriter<W>>;
   readonly #aborter = new AbortController();
 
   constructor(
     underlyingSink: UnderlyingSink<W>,
     strategy?: QueuingStrategy<W>,
   ) {
-    this.#sink = new Lock(
-      new WritableStream<W>(underlyingSink, strategy),
+    this.#writer = new Lock(
+      new WritableStream<W>(underlyingSink, strategy).getWriter(),
     );
   }
 
   #channel() {
     return new WritableStream<W>({
-      write: (chunk) => this.#sink.lock((sink) => push(sink, chunk)),
+      write: (chunk) => this.#writer.lock((writer) => writer.write(chunk)),
     });
   }
 
@@ -100,11 +99,11 @@ export class NonExclusiveWritableStream<W = unknown>
 
   close(): Promise<void> {
     this.#aborter.abort();
-    return this.#sink.lock((sink) => sink.close());
+    return this.#writer.lock((writer) => writer.close());
   }
 
   abort(): Promise<void> {
     this.#aborter.abort();
-    return this.#sink.lock((sink) => sink.abort());
+    return this.#writer.lock((writer) => writer.abort());
   }
 }
