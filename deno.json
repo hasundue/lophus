@@ -1,12 +1,11 @@
 {
   "tasks": {
     "cache": "fd -e ts | xargs deno cache",
-    "fmt": "fd -e ts -e md | xargs deno fmt",
-    "lint": "fd -e ts | xargs deno lint",
-    "test": "deno test -A --no-check ./core ./lib ./tests",
+    "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "docgen": "deno run -A ./bin/docgen.ts && deno fmt ./examples",
     "run": "deno run -A ./bin/run_example.ts"
   },
+  "exclude": ["dist/"],
   "lock": false
 }
