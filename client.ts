@@ -9,6 +9,7 @@ import type {
 } from "./nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { NonExclusiveWritableStream } from "./core/streams.ts";
+import { Lock } from "./core/x/async.ts";
 
 export * from "./nips/01.ts";
 
@@ -67,23 +68,26 @@ export class Relay
       return controller.terminate();
     }
 
+    let controllerLock: Lock<TransformStreamDefaultController<NostrEvent>>;
+
     return this.messages.pipeThrough(
       new TransformStream<RelayToClientMessage, NostrEvent>({
-        start() {
+        start(controller) {
+          controllerLock = new Lock(controller);
           return messenger.write(["REQ", id, ...[filter].flat()]);
         },
-        transform(msg, controller) {
+        transform(msg) {
           if (msg[1] === id) {
             if (msg[0] === "EOSE" && !opts.realtime) {
-              return terminate(controller);
+              return controllerLock.lock((con) => terminate(con));
             }
             if (msg[0] === "EVENT") {
-              return controller.enqueue(msg[2]);
+              return controllerLock.lock((con) => con.enqueue(msg[2]));
             }
           }
         },
-        flush(controller) {
-          return terminate(controller);
+        flush() {
+          return controllerLock.lock((con) => terminate(con));
         },
       }),
     );
