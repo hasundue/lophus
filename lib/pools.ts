@@ -3,15 +3,11 @@ import {
   Relay,
   RelayInit,
   RelayLike,
-  RelayToClientMessage,
   RelayUrl,
   SubscriptionFilter,
   SubscriptionOptions,
 } from "../client.ts";
-import {
-  NonExclusiveReadableStream,
-  NonExclusiveWritableStream,
-} from "../core/streams.ts";
+import { NonExclusiveWritableStream } from "../core/streams.ts";
 import { distinctBy, merge } from "../lib/streams.ts";
 
 /**
@@ -25,19 +21,17 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
 
   constructor(...init: (RelayUrl | RelayInit)[]) {
     const relays = init.map((i) => new Relay(i));
-    const writers = relays.filter((r) => r.config.write).map((r) =>
-      r.getWriter()
-    );
+
+    const writers = relays.filter((r) => r.config.write)
+      .map((r) => r.getWriter());
 
     super({
       async write(msg) {
-        await Promise.all(
-          writers.map((r) => r.write(msg)),
-        );
+        await Promise.all(writers.map((r) => r.write(msg)));
       },
     }, { highWaterMark: Math.max(...relays.map((r) => r.config.nbuffer)) });
 
-    this.relays = init.map((i) => new Relay(i));
+    this.relays = relays;
     this.#relays_read = this.relays.filter((r) => r.config.read);
   }
 
@@ -56,10 +50,6 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
   // ----------------------
   // NostrNode methods
   // ----------------------
-
-  get messages() {
-    return new NonExclusiveReadableStream<RelayToClientMessage>({});
-  }
 
   async close() {
     await Promise.all(this.relays.map((r) => r.close()));

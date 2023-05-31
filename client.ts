@@ -8,6 +8,7 @@ import type {
   SubscriptionId,
 } from "./nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
+import { NonExclusiveWritableStream } from "./core/streams.ts";
 
 export * from "./nips/01.ts";
 
@@ -109,4 +110,7 @@ export type SubscriptionOptions = {
   nbuffer: number;
 };
 
-export type RelayLike = Omit<Relay, "config" | "connected" | "status">;
+export interface RelayLike
+  extends NonExclusiveWritableStream<ClientToRelayMessage> {
+  subscribe: Relay["subscribe"];
+}
