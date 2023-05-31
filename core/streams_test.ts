@@ -110,6 +110,20 @@ describe("NonExclusiveReadableStream", () => {
     assertEquals(results, [2, 4]);
   });
 
+  it("should be teeable", () => {
+    const [tee1, tee2] = stream.tee();
+    assert(tee1 instanceof NonExclusiveReadableStream);
+    assert(tee2 instanceof NonExclusiveReadableStream);
+  });
+
+  it("should be iterable", async () => {
+    const results: number[] = [];
+    for await (const chunk of stream) {
+      results.push(chunk);
+    }
+    assertEquals(results, [1, 2]);
+  });
+
   it("should be cancelable", async () => {
     await stream.cancel();
   });

@@ -1,6 +1,7 @@
 import { Lock } from "./x/async.ts";
 
-export class NonExclusiveReadableStream<R = unknown> {
+export class NonExclusiveReadableStream<R = unknown>
+  implements ReadableStream<R> {
   readonly locked = false;
 
   #source: ReadableStream<R>;
@@ -8,7 +9,7 @@ export class NonExclusiveReadableStream<R = unknown> {
 
   constructor(
     underlyingSource: UnderlyingSource<R>,
-    readonly strategy?: QueuingStrategy<R>,
+    strategy?: QueuingStrategy<R>,
   ) {
     this.#source = new ReadableStream<R>(underlyingSource, strategy);
   }
@@ -19,9 +20,15 @@ export class NonExclusiveReadableStream<R = unknown> {
     return branch;
   }
 
-  getReader(): ReadableStreamDefaultReader<R> {
+  getReader(options?: { mode?: undefined }): ReadableStreamDefaultReader<R>;
+  getReader(options?: { mode: "byob" }): ReadableStreamBYOBReader;
+
+  getReader(options?: { mode?: "byob" | undefined }) {
     const branch = this.#branch();
-    const reader = branch.getReader();
+
+    const reader = options?.mode === "byob"
+      ? branch.getReader({ mode: "byob" })
+      : branch.getReader({ mode: undefined });
 
     // Cancel the branch when released
     reader.closed.catch(() => branch.cancel());
@@ -49,6 +56,14 @@ export class NonExclusiveReadableStream<R = unknown> {
     options?: PipeOptions,
   ): ReadableStream<T> {
     return this.#branch().pipeThrough(transform, options);
+  }
+
+  tee(): [this, this] {
+    return [this, this];
+  }
+
+  [Symbol.asyncIterator](): AsyncIterableIterator<R> {
+    return this.#branch()[Symbol.asyncIterator]();
   }
 
   cancel(): Promise<void> {
