@@ -31,8 +31,13 @@ describe("LazyWebSocket", () => {
     assert(ws === undefined);
   });
 
-  it("should create a WebSocket when an event listener is added", () => {
+  it("should not create a WebSocket when an event listener is added", () => {
     lazy.addEventListener("open", () => {});
+    assert(ws === undefined);
+  });
+
+  it("should create a WebSocket when the ready property is accessed", async () => {
+    await lazy.ready;
     assert(ws instanceof WebSocket);
   });
 
@@ -45,7 +50,7 @@ describe("LazyWebSocket", () => {
     const opened = new Promise((resolve) => {
       lazy.addEventListener("open", resolve);
     });
-    await lazy.send("test");
+    await lazy.ready;
     await opened;
   });
 
@@ -53,6 +58,7 @@ describe("LazyWebSocket", () => {
     const closed = new Promise((resolve) => {
       lazy.addEventListener("close", resolve);
     });
+    await lazy.ready;
     await lazy.close();
     await closed;
   });
@@ -61,8 +67,18 @@ describe("LazyWebSocket", () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
+    await lazy.ready;
     ws.dispatchEvent(new Event("error"));
     await errored;
+  });
+
+  it("should trigger the onmessage event when the WebSocket receives a message", async () => {
+    const messaged = new Promise((resolve) => {
+      lazy.addEventListener("message", resolve);
+    });
+    await lazy.ready;
+    ws.dispatchEvent(new MessageEvent("message", { data: "test" }));
+    await messaged;
   });
 
   it("should close the WebSocket when the LazyWebSocket is closed", async () => {
