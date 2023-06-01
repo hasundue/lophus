@@ -36,9 +36,9 @@ describe("NostrNode", () => {
     assertFalse(ws instanceof WebSocket);
   });
 
-  it("should create the WebSocket when message stream is requested", () => {
+  it("should not create the WebSocket when message stream is requested", () => {
     node.messages;
-    assert(ws instanceof WebSocket);
+    assertEquals(ws, undefined);
   });
 
   it("should connect to the WebSocket when a message is sent", async () => {
@@ -49,6 +49,7 @@ describe("NostrNode", () => {
 
   it("should recieve messages from the WebSocket", async () => {
     const reader = node.messages.getReader();
+    await node.connected;
     ws.dispatchEvent(
       new MessageEvent("message", {
         data: JSON.stringify(["NOTICE", "test"]),
