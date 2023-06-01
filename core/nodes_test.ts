@@ -17,7 +17,7 @@ describe("NostrNode", () => {
     node = new NostrNode(() => {
       ws = new WebSocket("wss://nostr-dev.wellorder.net");
       return ws;
-    }, { onError: console.error });
+    });
   });
 
   afterEach(async () => {

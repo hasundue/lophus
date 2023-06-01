@@ -1,5 +1,5 @@
 import type { NostrMessage } from "../nips/01.ts";
-import { LazyWebSocket, WebSocketEventHooks } from "./websockets.ts";
+import { LazyWebSocket } from "./websockets.ts";
 import {
   NonExclusiveReadableStream,
   NonExclusiveWritableStream,
@@ -29,7 +29,7 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
     });
 
     this.config = { nbuffer: 10, ...config };
-    this.ws = new LazyWebSocket(createWebSocket, config);
+    this.ws = new LazyWebSocket(createWebSocket);
   }
 
   get status() {
@@ -56,4 +56,4 @@ export class NostrNode<R = NostrMessage, W = NostrMessage>
 
 export type NostrNodeConfig = {
   nbuffer: number;
-} & Partial<WebSocketEventHooks>;
+};

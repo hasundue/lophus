@@ -95,12 +95,6 @@ export class LazyWebSocket {
   }
 }
 
-export type WebSocketEventHooks = {
-  [K in keyof WebSocketEventMap as `on${Capitalize<K>}`]: (
-    ev: WebSocketEventMap[K],
-  ) => void;
-};
-
 export enum WebSocketReadyState {
   CONNECTING = 0,
   OPEN = 1,

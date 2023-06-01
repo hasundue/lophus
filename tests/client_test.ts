@@ -50,10 +50,6 @@ describe("Relay constructor", () => {
         read: false,
         write: false,
         nbuffer: 20,
-        onOpen: noop,
-        onClose: noop,
-        onError: noop,
-        onMessage: noop,
         onNotice: noop,
       });
     });
