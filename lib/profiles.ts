@@ -1,24 +1,17 @@
-import {
-  EventKind,
-  MetadataContent,
-  PublicKey,
-  UnsignedEvent,
-} from "../nips/01.ts";
+import { EventKind, MetadataContent } from "../nips/01.ts";
 import type { Optional } from "../core/types.ts";
-import { Timestamp } from "./times.ts";
+import { EventInit } from "./events.ts";
 
 export type ProfileContentTemplate = Optional<
   MetadataContent,
   "about" | "picture"
 >;
 
-export type ProfileEvent = UnsignedEvent<EventKind.Metadata>;
+export type ProfileEvent = EventInit<EventKind.Metadata>;
 
 export class ProfileComposer
   extends TransformStream<ProfileContentTemplate, ProfileEvent> {
-  constructor(
-    readonly pubkey: PublicKey,
-  ) {
+  constructor() {
     super({
       transform: (template, controller) =>
         controller.enqueue(this.compose(template)),
@@ -26,10 +19,8 @@ export class ProfileComposer
   }
   compose(
     template: ProfileContentTemplate,
-  ): UnsignedEvent<EventKind.Metadata> {
+  ): EventInit<EventKind.Metadata> {
     return {
-      pubkey: this.pubkey,
-      created_at: Timestamp.now,
       kind: EventKind.Metadata,
       tags: [],
       content: { about: "", picture: "", ...template },
