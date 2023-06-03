@@ -85,4 +85,16 @@ describe("LazyWebSocket", () => {
     await lazy.close();
     assertEquals(ws.readyState, WebSocket.CLOSED);
   });
+
+  it("should remove an event listener when the signal is aborted", async () => {
+    const controller = new AbortController();
+    let dispatched = false;
+    const listener = () => {
+      dispatched = true;
+    };
+    lazy.addEventListener("open", listener, { signal: controller.signal });
+    controller.abort();
+    await lazy.ready;
+    assert(!dispatched);
+  });
 });

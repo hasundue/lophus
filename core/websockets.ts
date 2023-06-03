@@ -9,14 +9,14 @@ export class LazyWebSocket {
   #notifier = new Notify();
 
   // Callbacks to add event listeners to the WebSocket.
-  #callbacks: ((ws: WebSocket) => void)[] = [];
+  #inits = new Set<(ws: WebSocket) => void>();
 
   constructor(
     protected createWebSocket: () => WebSocket,
     // TODO: protected logger: Logger,
   ) {
     for (const event of ["open", "close"] as const) {
-      this.#callbacks.push((ws) =>
+      this.#inits.add((ws) =>
         ws.addEventListener(event, () => this.#notifier.notifyAll())
       );
     }
@@ -30,7 +30,7 @@ export class LazyWebSocket {
     this.#ws = this.#created();
 
     // Add event listeners
-    this.#callbacks.forEach((cb) => cb(this.#ws!));
+    this.#inits.forEach((cb) => cb(this.#ws!));
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
@@ -68,10 +68,16 @@ export class LazyWebSocket {
     listener: (this: WebSocket, ev: WebSocketEventMap[T]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ) {
-    if (this.#ws?.readyState === WebSocket.OPEN) {
-      return this.#ws.addEventListener(type, listener, options);
+    this.#ws?.addEventListener(type, listener, options);
+
+    const cb = (ws: WebSocket) => ws.addEventListener(type, listener, options);
+    this.#inits.add(cb);
+
+    if (typeof options === "object" && options.signal) {
+      options.signal.addEventListener("abort", () => {
+        this.#inits.delete(cb);
+      });
     }
-    this.#callbacks.push((ws) => ws.addEventListener(type, listener, options));
   }
 
   async close(code?: number, reason?: string): Promise<void> {
