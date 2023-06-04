@@ -1,5 +1,7 @@
 import type {
   ClientToRelayMessage,
+  EoseMessage,
+  EventMessage,
   NostrEvent,
   NoticeBody,
   RelayToClientMessage,
@@ -16,9 +18,13 @@ export * from "./nips/01.ts";
 /**
  * A class that represents a remote Nostr Relay.
  */
-export class Relay
-  extends NostrNode<RelayToClientMessage, ClientToRelayMessage> {
+export class Relay extends NostrNode<ClientToRelayMessage> {
   readonly config: Readonly<RelayConfig>;
+
+  readonly #subs = new Map<
+    SubscriptionId,
+    Lock<WritableStreamDefaultWriter<EoseMessage | EventMessage>>
+  >();
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -37,17 +43,30 @@ export class Relay
       read: true, write: true, nbuffer: 10, ...opts,
     };
 
-    if (opts?.onNotice) {
-      this.messages.pipeTo(
-        new WritableStream({
-          write(msg) {
-            if (msg[0] === "NOTICE") {
-              return opts.onNotice!(msg[1]);
-            }
-          },
-        }),
-      );
-    }
+    const messenger = new Lock(this.getWriter());
+
+    this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
+      const msg = JSON.parse(ev.data) as RelayToClientMessage;
+
+      // TODO: Apply backpressure when a queue is full.
+
+      if (msg[0] === "NOTICE") {
+        return opts?.onNotice?.(msg[1]);
+      }
+      const sub = this.#subs.get(msg[1]);
+
+      const promise = sub
+        ? sub.lock((writer) => writer.write(msg))
+        : messenger.lock((writer) => writer.write(["CLOSE", msg[1]]));
+
+      return promise.catch((err) => {
+        if (err instanceof TypeError) {
+          // Stream is already closing or closed.
+          return;
+        }
+        throw err;
+      });
+    });
   }
 
   subscribe(
@@ -59,38 +78,62 @@ export class Relay
     opts.nbuffer ??= this.config.nbuffer;
 
     const messenger = this.getWriter();
+    const aborter = new AbortController();
 
-    async function terminate(
-      controller: TransformStreamDefaultController<NostrEvent>,
-    ) {
-      await messenger.write(["CLOSE", id]);
-      messenger.releaseLock();
-      return controller.terminate();
-    }
+    let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent>>;
 
-    let controllerLock: Lock<TransformStreamDefaultController<NostrEvent>>;
-
-    return this.messages.pipeThrough(
-      new TransformStream<RelayToClientMessage, NostrEvent>({
-        start(controller) {
-          controllerLock = new Lock(controller);
-          return messenger.write(["REQ", id, ...[filter].flat()]);
-        },
-        transform(msg) {
-          if (msg[1] === id) {
-            if (msg[0] === "EOSE" && !opts.realtime) {
-              return controllerLock.lock((con) => terminate(con));
+    this.#subs.set(
+      id,
+      new Lock(
+        new NonExclusiveWritableStream<EoseMessage | EventMessage>({
+          write([kind, _, event]) {
+            switch (kind) {
+              case "EOSE":
+                if (opts.realtime) return;
+                return controllerLock.lock((cnt) => cnt.close());
+              case "EVENT":
+                return controllerLock.lock((cnt) => cnt.enqueue(event));
             }
-            if (msg[0] === "EVENT") {
-              return controllerLock.lock((con) => con.enqueue(msg[2]));
-            }
-          }
-        },
-        flush() {
-          return controllerLock.lock((con) => terminate(con));
-        },
-      }),
+          },
+          close() {
+            return controllerLock.lock((cnt) => cnt.close());
+          },
+        }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }))
+          .getWriter(),
+      ),
     );
+
+    const request = () => messenger.write(["REQ", id, ...[filter].flat()]);
+
+    return new ReadableStream<NostrEvent>({
+      start: (controller) => {
+        controllerLock = new Lock(controller);
+
+        this.ws.addEventListener("open", request, { signal: aborter.signal });
+
+        if (this.ws.status === WebSocket.OPEN) {
+          return request();
+        }
+      },
+      pull: () => {
+        return this.connected;
+      },
+      async cancel() {
+        aborter.abort();
+
+        await messenger.write(["CLOSE", id]);
+        messenger.close();
+      },
+    }, new CountQueuingStrategy({ highWaterMark: 0 }));
+  }
+
+  override async close() {
+    await Promise.all(
+      Array.from(this.#subs.values()).map((sub) =>
+        sub.lock((writer) => writer.close())
+      ),
+    );
+    await super.close();
   }
 }
 

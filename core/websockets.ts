@@ -23,14 +23,16 @@ export class LazyWebSocket {
   }
 
   #created(): WebSocket {
-    return this.#ws ??= this.createWebSocket();
+    if (this.#ws) return this.#ws;
+
+    this.#ws = this.createWebSocket();
+    this.#inits.forEach((addEventListener) => addEventListener(this.#ws!));
+
+    return this.#ws;
   }
 
   async #ready(): Promise<WebSocket> {
     this.#ws = this.#created();
-
-    // Add event listeners
-    this.#inits.forEach((cb) => cb(this.#ws!));
 
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
@@ -76,6 +78,7 @@ export class LazyWebSocket {
     if (typeof options === "object" && options.signal) {
       options.signal.addEventListener("abort", () => {
         this.#inits.delete(cb);
+        this.#ws?.removeEventListener(type, listener, options);
       });
     }
   }

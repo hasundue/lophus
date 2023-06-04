@@ -36,28 +36,10 @@ describe("NostrNode", () => {
     assertFalse(ws instanceof WebSocket);
   });
 
-  it("should not create the WebSocket when message stream is requested", () => {
-    node.messages;
-    assertEquals(ws, undefined);
-  });
-
   it("should connect to the WebSocket when a message is sent", async () => {
     await node.getWriter().write(["NOTICE", "test"]);
     assert(ws instanceof WebSocket);
     assertEquals(ws.readyState, WebSocket.OPEN);
-  });
-
-  it("should recieve messages from the WebSocket", async () => {
-    const reader = node.messages.getReader();
-    await node.connected;
-    ws.dispatchEvent(
-      new MessageEvent("message", {
-        data: JSON.stringify(["NOTICE", "test"]),
-      }),
-    );
-    const res = await reader.read();
-    reader.releaseLock();
-    assertEquals(res.value, ["NOTICE", "test"]);
   });
 
   it("should close the WebSocket when the node is closed", async () => {

@@ -90,33 +90,21 @@ describe("Relay", () => {
     assertEquals(relay.status, WebSocket.CLOSED);
   });
 
-  it("should connect when message stream is opened", async () => {
-    const msgs = relay.messages;
-    await relay.connected;
-    assertEquals(relay.status, WebSocket.OPEN);
-    await msgs.cancel();
-  });
-
-  it("should connect when a subscription is created", async () => {
-    const sub = relay.subscribe({ kinds: [1] });
-    await relay.connected;
-    assertEquals(relay.status, WebSocket.OPEN);
-    await sub.cancel();
+  it("should not connect when a subscription is created", () => {
+    relay.subscribe({ kinds: [1] });
+    assertEquals(relay.status, WebSocket.CLOSED);
   });
 
   it("should receive text notes", async () => {
     const sub = relay.subscribe({ kinds: [1] });
     assert(await pop(sub));
-    await sub.cancel();
   });
 
-  it("should be able to open multiple subscriptions", async () => {
+  it("should be able to open multiple subscriptions", () => {
     const sub1 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
     const sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
     assert(sub1);
     assert(sub2);
-    await sub1.cancel();
-    await sub2.cancel();
   });
 
   it("should recieve metas and notes simultaneously", async () => {
@@ -124,7 +112,5 @@ describe("Relay", () => {
     const sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
     assert(await pop(sub1));
     assert(await pop(sub2));
-    await sub1.cancel();
-    await sub2.cancel();
   });
 });
