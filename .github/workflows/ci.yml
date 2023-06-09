@@ -29,7 +29,17 @@ jobs:
         run: deno lint
 
       - name: Run tests
-        run: deno test -A
+        run: deno test -A --coverage=./coverage_profile
         env: 
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PUBLIC_KEY: ${{ env.PUBLIC_KEY }}
+
+      - name: Create coverage report
+        run: deno coverage ./coverage_profile --lcov --output=./coverage.lcov
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ${{ env.REPO_PATH }}/coverage.lcov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
