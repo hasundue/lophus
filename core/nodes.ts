@@ -16,9 +16,7 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
   ) {
     super({
       write: (msg) => this.ws.send(JSON.stringify(msg)),
-      close: () => {
-        return this.ws.close();
-      },
+      close: () => this.ws.close(),
     });
     this.config = { nbuffer: 10, ...config };
     this.ws = new LazyWebSocket(createWebSocket);
