@@ -3,8 +3,11 @@
     "cache": "fd -e ts | xargs deno cache",
     "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
-    "docgen": "deno run -A ./bin/docgen.ts && deno fmt ./examples",
+    "docgen": "deno run -A ./bin/docgen.ts && deno fmt ./docs/EXAMPLES.md",
     "run": "deno run -A ./bin/run_example.ts"
+  },
+  "imports": {
+    "https://deno.land/x/lophus/": "./"
   },
   "exclude": ["dist/"],
   "lock": false

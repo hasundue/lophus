@@ -3,8 +3,8 @@
 ### Global timeline streaming
 
 ```ts
-import { Relay } from "../client.ts";
-import { Timestamp } from "../lib/times.ts";
+import { Relay } from "https://deno.land/x/lophus/client.ts";
+import { Timestamp } from "https://deno.land/x/lophus/lib/times.ts";
 
 new Relay("wss://nos.lol")
   .subscribe({ kinds: [1], since: Timestamp.now })
@@ -14,8 +14,8 @@ new Relay("wss://nos.lol")
 ### Stream from multiple relays with a relay pool
 
 ```ts
-import { RelayPool } from "../lib/pools.ts";
-import { Timestamp } from "../lib/times.ts";
+import { RelayPool } from "https://deno.land/x/lophus/lib/pools.ts";
+import { Timestamp } from "https://deno.land/x/lophus/lib/times.ts";
 
 new RelayPool("wss://nos.lol", "wss://relay.nostr.band")
   .subscribe({ kinds: [1], since: Timestamp.now })
@@ -25,26 +25,31 @@ new RelayPool("wss://nos.lol", "wss://relay.nostr.band")
 ### Publish a text note
 
 ```ts
-import { Relay } from "../client.ts";
-import { EventKind, EventPublisher } from "../lib/events.ts";
-import { env } from "../lib/env.ts";
+import { Relay } from "https://deno.land/x/lophus/client.ts";
+import {
+  EventKind,
+  EventPublisher,
+} from "https://deno.land/x/lophus/lib/events.ts";
+import { env } from "https://deno.land/x/lophus/lib/env.ts";
 
 const relay = new Relay("wss://nos.lol");
 
-new EventPublisher(relay, env.PRIVATE_KEY).publish({
+await new EventPublisher(relay, env.PRIVATE_KEY).publish({
   kind: EventKind.TextNote,
   content: "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
-}).then(() => relay.close());
+});
+
+await relay.close();
 ```
 
 ### Echo bot
 
 ```ts
-import { Relay } from "../client.ts";
-import { DefaultAgent } from "../lib/agents.ts";
-import { EventPublisher } from "../lib/events.ts";
-import { TextNoteComposer } from "../lib/notes.ts";
-import { env } from "../lib/env.ts";
+import { Relay } from "https://deno.land/x/lophus/client.ts";
+import { DefaultAgent } from "https://deno.land/x/lophus/lib/agents.ts";
+import { EventPublisher } from "https://deno.land/x/lophus/lib/events.ts";
+import { TextNoteComposer } from "https://deno.land/x/lophus/lib/notes.ts";
+import { env } from "https://deno.land/x/lophus/lib/env.ts";
 
 const relay = new Relay("wss://nostr-dev.wellorder.net");
 
@@ -57,9 +62,9 @@ relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
 ### Transfer your notes from relay to relay
 
 ```ts
-import { Relay } from "../client.ts";
-import { EventPublisher } from "../lib/events.ts";
-import { env } from "../lib/env.ts";
+import { Relay } from "https://deno.land/x/lophus/client.ts";
+import { EventPublisher } from "https://deno.land/x/lophus/lib/events.ts";
+import { env } from "https://deno.land/x/lophus/lib/env.ts";
 
 new Relay("wss://relay.nostr.band")
   .subscribe({

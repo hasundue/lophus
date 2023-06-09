@@ -1,12 +1,12 @@
 //
-// Generate the README.md for the project.
+// Generate docs/EXAMPLES.md
 //
 const srcs = [
-  "../examples/global.ts",
-  "../examples/pool.ts",
-  "../examples/publish.ts",
-  "../examples/echo.ts",
-  "../examples/transfer.ts",
+  "../docs/src/examples/global.ts",
+  "../docs/src/examples/pool.ts",
+  "../docs/src/examples/publish.ts",
+  "../docs/src/examples/echo.ts",
+  "../docs/src/examples/transfer.ts",
 ] as const;
 
 const ts_begin = "```ts";
@@ -23,6 +23,6 @@ const output = "## Examples\n" +
   texts.join("\n");
 
 Deno.writeTextFileSync(
-  new URL("../examples/README.md", import.meta.url),
+  new URL("../docs/EXAMPLES.md", import.meta.url),
   output,
 );
