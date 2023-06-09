@@ -1,5 +1,4 @@
-import { EventKind, MetadataContent } from "../nips/01.ts";
-import type { Optional } from "../core/types.ts";
+import { EventKind, MetadataContent, Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 
 export type ProfileContentTemplate = Optional<

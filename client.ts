@@ -8,12 +8,12 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./nips/01.ts";
+} from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { NonExclusiveWritableStream } from "./core/streams.ts";
 import { Lock } from "./core/x/async.ts";
 
-export * from "./nips/01.ts";
+export * from "./core/nips/01.ts";
 
 /**
  * A class that represents a remote Nostr Relay.

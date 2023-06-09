@@ -1,4 +1,4 @@
-import { NostrEvent } from "../nips/01.ts";
+import { NostrEvent } from "../core/types.ts";
 
 export class DefaultAgent<T> extends TransformStream<NostrEvent, T> {
   constructor(fn: (event: NostrEvent) => T) {

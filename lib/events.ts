@@ -1,13 +1,13 @@
-import type {
+import {
   EventContent,
   EventKind,
   NostrMessage,
   PrivateKey,
   Tag,
-} from "../nips/01.ts";
+} from "../core/types.ts";
 import { Relay } from "../client.ts";
 
-export { EventKind } from "../nips/01.ts";
+export { EventKind } from "../core/types.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: K;

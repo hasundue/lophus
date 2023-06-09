@@ -2,7 +2,7 @@
 // NIP-01: Nostr Basic Protocol
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
-import { Brand } from "../core/types.ts";
+import { Brand } from "../types.ts";
 
 // ----------------------
 // Events and signatures

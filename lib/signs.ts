@@ -1,11 +1,12 @@
 import type {
+  Brand,
   EventId,
   EventKind,
   EventSerializePrecursor,
   NostrEvent,
+  Require,
   Signature,
-} from "../nips/01.ts";
-import type { Brand, Require } from "../core/types.ts";
+} from "../core/types.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
 import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
