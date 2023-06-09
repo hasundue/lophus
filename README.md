@@ -3,6 +3,9 @@
 > **Warning**\
 > Still under development and not ready for use.
 
+[![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/github/hasundue/lophus/branch/main/graph/badge.svg?token=s01IMg4nI8)](https://codecov.io/github/hasundue/lophus)
+
 Yet another TypeScript library for [Nostr][nostr].
 
 ## Features
@@ -11,7 +14,7 @@ Yet another TypeScript library for [Nostr][nostr].
 - **Portable** 📦 - The client core (client.ts) has no dependencies on Deno or
   Node.js APIs.
 - **Lightweight** 🪶 - The minified version of client core (client.min.js) is
-  smaller than 4.0 KB.
+  about 4.5 KB.
 - **Modular** 🔌 - High-level interfaces and NIPs are implemented as
   [optional modules][modules], which enables you to keep an app as small as
   possible.
@@ -26,5 +29,5 @@ See [./examples](https://github.com/hasundue/lophus/tree/main/examples).
 
 ## Supported NIPs
 
-- [ ] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic
+- [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic
       protocol
