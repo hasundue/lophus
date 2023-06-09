@@ -1,7 +1,7 @@
 // Transfer your notes from relay to relay
-import { Relay } from "https://deno.land/x/lophus/client.ts";
-import { EventPublisher } from "https://deno.land/x/lophus/lib/events.ts";
-import { env } from "https://deno.land/x/lophus/lib/env.ts";
+import { Relay } from "lophus/client.ts";
+import { EventPublisher } from "lophus/lib/events.ts";
+import { env } from "lophus/lib/env.ts";
 
 new Relay("wss://relay.nostr.band")
   .subscribe({

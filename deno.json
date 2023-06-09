@@ -7,7 +7,7 @@
     "run": "deno run -A ./bin/run_example.ts"
   },
   "imports": {
-    "https://deno.land/x/lophus/": "./"
+    "lophus/": "./"
   },
   "exclude": ["dist/"],
   "lock": false
