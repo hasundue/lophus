@@ -32,23 +32,6 @@ export class NonExclusiveWritableStream<W = unknown>
     return writer;
   }
 
-  pipedThrough<I>(
-    transform: TransformStream<I, W>,
-    options?: PipeOptions,
-  ): WritableStream<I> {
-    const channel = this.#channel();
-
-    transform.readable.pipeTo(channel, {
-      signal: this.#aborter.signal,
-      ...options,
-    }).catch((err) => {
-      if (err.name !== "AbortError") throw err;
-      return channel.abort();
-    });
-
-    return transform.writable;
-  }
-
   close(): Promise<void> {
     this.#aborter.abort();
     return this.#writer.lock((writer) => writer.close());
