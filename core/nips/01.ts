@@ -76,10 +76,10 @@ export type NoticeMessage = ["NOTICE", NoticeBody];
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 export type NoticeBody = string;
 
-export interface SubscriptionFilter {
+export interface SubscriptionFilter<K extends EventKind = EventKind> {
   ids?: EventId[];
   authors?: PublicKey[];
-  kinds?: EventKind[];
+  kinds?: K[];
   "#e"?: EventId[];
   "#p"?: PublicKey[];
   since?: Timestamp;

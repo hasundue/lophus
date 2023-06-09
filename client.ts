@@ -1,6 +1,7 @@
-import type {
+import {
   ClientToRelayMessage,
   EoseMessage,
+  EventKind,
   EventMessage,
   NostrEvent,
   NoticeBody,
@@ -69,10 +70,10 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     });
   }
 
-  subscribe(
-    filter: SubscriptionFilter | SubscriptionFilter[],
+  subscribe<K extends EventKind>(
+    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
-  ): ReadableStream<NostrEvent> {
+  ): ReadableStream<NostrEvent<K>> {
     const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     opts.realtime ??= true;
     opts.nbuffer ??= this.config.nbuffer;
@@ -80,12 +81,12 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     const messenger = this.getWriter();
     const aborter = new AbortController();
 
-    let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent>>;
+    let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent<K>>>;
 
     this.#subs.set(
       id,
       new Lock(
-        new NonExclusiveWritableStream<EoseMessage | EventMessage>({
+        new NonExclusiveWritableStream<EoseMessage | EventMessage<K>>({
           write([kind, _, event]) {
             switch (kind) {
               case "EOSE":
@@ -105,7 +106,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
     const request = () => messenger.write(["REQ", id, ...[filter].flat()]);
 
-    return new ReadableStream<NostrEvent>({
+    return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         controllerLock = new Lock(controller);
 
