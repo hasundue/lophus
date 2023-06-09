@@ -23,9 +23,9 @@ Yet another TypeScript library for [Nostr][nostr].
 [streams-api]: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
 [modules]: https://github.com/hasundue/lophus/tree/main/lib
 
-## Examples
+## Documentation
 
-See [./examples](https://github.com/hasundue/lophus/tree/main/examples).
+- [Examples](https://github.com/hasundue/lophus/tree/main/docs/EXAMPLES.md)
 
 ## Supported NIPs
 
