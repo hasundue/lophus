@@ -14,7 +14,7 @@ export interface NostrEvent<K extends EventKind = EventKind> {
   created_at: Timestamp;
   kind: K;
   tags: Tag[];
-  content: EventContent<K>;
+  content: Stringified<EventContent[K]>;
   sig: Signature;
 }
 
@@ -32,12 +32,12 @@ export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
 
 export type EventSerializePrecursor<K extends EventKind = EventKind> = [
-  0,
-  PublicKey,
-  Timestamp,
-  K,
-  Tag[],
-  EventContent<K>,
+  header: 0,
+  pubkey: PublicKey,
+  created_at: Timestamp,
+  kind: K,
+  tags: Tag[],
+  content: Stringified<EventContent[K]>,
 ];
 
 // ----------------------
@@ -97,15 +97,11 @@ export enum EventKind {
   RecommendRelay = 2,
 }
 
-// deno-fmt-ignore
-export type EventContent<K extends EventKind> = 
-  K extends EventKind.Metadata
-    ? MetadataContent
-  : K extends EventKind.TextNote 
-    ? string
-  : K extends EventKind.RecommendRelay 
-    ? RelayUrl
-  : never;
+export type EventContent = [
+  MetadataContent,
+  string,
+  RelayUrl,
+];
 
 export interface MetadataContent {
   name: string;
@@ -114,3 +110,9 @@ export interface MetadataContent {
 }
 
 export type Url = Brand<string, "Url"> | "";
+
+// ----------------------
+// Utility types
+// ----------------------
+
+export type Stringified<T> = string & { __content: T };
