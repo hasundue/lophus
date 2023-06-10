@@ -6,7 +6,7 @@ import type {
   Stringified,
   Tag,
 } from "../core/types.ts";
-import { Relay } from "../client.ts";
+import type { RelayLike } from "../client.ts";
 
 export { EventKind } from "../core/types.ts";
 
@@ -23,13 +23,13 @@ export class EventPublisher<K extends EventKind = EventKind>
   #signer: Signer;
   #messenger: WritableStreamDefaultWriter<ClientToRelayMessage>;
 
-  constructor(relay: Relay, nsec: PrivateKey) {
+  constructor(relayLike: RelayLike, nsec: PrivateKey) {
     super({
       write: (event) => this.publish(event),
       close: () => this.#messenger.releaseLock(),
     });
     this.#signer = new Signer(nsec);
-    this.#messenger = relay.getWriter();
+    this.#messenger = relayLike.getWriter();
   }
 
   publish<K extends EventKind>(event: EventInit<K>): Promise<void> {
