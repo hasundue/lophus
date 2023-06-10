@@ -1,10 +1,13 @@
-import {
+import type {
   ClientToRelayMessage,
+  EventKind,
+  SubscriptionFilter,
+} from "../core/types.ts";
+import {
   Relay,
   RelayInit,
   RelayLike,
   RelayUrl,
-  SubscriptionFilter,
   SubscriptionOptions,
 } from "../client.ts";
 import { NonExclusiveWritableStream } from "../core/streams.ts";
@@ -39,8 +42,8 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
   // Relay methods
   // ----------------------
 
-  subscribe(
-    filter: SubscriptionFilter | SubscriptionFilter[],
+  subscribe<K extends EventKind>(
+    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
   ) {
     const chs = this.#relays_read.map((r) => r.subscribe(filter, opts));
