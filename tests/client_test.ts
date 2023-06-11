@@ -42,8 +42,6 @@ describe("Relay constructor", () => {
   });
 
   describe("called with url and options", () => {
-    const noop = () => {};
-
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net", {
         name: "test",
@@ -68,7 +66,6 @@ describe("Relay constructor", () => {
         nbuffer: 20,
         read: false,
         write: false,
-        onNotice: noop,
       });
     });
   });
