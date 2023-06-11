@@ -5,6 +5,7 @@
     "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "docgen": "deno run -A ./bin/docgen.ts && deno fmt ./docs/EXAMPLES.md",
+    "ci": "deno task docgen && deno fmt && deno task check && deno task test",
     "run": "deno run -A ./bin/run_example.ts"
   },
   "imports": {
