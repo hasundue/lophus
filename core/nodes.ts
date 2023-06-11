@@ -1,5 +1,6 @@
+import type { Logger } from "./std/log.ts";
 import type { NostrMessage } from "./types.ts";
-import { LazyWebSocket, WebSocketReadyState } from "./websockets.ts";
+import { LazyWebSocket, type WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
 /**
@@ -12,14 +13,20 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
 
   constructor(
     createWebSocket: () => WebSocket,
-    config: Partial<NostrNodeConfig> = {},
+    opts: Partial<NostrNodeConfig> = {},
   ) {
     super({
-      write: (msg) => this.ws.send(JSON.stringify(msg)),
-      close: () => this.ws.close(),
+      write: (msg): Promise<void> => {
+        opts.logger?.debug("[node] send", msg);
+        return this.ws.send(JSON.stringify(msg));
+      },
+      close: (): Promise<void> => {
+        opts.logger?.debug("[node] close");
+        return this.ws.close();
+      },
     });
-    this.config = { nbuffer: 10, ...config };
-    this.ws = new LazyWebSocket(createWebSocket);
+    this.config = { nbuffer: 10, ...opts };
+    this.ws = new LazyWebSocket(createWebSocket, opts?.logger);
   }
 
   get status(): WebSocketReadyState {
@@ -33,4 +40,5 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
 
 export type NostrNodeConfig = {
   nbuffer: number;
+  logger?: Logger;
 };

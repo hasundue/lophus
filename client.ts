@@ -4,7 +4,6 @@ import type {
   EventKind,
   EventMessage,
   NostrEvent,
-  NoticeBody,
   RelayToClientMessage,
   RelayUrl,
   SubscriptionFilter,
@@ -52,7 +51,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       // TODO: Apply backpressure when a queue is full.
 
       if (msg[0] === "NOTICE") {
-        return opts?.onNotice?.(msg[1]);
+        return opts?.logger?.info(`[notice](${this.config.name}) ${msg[1]}`);
       }
       const sub = this.#subs.get(msg[1]);
 
@@ -87,13 +86,16 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       id,
       new Lock(
         new NonExclusiveWritableStream<EoseMessage | EventMessage<K>>({
-          write([kind, _, event]) {
-            switch (kind) {
+          write: ([kn, _, ev]): Promise<void> | undefined => {
+            switch (kn) {
               case "EOSE":
+                this.config.logger?.debug(`[eose](${this.config.name}) ${id}`);
                 if (opts.realtime) return;
                 return controllerLock.lock((cnt) => cnt.close());
+
               case "EVENT":
-                return controllerLock.lock((cnt) => cnt.enqueue(event));
+                this.config.logger?.debug(`[event](${this.config.name})`, ev);
+                return controllerLock.lock((cnt) => cnt.enqueue(ev));
             }
           },
           close() {
@@ -143,7 +145,6 @@ export type RelayConfig = NostrNodeConfig & {
   name: string;
   read: boolean;
   write: boolean;
-  onNotice?: (notice: NoticeBody) => void | Promise<void>;
 };
 
 export type RelayOptions = Partial<RelayConfig>;
