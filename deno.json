@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "cache": "fd -e ts | xargs deno cache",
+    "cache": "deno cache ./**/*.ts",
     "check": "deno check ./**/*.ts",
     "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
