@@ -1,4 +1,4 @@
-import type { Logger } from "./std/log.ts";
+import { Logger } from "./types.ts";
 import { Notify } from "./x/async.ts";
 
 /**
@@ -19,7 +19,7 @@ export class LazyWebSocket {
     for (const event of ["open", "close"] as const) {
       this.#inits.add((ws) =>
         ws.addEventListener(event, (): void => {
-          this.logger?.debug(`[ws] ${event}`);
+          this.logger?.debug?.(`[ws] ${event}`);
           this.#notifier.notifyAll();
         })
       );
@@ -27,12 +27,12 @@ export class LazyWebSocket {
   }
 
   #created(): WebSocket {
-    this.logger?.debug("[ws] created");
-
     if (this.#ws) return this.#ws;
 
     this.#ws = this.createWebSocket();
     this.#inits.forEach((addEventListener) => addEventListener(this.#ws!));
+
+    this.logger?.debug?.("[ws] created");
 
     return this.#ws;
   }
@@ -55,7 +55,7 @@ export class LazyWebSocket {
         await this.#notifier.notified();
     }
 
-    this.logger?.debug("[ws] ready");
+    this.logger?.debug?.("[ws] ready");
 
     return this.#ws;
   }
@@ -70,7 +70,7 @@ export class LazyWebSocket {
 
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
     this.#ws = await this.#ready();
-    this.logger?.debug("[ws] send", data);
+    this.logger?.debug?.("[ws] send", data);
     this.#ws.send(data);
   }
 
@@ -79,7 +79,7 @@ export class LazyWebSocket {
     listener: (this: WebSocket, ev: WebSocketEventMap[T]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ) {
-    this.logger?.debug("[ws] listen", type);
+    this.logger?.debug?.("[ws] listen", type);
 
     this.#ws?.addEventListener(type, listener, options);
 
@@ -88,7 +88,7 @@ export class LazyWebSocket {
 
     if (typeof options === "object" && options.signal) {
       options.signal.addEventListener("abort", () => {
-        this.logger?.debug("[ws] unlisten", type);
+        this.logger?.debug?.("[ws] unlisten", type);
         this.#inits.delete(cb);
         this.#ws?.removeEventListener(type, listener, options);
       });

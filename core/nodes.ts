@@ -1,5 +1,4 @@
-import type { Logger } from "./std/log.ts";
-import type { NostrMessage } from "./types.ts";
+import type { Logger, NostrMessage } from "./types.ts";
 import { LazyWebSocket, type WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
@@ -17,11 +16,11 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
   ) {
     super({
       write: (msg): Promise<void> => {
-        opts.logger?.debug("[node] send", msg);
+        opts.logger?.debug?.("[node] send", msg);
         return this.ws.send(JSON.stringify(msg));
       },
       close: (): Promise<void> => {
-        opts.logger?.debug("[node] close");
+        opts.logger?.debug?.("[node] close");
         return this.ws.close();
       },
     });

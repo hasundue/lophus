@@ -51,7 +51,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       // TODO: Apply backpressure when a queue is full.
 
       if (msg[0] === "NOTICE") {
-        return opts?.logger?.info(`[notice](${this.config.name}) ${msg[1]}`);
+        return opts?.logger?.info?.(`[notice] ${this.config.name} ${msg[1]}`);
       }
       const sub = this.#subs.get(msg[1]);
 
@@ -89,12 +89,14 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
           write: ([kn, _, ev]): Promise<void> | undefined => {
             switch (kn) {
               case "EOSE":
-                this.config.logger?.debug(`[eose](${this.config.name}) ${id}`);
+                this.config.logger?.debug?.(`[eose] ${this.config.name} ${id}`);
+
                 if (opts.realtime) return;
                 return controllerLock.lock((cnt) => cnt.close());
 
               case "EVENT":
-                this.config.logger?.debug(`[event](${this.config.name})`, ev);
+                this.config.logger?.debug?.(`[event] ${this.config.name}`, ev);
+
                 return controllerLock.lock((cnt) => cnt.enqueue(ev));
             }
           },

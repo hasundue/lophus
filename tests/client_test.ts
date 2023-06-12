@@ -42,12 +42,15 @@ describe("Relay constructor", () => {
   });
 
   describe("called with url and options", () => {
+    const logger = { info: () => {} };
+
     beforeAll(() => {
       relay = new Relay("wss://nostr-dev.wellorder.net", {
         name: "test",
         read: false,
         write: false,
         nbuffer: 20,
+        logger,
       });
     });
 
@@ -66,6 +69,7 @@ describe("Relay constructor", () => {
         nbuffer: 20,
         read: false,
         write: false,
+        logger,
       });
     });
   });
