@@ -1,9 +1,9 @@
 // Echo bot
-import { Relay } from "lophus/client.ts";
-import { DefaultAgent } from "lophus/lib/agents.ts";
-import { EventPublisher } from "lophus/lib/events.ts";
-import { TextNoteComposer } from "lophus/lib/notes.ts";
-import { env } from "lophus/lib/env.ts";
+import { Relay } from "../../../client.ts";
+import { DefaultAgent } from "../../../lib/agents.ts";
+import { EventPublisher } from "../../../lib/events.ts";
+import { TextNoteComposer } from "../../../lib/notes.ts";
+import { env } from "../../../lib/env.ts";
 
 const relay = new Relay("wss://nostr-dev.wellorder.net");
 

@@ -8,9 +8,6 @@
     "ci": "deno task docgen && deno fmt && deno task check && deno task test",
     "run": "deno run -A ./bin/run_example.ts"
   },
-  "imports": {
-    "lophus/": "./"
-  },
   "exclude": ["dist/"],
   "lock": false
 }

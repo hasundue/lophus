@@ -1,7 +1,7 @@
 // Recommend relays
-import { Relay } from "lophus/client.ts";
-import { EventPublisher } from "lophus/lib/events.ts";
-import { env } from "lophus/lib/env.ts";
+import { Relay } from "../../../client.ts";
+import { EventPublisher } from "../../../lib/events.ts";
+import { env } from "../../../lib/env.ts";
 
 const relay_url = "wss://nostr-dev.wellorder.net";
 const relay = new Relay(relay_url);
