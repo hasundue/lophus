@@ -11,7 +11,7 @@ import {
   SubscriptionOptions,
 } from "../client.ts";
 import { NonExclusiveWritableStream } from "../core/streams.ts";
-import { distinctBy, merge } from "../lib/streams.ts";
+import { Distinctor, merge } from "../lib/streams.ts";
 
 /**
  * A pool of relays that can be used as a single relay.
@@ -46,8 +46,8 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
   ) {
-    const chs = this.#relays_read.map((r) => r.subscribe(filter, opts));
-    return merge(chs).pipeThrough(distinctBy((m) => m.id));
+    const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));
+    return merge(...subs).pipeThrough(new Distinctor((m) => m.id));
   }
 
   // ----------------------
