@@ -3,7 +3,7 @@ export { mergeReadableStreams as merge } from "https://deno.land/std@0.187.0/str
 /**
  * TransformStream which filters out duplicate values from a stream.
  */
-export class Distinctor<R extends unknown, T extends unknown>
+export class Distinctor<R = unknown, T = unknown>
   extends TransformStream<R, R> {
   #seen: Set<T>;
 
@@ -19,5 +19,19 @@ export class Distinctor<R extends unknown, T extends unknown>
       },
     });
     this.#seen = new Set<T>();
+  }
+}
+
+export class Transformer<R = unknown, W = unknown>
+  extends TransformStream<R, W> {
+  constructor(fn: (chunk: R) => W) {
+    super({
+      transform(event, controller) {
+        const result = fn(event);
+        if (result) {
+          controller.enqueue(result);
+        }
+      },
+    });
   }
 }

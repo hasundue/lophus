@@ -26,14 +26,14 @@ new RelayPool("wss://nos.lol", "wss://relay.nostr.band")
 
 ```ts
 import { Relay } from "../../../client.ts";
-import { EventKind, EventPublisher } from "../../../lib/events.ts";
+import { EventPublisher } from "../../../lib/events.ts";
 import { env } from "../../../lib/env.ts";
 
 const relay = new Relay("wss://nos.lol");
 
 new EventPublisher(relay, env.PRIVATE_KEY)
   .publish({
-    kind: EventKind.TextNote,
+    kind: 1,
     content:
       "Hello, Nostr! This is Lophus, yet another JS/TS library for Nostr!",
   })
@@ -44,16 +44,14 @@ new EventPublisher(relay, env.PRIVATE_KEY)
 
 ```ts
 import { Relay } from "../../../client.ts";
-import { DefaultAgent } from "../../../lib/agents.ts";
+import { Transformer } from "../../../lib/streams.ts";
 import { EventPublisher } from "../../../lib/events.ts";
-import { TextNoteComposer } from "../../../lib/notes.ts";
 import { env } from "../../../lib/env.ts";
 
 const relay = new Relay("wss://nostr-dev.wellorder.net");
 
 relay.subscribe({ kinds: [1], "#p": [env.PUBLIC_KEY] })
-  .pipeThrough(new DefaultAgent((ev) => ({ content: ev.content })))
-  .pipeThrough(new TextNoteComposer())
+  .pipeThrough(new Transformer((ev) => ({ kind: 1, content: ev.content })))
   .pipeTo(new EventPublisher(relay, env.PRIVATE_KEY));
 ```
 
