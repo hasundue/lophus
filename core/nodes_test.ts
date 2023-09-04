@@ -8,14 +8,18 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
+import { Server, WebSocket } from "../lib/x/mock-socket.ts";
 
 describe("NostrNode", () => {
+  const url = "wss://localhost:8080";
+  let server: Server;
   let node: NostrNode;
   let ws: WebSocket;
 
   beforeEach(() => {
+    server = new Server(url);
     node = new NostrNode(() => {
-      ws = new WebSocket("wss://nostr-dev.wellorder.net");
+      ws = new WebSocket(url);
       return ws;
     });
   });
@@ -26,6 +30,7 @@ describe("NostrNode", () => {
         throw err;
       }
     });
+    server.close();
   });
 
   it("should be able to create a NostrNode instance", () => {

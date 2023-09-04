@@ -1,4 +1,8 @@
-import { Relay } from "../client.ts";
+import {
+  ClientToRelayMessage,
+  Relay,
+  RelayToClientMessage,
+} from "../client.ts";
 import { pop } from "../lib/x/streamtools.ts";
 import {
   afterAll,
@@ -11,13 +15,16 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
+import { Server, WebSocket } from "../lib/x/mock-socket.ts";
+
+const url = "wss://localhost:8080";
 
 describe("Relay constructor", () => {
   let relay: Relay;
 
   describe("called with url only", () => {
     beforeAll(() => {
-      relay = new Relay("wss://nostr-dev.wellorder.net");
+      relay = new Relay(url);
     });
 
     it("should be constructable", () => {
@@ -25,11 +32,11 @@ describe("Relay constructor", () => {
     });
 
     it("should have a url", () => {
-      assertEquals(relay.config.url, "wss://nostr-dev.wellorder.net");
+      assertEquals(relay.config.url, url);
     });
 
     it("should have a name", () => {
-      assertEquals(relay.config.name, "nostr-dev.wellorder.net");
+      assertEquals(relay.config.name, "localhost:8080");
     });
 
     it("should have default options", () => {
@@ -45,7 +52,7 @@ describe("Relay constructor", () => {
     const noop = () => {};
 
     beforeAll(() => {
-      relay = new Relay("wss://nostr-dev.wellorder.net", {
+      relay = new Relay(url, {
         name: "test",
         read: false,
         write: false,
@@ -65,7 +72,7 @@ describe("Relay constructor", () => {
     it("should have the given options", () => {
       assertObjectMatch(relay.config, {
         name: "test",
-        url: "wss://nostr-dev.wellorder.net",
+        url,
         nbuffer: 20,
         read: false,
         write: false,
@@ -76,14 +83,34 @@ describe("Relay constructor", () => {
 });
 
 describe("Relay", () => {
+  const url = "wss://localhost:8080";
+  let server: Server;
   let relay: Relay;
 
   beforeEach(() => {
-    relay = new Relay("wss://nostr-dev.wellorder.net");
+    server = new Server(url);
+    server.on("connection", (ws) => {
+      ws.on("message", (data) => {
+        if (typeof data !== "string") throw new Error();
+        const msg = JSON.parse(data) as ClientToRelayMessage;
+        if (msg[0] === "REQ") {
+          ws.send(JSON.stringify(
+            [
+              "EVENT",
+              msg[1],
+              // deno-lint-ignore no-explicit-any
+              { kind: 1 } as any,
+            ] satisfies RelayToClientMessage,
+          ));
+        }
+      });
+    });
+    relay = new Relay(url);
   });
 
   afterEach(async () => {
     await relay.close();
+    server.close();
   });
 
   it("should not be connected initially", () => {

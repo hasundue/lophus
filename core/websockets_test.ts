@@ -6,21 +6,26 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
+import { Server, WebSocket } from "../lib/x/mock-socket.ts";
 import { LazyWebSocket } from "./websockets.ts";
 
 describe("LazyWebSocket", () => {
+  let server: Server;
   let ws: WebSocket;
   let lazy: LazyWebSocket;
 
   beforeEach(() => {
+    const url = "wss://localhost:8080";
+    server = new Server(url);
     lazy = new LazyWebSocket(() => {
-      ws = new WebSocket("wss://nostr-dev.wellorder.net");
+      ws = new WebSocket(url);
       return ws;
     });
   });
 
   afterEach(async () => {
     await lazy.close();
+    server.close();
   });
 
   it("should be able to create a LazyWebSocket instance", () => {
