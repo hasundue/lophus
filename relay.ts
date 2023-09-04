@@ -1,6 +1,6 @@
 import type {
-  RelayToClientMessage,
   ClientToRelayMessage,
+  RelayToClientMessage,
 } from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { Lock } from "./core/x/async.ts";

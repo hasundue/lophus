@@ -16,8 +16,10 @@ export class MockWebSocket implements WebSocket {
 
   readonly url: string = "";
 
-  close: (code?: number, reason?: string) => void;
-  send: (data: string | ArrayBufferLike | Blob | ArrayBufferView) => void;
+  readonly close: (code?: number, reason?: string) => void;
+  readonly send: (
+    data: string | ArrayBufferLike | Blob | ArrayBufferView,
+  ) => void;
 
   constructor(
     onclosed?: (code?: number, reason?: string) => void,
@@ -25,10 +27,10 @@ export class MockWebSocket implements WebSocket {
   ) {
     this.close = (code?: number, reason?: string) => {
       return onclosed?.(code, reason);
-    }
+    };
     this.send = (data: string | ArrayBufferLike | Blob | ArrayBufferView) => {
       return onsent?.(data);
-    }
+    };
   }
 
   onclose: ((this: WebSocket, ev: CloseEvent) => void) | null = null;
