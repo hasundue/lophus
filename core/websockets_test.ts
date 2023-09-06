@@ -1,79 +1,59 @@
 import {
-  afterEach,
+  afterAll,
   assert,
   assertEquals,
-  beforeEach,
+  beforeAll,
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { Server, WebSocket } from "../lib/x/mock-socket.ts";
+import { Server } from "../lib/x/mock-socket.ts";
 import { LazyWebSocket } from "./websockets.ts";
 
 describe("LazyWebSocket", () => {
   let server: Server;
-  let ws: WebSocket;
   let lazy: LazyWebSocket;
 
-  beforeEach(() => {
+  beforeAll(() => {
     const url = "wss://localhost:8080";
     server = new Server(url);
-    lazy = new LazyWebSocket(() => {
-      ws = new WebSocket(url);
-      return ws;
-    });
+    lazy = new LazyWebSocket(url);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await lazy.close();
     server.close();
   });
 
   it("should be able to create a LazyWebSocket instance", () => {
-    assert(lazy);
+    assert(lazy instanceof LazyWebSocket);
   });
 
-  it("should not create a WebSocket until it is needed", () => {
-    assert(ws === undefined);
+  it("should not open a WebSocket until it is needed", () => {
+    assertEquals(lazy.readyState, WebSocket.CLOSED);
   });
 
-  it("should not create a WebSocket when an event listener is added", () => {
-    lazy.addEventListener("open", () => {});
-    assert(ws === undefined);
+  it("should not open a WebSocket when an event listener is added", () => {
+    lazy.addEventListener("message", () => {});
+    assertEquals(lazy.readyState, WebSocket.CLOSED);
   });
 
-  it("should create a WebSocket when the ready property is accessed", async () => {
-    await lazy.ready;
-    assert(ws instanceof WebSocket);
-  });
-
-  it("should create a WebSocket when an event is sent", async () => {
-    await lazy.send("test");
-    assert(ws instanceof WebSocket);
-  });
-
-  it("should trigger the onopen event when the WebSocket is opened", async () => {
+  it("should trigger the onopen event when an event is sent", async () => {
     const opened = new Promise((resolve) => {
       lazy.addEventListener("open", resolve);
     });
-    await lazy.ready;
+    await lazy.send("test");
     await opened;
   });
 
-  it("should trigger the onclose event when the WebSocket is closed", async () => {
-    const closed = new Promise((resolve) => {
-      lazy.addEventListener("close", resolve);
-    });
-    await lazy.ready;
-    await lazy.close();
-    await closed;
+  it("should open the WebSocket when an event is sent", () => {
+    assertEquals(lazy.readyState, WebSocket.OPEN);
   });
 
   it("should trigger the onerror event when the WebSocket errors", async () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    await lazy.ready;
-    ws.dispatchEvent(new Event("error"));
+    lazy.dispatchEvent(new Event("error"));
     await errored;
   });
 
@@ -81,25 +61,19 @@ describe("LazyWebSocket", () => {
     const messaged = new Promise((resolve) => {
       lazy.addEventListener("message", resolve);
     });
-    await lazy.ready;
-    ws.dispatchEvent(new MessageEvent("message", { data: "test" }));
+    lazy.dispatchEvent(new MessageEvent("message", { data: "test" }));
     await messaged;
   });
 
-  it("should close the WebSocket when the LazyWebSocket is closed", async () => {
+  it("should trigger the onclose event when the WebSocket is closed", async () => {
+    const closed = new Promise((resolve) => {
+      lazy.addEventListener("close", resolve);
+    });
     await lazy.close();
-    assertEquals(ws.readyState, WebSocket.CLOSED);
+    await closed;
   });
 
-  it("should remove an event listener when the signal is aborted", async () => {
-    const controller = new AbortController();
-    let dispatched = false;
-    const listener = () => {
-      dispatched = true;
-    };
-    lazy.addEventListener("open", listener, { signal: controller.signal });
-    controller.abort();
-    await lazy.ready;
-    assert(!dispatched);
+  it("should close the WebSocket when the LazyWebSocket is closed", () => {
+    assertEquals(lazy.readyState, WebSocket.CLOSED);
   });
 });

@@ -1,103 +1,65 @@
-import { Logger } from "./types.ts";
 import { Notify } from "./x/async.ts";
 
 /**
  * A lazy WebSocket that creates a connection when it is needed.
  * It will also wait for the webSocket to be ready before sending any data.
  */
-export class LazyWebSocket {
+export class LazyWebSocket extends EventTarget implements WebSocket {
   #ws?: WebSocket;
+  #createWebSocket: () => WebSocket;
   #notifier = new Notify();
 
-  // Callbacks to add event listeners to the WebSocket.
-  #inits = new Set<(ws: WebSocket) => void>();
-
   constructor(
-    protected createWebSocket: () => WebSocket,
-    protected logger?: Logger,
+    url: string | URL,
+    protocols?: string | string[],
   ) {
-    for (const event of ["open", "close"] as const) {
-      this.#inits.add((ws) =>
-        ws.addEventListener(event, (): void => {
-          this.logger?.debug?.(`[ws] ${event}`);
-          this.#notifier.notifyAll();
-        })
-      );
-    }
+    super(); // EventTarget
+    this.#createWebSocket = () => {
+      const ws = new WebSocket(url, protocols);
+      // Pass through events from the WebSocket
+      for (const type of ["error", "message"] as const) {
+        ws.addEventListener(type, (ev) => dispatchEvent.bind(this, ev));
+      }
+      for (const type of ["open", "close"] as const) {
+        ws.addEventListener(type, () => this.#notifier.notify());
+      }
+      return ws;
+    };
+    this.url = url.toString();
   }
 
   #created(): WebSocket {
-    if (this.#ws) return this.#ws;
-
-    this.#ws = this.createWebSocket();
-    this.#inits.forEach((addEventListener) => addEventListener(this.#ws!));
-
-    this.logger?.debug?.("[ws] created");
-
-    return this.#ws;
+    return this.#ws ??= this.#createWebSocket();
   }
 
   async #ready(): Promise<WebSocket> {
     this.#ws = this.#created();
-
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
         await this.#notifier.notified();
         /* falls through */
       case WebSocket.OPEN:
         break;
-
       case WebSocket.CLOSING:
         await this.#notifier.notified();
         /* falls through */
       case WebSocket.CLOSED:
-        this.#ws = this.createWebSocket();
+        this.#ws = this.#createWebSocket();
         await this.#notifier.notified();
     }
-
-    this.logger?.debug?.("[ws] ready");
-
+    this.dispatchEvent(new Event("open"));
     return this.#ws;
-  }
-
-  get ready(): Promise<void> {
-    return this.#ready().then(() => {});
-  }
-
-  get status(): WebSocketReadyState {
-    return this.#ws?.readyState ?? WebSocket.CLOSED;
   }
 
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
     this.#ws = await this.#ready();
-    this.logger?.debug?.("[ws] send", data);
     this.#ws.send(data);
   }
 
-  addEventListener<T extends keyof WebSocketEventMap>(
-    type: T,
-    listener: (this: WebSocket, ev: WebSocketEventMap[T]) => unknown,
-    options?: boolean | AddEventListenerOptions,
-  ) {
-    this.logger?.debug?.("[ws] listen", type);
-
-    this.#ws?.addEventListener(type, listener, options);
-
-    const cb = (ws: WebSocket) => ws.addEventListener(type, listener, options);
-    this.#inits.add(cb);
-
-    if (typeof options === "object" && options.signal) {
-      options.signal.addEventListener("abort", () => {
-        this.logger?.debug?.("[ws] unlisten", type);
-        this.#inits.delete(cb);
-        this.#ws?.removeEventListener(type, listener, options);
-      });
-    }
-  }
-
   async close(code?: number, reason?: string): Promise<void> {
-    if (!this.#ws) return;
-
+    if (!this.#ws) {
+      return;
+    }
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
         await this.#notifier.notified();
@@ -109,11 +71,47 @@ export class LazyWebSocket {
         await this.#notifier.notified();
         /* falls through */
       case WebSocket.CLOSED:
-        return;
+        break;
+    }
+    this.dispatchEvent(new Event("close"));
+  }
+
+  // --------------
+  // WebSocket API
+  // --------------
+  set binaryType(value: BinaryType) {
+    if (this.#ws) {
+      this.#ws.binaryType = value;
     }
   }
+  get bufferedAmount() {
+    return this.#ws ? this.#ws.bufferedAmount : 0;
+  }
+  get extensions() {
+    return this.#ws ? this.#ws.extensions : "";
+  }
+  get protocol() {
+    return this.#ws ? this.#ws.protocol : "";
+  }
+  get readyState(): WebSocketReadyState {
+    return this.#ws ? this.#ws.readyState : WebSocket.CLOSED;
+  }
+  readonly url: string;
+
+  onclose: WebSocket["onclose"] = null;
+  onerror: WebSocket["onerror"] = null;
+  onmessage: WebSocket["onmessage"] = null;
+  onopen: WebSocket["onopen"] = null;
+
+  readonly CONNECTING = WebSocket.CONNECTING;
+  readonly OPEN = WebSocket.OPEN;
+  readonly CLOSING = WebSocket.CLOSING;
+  readonly CLOSED = WebSocket.CLOSED;
 }
 
+/**
+ * The ready state of a WebSocket.
+ */
 export enum WebSocketReadyState {
   CONNECTING = 0,
   OPEN = 1,
