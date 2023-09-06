@@ -4,6 +4,7 @@ import {
   afterEach,
   assert,
   assertEquals,
+  assertThrows,
   assertObjectMatch,
   beforeAll,
   beforeEach,
@@ -13,8 +14,8 @@ import {
 import { MockWebSocket } from "../lib/testing.ts";
 
 describe("Client", () => {
-  describe("new Client()", () => {
-    let ws: WebSocket;
+  describe("constructor", () => {
+    let ws: MockWebSocket;
     let client: Client;
     beforeAll(() => {
       ws = new MockWebSocket();
@@ -22,8 +23,7 @@ describe("Client", () => {
     });
     afterAll(async () => {
       await client.close();
-      ws.close();
-      // wait for 1 second to allow the server to close the connection.
+      await ws.close();
     });
     it("should create a Client instance", () => {
       assert(client instanceof Client);
