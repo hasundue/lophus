@@ -11,7 +11,7 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
   protected ws: LazyWebSocket;
 
   constructor(
-    createWebSocket: () => WebSocket,
+    url: string | URL,
     opts: Partial<NostrNodeConfig> = {},
   ) {
     super({
@@ -25,15 +25,11 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
       },
     });
     this.config = { nbuffer: 10, ...opts };
-    this.ws = new LazyWebSocket(createWebSocket, opts?.logger);
+    this.ws = new LazyWebSocket(url);
   }
 
   get status(): WebSocketReadyState {
-    return this.ws.status;
-  }
-
-  get connected(): Promise<void> {
-    return this.ws.ready;
+    return this.ws.readyState;
   }
 }
 
