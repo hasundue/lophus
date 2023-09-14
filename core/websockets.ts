@@ -1,5 +1,13 @@
 import { Notify } from "./x/async.ts";
 
+export type WebSocketEventType = keyof WebSocketEventMap;
+export const WebSocketEventTypes: WebSocketEventType[] = [
+  "close",
+  "error",
+  "message",
+  "open",
+];
+
 export interface WebSocketLike {
   readonly url: string;
   readonly readyState: WebSocketReadyState;
@@ -12,6 +20,11 @@ export interface WebSocketLike {
   dispatchEvent: WebSocket["dispatchEvent"];
 }
 
+type EventListenerOptionsMap = Map<
+  EventListenerOrEventListenerObject,
+  boolean | AddEventListenerOptions | undefined
+>;
+
 /**
  * A lazy WebSocket that creates a connection when it is needed.
  * It will also wait for the webSocket to be ready before sending any data.
@@ -20,11 +33,13 @@ export class LazyWebSocket implements WebSocketLike {
   #ws?: WebSocket;
   #createWebSocket: () => WebSocket;
 
-  readonly #notifier = new Notify();
-  readonly #addEventListenerMap = new Map<
-    EventListenerOrEventListenerObject,
-    () => ReturnType<WebSocket["addEventListener"]>
+  readonly #eventListenerMap = new Map<
+    WebSocketEventType,
+    EventListenerOptionsMap
   >();
+  readonly #notifier = new Notify();
+
+  readonly url: string;
 
   constructor(
     url: string | URL,
@@ -34,8 +49,13 @@ export class LazyWebSocket implements WebSocketLike {
       const ws = new WebSocket(url, protocols);
       ws.addEventListener("open", () => {
         this.#notifier.notifyAll();
-        this.#addEventListenerMap.forEach((callback) => callback());
+        this.#eventListenerMap.forEach((map, type) => {
+          map.forEach((options, listener) => {
+            ws.addEventListener(type, listener, options);
+          });
+        });
       });
+      ws.dispatchEvent(new Event("open"));
       return ws;
     };
     this.url = url.toString();
@@ -72,26 +92,44 @@ export class LazyWebSocket implements WebSocketLike {
     this.#ws.send(data);
   }
 
-  close(code?: number, reason?: string): void {
-    this.#ws?.close(code, reason);
+  async close(code?: number, reason?: string): Promise<void> {
+    if (!this.#ws) {
+      return;
+    }
+    switch (this.#ws.readyState) {
+      case WebSocket.CONNECTING:
+        await this.#notifier.notified();
+        /* falls through */
+      case WebSocket.OPEN:
+        this.#ws.close(code, reason);
+        /* falls through */
+      case WebSocket.CLOSING:
+        await this.#notifier.notified();
+        /* falls through */
+      case WebSocket.CLOSED:
+        break;
+    }
     this.#ws = undefined;
   }
 
   get readyState(): WebSocketReadyState {
     return this.#ws ? this.#ws.readyState : WebSocket.CLOSED;
   }
-  readonly url: string;
 
   addEventListener: WebSocket["addEventListener"] = (
     type: keyof WebSocketEventMap,
     listener: EventListenerOrEventListenerObject,
     options: boolean | AddEventListenerOptions = {},
   ) => {
-    const callback = () => this.#ws?.addEventListener(type, listener, options);
     if (this.#ws?.readyState === WebSocket.OPEN) {
-      callback();
+      this.#ws?.addEventListener(type, listener, options);
     }
-    this.#addEventListenerMap.set(listener, callback);
+    const map = this.#eventListenerMap.get(type);
+    if (map) {
+      map.set(listener, options);
+    } else {
+      this.#eventListenerMap.set(type, new Map([[listener, options]]));
+    }
   };
 
   removeEventListener: WebSocket["removeEventListener"] = (
@@ -100,7 +138,7 @@ export class LazyWebSocket implements WebSocketLike {
     options: boolean | EventListenerOptions = {},
   ) => {
     this.#ws?.removeEventListener(type, listener, options);
-    this.#addEventListenerMap.delete(listener);
+    this.#eventListenerMap.get(type)?.delete(listener);
   };
 
   dispatchEvent: WebSocket["dispatchEvent"] = (event: Event) => {

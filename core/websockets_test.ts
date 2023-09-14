@@ -10,7 +10,6 @@ import {
 } from "../lib/std/testing.ts";
 import { Server } from "../lib/x/mock-socket.ts";
 import { LazyWebSocket } from "./websockets.ts";
-import { Notify } from "./x/async.ts";
 
 describe("LazyWebSocket", () => {
   let server: Server;
@@ -23,9 +22,9 @@ describe("LazyWebSocket", () => {
     lazy = new LazyWebSocket(url);
   });
 
-  afterAll(() => {
-    server.close();
-    lazy.close();
+  afterAll(async () => {
+    await lazy.close();
+    server.stop();
   });
 
   it("should be able to create a LazyWebSocket instance", () => {
@@ -43,21 +42,21 @@ describe("LazyWebSocket", () => {
     assertEquals(lazy.readyState, WebSocket.CLOSED);
   });
 
-  // it("should trigger the onopen event when an event is sent", async () => {
-  //   await lazy.send("test");
-  //   assert(await promise);
-  // });
+  it("should trigger the onopen event when an event is sent", async () => {
+    await lazy.send("test");
+    assert(await promise);
+  });
 
-//   it("should open the WebSocket when an event is sent", () => {
-//     assertEquals(lazy.readyState, WebSocket.OPEN);
-//   });
+  it("should open the WebSocket when an event is sent", () => {
+    assertEquals(lazy.readyState, WebSocket.OPEN);
+  });
 
   it("should trigger the onerror event when the WebSocket errors", async () => {
     await lazy.ready();
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    lazy.dispatchEvent(new Event("error"));
+    server.emit("error", new Error("test"));
     await errored;
   });
 
@@ -75,12 +74,12 @@ describe("LazyWebSocket", () => {
     const closed = new Promise((resolve) => {
       lazy.addEventListener("close", resolve);
     });
-    lazy.dispatchEvent(new CloseEvent("close"));
+    server.emit("close", null);
     await closed;
   });
 
-//   it("should close the WebSocket when the LazyWebSocket is closed", () => {
-//     lazy.close();
-//     assertEquals(lazy.readyState, WebSocket.CLOSED);
-//   });
+  it("should close the WebSocket when the LazyWebSocket is closed", async () => {
+    await lazy.close();
+    assertEquals(lazy.readyState, WebSocket.CLOSED);
+  });
 });
