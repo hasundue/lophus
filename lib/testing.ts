@@ -1,4 +1,4 @@
-export class MockWebSocket implements WebSocket {
+export class MockWebSocket extends EventTarget implements WebSocket {
   readonly CONNECTING = WebSocket.CONNECTING;
   readonly OPEN = WebSocket.OPEN;
   readonly CLOSING = WebSocket.CLOSING;
@@ -28,6 +28,7 @@ export class MockWebSocket implements WebSocket {
   }
 
   constructor(url?: string | URL, protocols?: string | string[]) {
+    super();
     this.url = url?.toString() ?? "";
     this.protocol = protocols ? protocols.toString() : "";
   }
@@ -56,30 +57,15 @@ export class MockWebSocket implements WebSocket {
     }
   }
 
-  onclose: ((this: WebSocket, ev: CloseEvent) => void) | null = null;
-  onerror: ((this: WebSocket, ev: Event) => void) | null = null;
-  onmessage: ((this: WebSocket, ev: MessageEvent) => void) | null = null;
-  onopen: ((this: WebSocket, ev: Event) => void) | null = null;
+  addEventListener: WebSocket["addEventListener"] = super.addEventListener;
+  removeEventListener: WebSocket["removeEventListener"] = super
+    .removeEventListener;
+  dispatchEvent: WebSocket["dispatchEvent"] = super.dispatchEvent;
 
-  addEventListener(
-    _type: string,
-    _listener: EventListenerOrEventListenerObject | null,
-    _options?: boolean | AddEventListenerOptions,
-  ): void {
-    throw new Error("Method not implemented.");
-  }
-
-  removeEventListener(
-    _type: string,
-    _callback: EventListenerOrEventListenerObject | null,
-    _options?: EventListenerOptions | boolean,
-  ): void {
-    throw new Error("Method not implemented.");
-  }
-
-  dispatchEvent(_event: Event): boolean {
-    throw new Error("Method not implemented.");
-  }
+  onclose: WebSocket["onclose"] = null;
+  onerror: WebSocket["onerror"] = null;
+  onmessage: WebSocket["onmessage"] = null;
+  onopen: WebSocket["onopen"] = null;
 }
 
 type MessageEventData = string | ArrayBufferLike | Blob | ArrayBufferView;

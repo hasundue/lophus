@@ -1,28 +1,41 @@
 import { Notify } from "./x/async.ts";
 
+export interface WebSocketLike {
+  readonly url: string;
+  readonly readyState: WebSocketReadyState;
+  send(
+    data: string | ArrayBufferLike | Blob | ArrayBufferView,
+  ): void | Promise<void>;
+  close(code?: number, reason?: string): void | Promise<void>;
+  addEventListener: WebSocket["addEventListener"];
+  removeEventListener: WebSocket["removeEventListener"];
+  dispatchEvent: WebSocket["dispatchEvent"];
+}
+
 /**
  * A lazy WebSocket that creates a connection when it is needed.
  * It will also wait for the webSocket to be ready before sending any data.
  */
-export class LazyWebSocket extends EventTarget implements WebSocket {
+export class LazyWebSocket implements WebSocketLike {
   #ws?: WebSocket;
   #createWebSocket: () => WebSocket;
-  #notifier = new Notify();
+
+  readonly #notifier = new Notify();
+  readonly #addEventListenerMap = new Map<
+    EventListenerOrEventListenerObject,
+    () => ReturnType<WebSocket["addEventListener"]>
+  >();
 
   constructor(
     url: string | URL,
     protocols?: string | string[],
   ) {
-    super(); // EventTarget
     this.#createWebSocket = () => {
       const ws = new WebSocket(url, protocols);
-      // Pass through events from the WebSocket
-      for (const type of ["error", "message"] as const) {
-        ws.addEventListener(type, (ev) => dispatchEvent.bind(this, ev));
-      }
-      for (const type of ["open", "close"] as const) {
-        ws.addEventListener(type, () => this.#notifier.notify());
-      }
+      ws.addEventListener("open", () => {
+        this.#notifier.notifyAll();
+        this.#addEventListenerMap.forEach((callback) => callback());
+      });
       return ws;
     };
     this.url = url.toString();
@@ -47,8 +60,11 @@ export class LazyWebSocket extends EventTarget implements WebSocket {
         this.#ws = this.#createWebSocket();
         await this.#notifier.notified();
     }
-    this.dispatchEvent(new Event("open"));
     return this.#ws;
+  }
+
+  async ready(): Promise<void> {
+    await this.#ready();
   }
 
   async send(data: Parameters<WebSocket["send"]>[0]): Promise<void> {
@@ -56,57 +72,40 @@ export class LazyWebSocket extends EventTarget implements WebSocket {
     this.#ws.send(data);
   }
 
-  async close(code?: number, reason?: string): Promise<void> {
-    if (!this.#ws) {
-      return;
-    }
-    switch (this.#ws.readyState) {
-      case WebSocket.CONNECTING:
-        await this.#notifier.notified();
-        /* falls through */
-      case WebSocket.OPEN:
-        this.#ws.close(code, reason);
-        /* falls through */
-      case WebSocket.CLOSING:
-        await this.#notifier.notified();
-        /* falls through */
-      case WebSocket.CLOSED:
-        break;
-    }
-    this.dispatchEvent(new Event("close"));
+  close(code?: number, reason?: string): void {
+    this.#ws?.close(code, reason);
+    this.#ws = undefined;
   }
 
-  // --------------
-  // WebSocket API
-  // --------------
-  set binaryType(value: BinaryType) {
-    if (this.#ws) {
-      this.#ws.binaryType = value;
-    }
-  }
-  get bufferedAmount() {
-    return this.#ws ? this.#ws.bufferedAmount : 0;
-  }
-  get extensions() {
-    return this.#ws ? this.#ws.extensions : "";
-  }
-  get protocol() {
-    return this.#ws ? this.#ws.protocol : "";
-  }
   get readyState(): WebSocketReadyState {
     return this.#ws ? this.#ws.readyState : WebSocket.CLOSED;
   }
   readonly url: string;
 
-  onclose: WebSocket["onclose"] = null;
-  onerror: WebSocket["onerror"] = null;
-  onmessage: WebSocket["onmessage"] = null;
-  onopen: WebSocket["onopen"] = null;
+  addEventListener: WebSocket["addEventListener"] = (
+    type: keyof WebSocketEventMap,
+    listener: EventListenerOrEventListenerObject,
+    options: boolean | AddEventListenerOptions = {},
+  ) => {
+    const callback = () => this.#ws?.addEventListener(type, listener, options);
+    if (this.#ws?.readyState === WebSocket.OPEN) {
+      callback();
+    }
+    this.#addEventListenerMap.set(listener, callback);
+  };
 
-  readonly CONNECTING = WebSocket.CONNECTING;
-  readonly OPEN = WebSocket.OPEN;
-  readonly CLOSING = WebSocket.CLOSING;
-  readonly CLOSED = WebSocket.CLOSED;
+  removeEventListener: WebSocket["removeEventListener"] = (
+    type: keyof WebSocketEventMap,
+    listener: EventListenerOrEventListenerObject,
+    options: boolean | EventListenerOptions = {},
+  ) => {
+    this.#ws?.removeEventListener(type, listener, options);
+    this.#addEventListenerMap.delete(listener);
+  };
+
+  dispatchEvent: WebSocket["dispatchEvent"] = (event: Event) => {
+    return this.#ws?.dispatchEvent(event) ?? false;
+  };
 }
 
 /**

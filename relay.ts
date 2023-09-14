@@ -3,6 +3,7 @@ import type {
   RelayToClientMessage,
 } from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
+import { LazyWebSocket } from "./core/websockets.ts";
 import { Lock } from "./core/x/async.ts";
 
 class ConnectionError extends Error {}
@@ -10,7 +11,7 @@ class ConnectionError extends Error {}
 /**
  * A class that represents a remote Nostr client.
  */
-export class Client extends NostrNode<RelayToClientMessage> {
+export class Client extends NostrNode<RelayToClientMessage, LazyWebSocket> {
   constructor(
     ws: WebSocket,
     opts?: ClientOptions,

@@ -4,7 +4,6 @@ import {
   afterEach,
   assert,
   assertEquals,
-  assertThrows,
   assertObjectMatch,
   beforeAll,
   beforeEach,
