@@ -11,6 +11,12 @@ export class MockWebSocket extends EventTarget implements WebSocket {
     this.url = url?.toString() ?? "";
     this.protocol = protocols ? [...protocols].flat()[0] : "";
     MockWebSocket.#instances.push(this);
+
+    // Simulate a slow opening of a WebSocket as much as possible.
+    queueMicrotask(() => {
+      this.#readyState = 1;
+      this.dispatchEvent(new Event("open"));
+    });
   }
 
   binaryType: "blob" | "arraybuffer" = "blob";
@@ -27,7 +33,7 @@ export class MockWebSocket extends EventTarget implements WebSocket {
   get readyState(): number {
     return this.#readyState;
   }
-  #readyState: number = this.OPEN;
+  #readyState = 0;
 
   get remote(): MockWebSocket {
     if (!this.#remote) {
