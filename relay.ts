@@ -1,41 +1,85 @@
 import type {
   ClientToRelayMessage,
+  EventMessage,
+  NostrEvent,
   RelayToClientMessage,
+  SubscriptionFilter,
 } from "./core/types.ts";
+import { SubscriptionId } from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
-import { LazyWebSocket } from "./core/websockets.ts";
-import { Lock } from "./core/x/async.ts";
-
-class ConnectionError extends Error {}
 
 /**
  * A class that represents a remote Nostr client.
  */
-export class Client extends NostrNode<RelayToClientMessage, LazyWebSocket> {
+export class Client extends NostrNode<RelayToClientMessage> {
+  declare ws: WebSocket;
+
+  #events: ReadableStream<NostrEvent>;
+  #requests: ReadableStream<[SubscriptionId, SubscriptionFilter]>;
+
+  /**
+   * Writable interface for the subscriptions.
+   */
+  readonly subscriptions = new Map<
+    SubscriptionId,
+    WritableStream<NostrEvent>
+  >();
+
   constructor(
     ws: WebSocket,
     opts?: ClientOptions,
   ) {
     super( // new NostrNode(
-      () => {
-        if (ws.readyState >= WebSocket.CLOSING) {
-          throw new ConnectionError("WebSocket is closing or closed");
-        }
-        return ws;
-      },
+      ws,
       { nbuffer: 10, ...opts },
     );
-    // const messenger = new Lock(this.getWriter());
+    let enqueueEvent: (ev: NostrEvent) => void;
+    this.#events = new ReadableStream<NostrEvent>({
+      start: (controller) => {
+        enqueueEvent = controller.enqueue;
+      },
+    });
+    let enqueueRequest: (req: [SubscriptionId, SubscriptionFilter]) => void;
+    this.#requests = new ReadableStream<[SubscriptionId, SubscriptionFilter]>({
+      start: (controller) => {
+        enqueueRequest = controller.enqueue;
+      },
+    });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
       const msg = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Apply backpressure when a queue is full.
-      if (msg[0] === "EVENT") {
-        // TODO: Handle event (write to stream, database, etc.).
-        return;
+      const kind = msg[0];
+      if (kind === "EVENT") {
+        return enqueueEvent(msg[1]);
       }
-      const subid = msg[1];
+      const id = msg[1];
+      if (kind === "CLOSE") {
+        const sub = this.subscriptions.get(id);
+        if (!sub) {
+          return;
+        }
+        this.subscriptions.delete(id);
+        return sub.close();
+      }
+      // kind === "REQ"
+      const filter = msg[2];
+      const channel = new TransformStream<NostrEvent, EventMessage>({
+        transform: (event, controller) => {
+          controller.enqueue(["EVENT", id, event]);
+        },
+      });
+      this.subscriptions.set(id, channel.writable);
+      return enqueueRequest([id, filter]);
     });
+  }
+
+  get events(): ReadableStream<NostrEvent> {
+    return this.#events;
+  }
+
+  get requests(): ReadableStream<[SubscriptionId, SubscriptionFilter]> {
+    return this.#requests;
   }
 }
 
