@@ -1,21 +1,14 @@
-import {
-  ClientToRelayMessage,
-  Relay,
-  RelayToClientMessage,
-} from "../client.ts";
-import { pop } from "../lib/x/streamtools.ts";
+import { NostrEvent, Relay } from "../client.ts";
 import {
   afterAll,
-  afterEach,
   assert,
   assertEquals,
   assertObjectMatch,
   beforeAll,
-  beforeEach,
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { Server, WebSocket } from "../lib/x/mock-socket.ts";
+import { MockWebSocket } from "../lib/testing.ts";
 
 const url = "wss://localhost:8080";
 
@@ -84,33 +77,17 @@ describe("Relay constructor", () => {
 
 describe("Relay", () => {
   const url = "wss://localhost:8080";
-  let server: Server;
   let relay: Relay;
+  let sub_0: ReadableStream<NostrEvent<0>>;
+  let sub_1: ReadableStream<NostrEvent<1>>;
 
-  beforeEach(() => {
-    server = new Server(url);
-    server.on("connection", (ws) => {
-      ws.on("message", (data) => {
-        if (typeof data !== "string") throw new Error();
-        const msg = JSON.parse(data) as ClientToRelayMessage;
-        if (msg[0] === "REQ") {
-          ws.send(JSON.stringify(
-            [
-              "EVENT",
-              msg[1],
-              // deno-lint-ignore no-explicit-any
-              { kind: 1 } as any,
-            ] satisfies RelayToClientMessage,
-          ));
-        }
-      });
-    });
+  beforeAll(() => {
+    globalThis.WebSocket = MockWebSocket;
     relay = new Relay(url);
   });
 
-  afterEach(async () => {
-    await relay.close();
-    server.close();
+  afterAll(() => {
+    relay.close();
   });
 
   it("should not be connected initially", () => {
@@ -118,26 +95,52 @@ describe("Relay", () => {
   });
 
   it("should not connect when a subscription is created", () => {
-    relay.subscribe({ kinds: [1] });
+    sub_1 = relay.subscribe({ kinds: [1] }, { id: "test-1" });
+    assert(sub_1 instanceof ReadableStream);
     assertEquals(relay.status, WebSocket.CLOSED);
   });
 
   it("should receive text notes", async () => {
-    const sub = relay.subscribe({ kinds: [1] });
-    assert(await pop(sub));
+    const reader = sub_1.getReader();
+    const read = reader.read();
+    const ws = MockWebSocket.instances[0];
+    ws.dispatchEvent(
+      new MessageEvent("message", {
+        data: JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
+      }),
+    );
+    const { value, done } = await read;
+    assert(!done);
+    assertEquals(value.kind, 1);
+    reader.releaseLock();
   });
 
   it("should be able to open multiple subscriptions", () => {
-    const sub1 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
-    const sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
-    assert(sub1);
-    assert(sub2);
+    sub_0 = relay.subscribe({ kinds: [0], limit: 1 }, { id: "test-0" });
+    assert(sub_0 instanceof ReadableStream);
   });
 
   it("should recieve metas and notes simultaneously", async () => {
-    const sub1 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
-    const sub2 = relay.subscribe({ kinds: [1], limit: 1 }, { realtime: false });
-    assert(await pop(sub1));
-    assert(await pop(sub2));
+    const read_0 = sub_0.getReader().read();
+    const read_1 = sub_1.getReader().read();
+    const ws = MockWebSocket.instances[0];
+    ws.dispatchEvent(
+      new MessageEvent("message", {
+        data: JSON.stringify(["EVENT", "test-0", { kind: 0 }]),
+      }),
+    );
+    ws.dispatchEvent(
+      new MessageEvent("message", {
+        data: JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
+      }),
+    );
+    const [{ value: value_0 }, { value: value_1 }] = await Promise.all([
+      read_0,
+      read_1,
+    ]);
+    assert(value_0);
+    assertEquals(value_0.kind, 0);
+    assert(value_1);
+    assertEquals(value_1.kind, 1);
   });
 });

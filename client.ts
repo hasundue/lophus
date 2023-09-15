@@ -11,6 +11,7 @@ import type {
 } from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { NonExclusiveWritableStream } from "./core/streams.ts";
+import { LazyWebSocket } from "./core/websockets.ts";
 import { Lock } from "./core/x/async.ts";
 
 export * from "./core/nips/01.ts";
@@ -19,6 +20,7 @@ export * from "./core/nips/01.ts";
  * A class that represents a remote Nostr Relay.
  */
 export class Relay extends NostrNode<ClientToRelayMessage> {
+  declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
 
   readonly #subs = new Map<
@@ -33,7 +35,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     const url = typeof init === "string" ? init : init.url;
 
     super( // new NostrNode(
-      () => new WebSocket(url),
+      new LazyWebSocket(url),
       { nbuffer: 10, ...opts },
     );
 
@@ -78,61 +80,55 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     opts.nbuffer ??= this.config.nbuffer;
 
     const messenger = this.getWriter();
-    const aborter = new AbortController();
-
     let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent<K>>>;
 
-    this.#subs.set(
-      id,
-      new Lock(
-        new NonExclusiveWritableStream<EoseMessage | EventMessage<K>>({
-          write: ([kn, _, ev]): Promise<void> | undefined => {
-            switch (kn) {
-              case "EOSE":
-                this.config.logger?.debug?.(`[eose] ${this.config.name} ${id}`);
-
-                if (opts.realtime) return;
-                return controllerLock.lock((cnt) => cnt.close());
-
-              case "EVENT":
-                this.config.logger?.debug?.(`[event] ${this.config.name}`, ev);
-
-                return controllerLock.lock((cnt) => cnt.enqueue(ev));
+    const writable = new NonExclusiveWritableStream<
+      EoseMessage | EventMessage<K>
+    >({
+      write: ([kind, _, event]): Promise<void> | undefined => {
+        switch (kind) {
+          case "EOSE":
+            this.config.logger?.debug?.(`[eose] ${this.config.name} ${id}`);
+            if (opts.realtime) {
+              return;
             }
-          },
-          close() {
             return controllerLock.lock((cnt) => cnt.close());
-          },
-        }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }))
-          .getWriter(),
-      ),
-    );
+          case "EVENT":
+            this.config.logger?.debug?.(`[event] ${this.config.name}`, event);
+            return controllerLock.lock((cnt) => cnt.enqueue(event));
+        }
+      },
+      close() {
+        return controllerLock.lock((cnt) => cnt.close());
+      },
+    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
+
+    this.#subs.set(id, new Lock(writable.getWriter()));
 
     const request = () => messenger.write(["REQ", id, ...[filter].flat()]);
 
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         controllerLock = new Lock(controller);
-
-        this.ws.addEventListener("open", request, { signal: aborter.signal });
-
-        if (this.ws.status === WebSocket.OPEN) {
+        this.ws.addEventListener("open", request);
+        if (this.ws.readyState === WebSocket.OPEN) {
           return request();
         }
       },
       pull: () => {
-        return this.connected;
+        return this.ws.ready();
       },
-      async cancel() {
-        aborter.abort();
-
-        await messenger.write(["CLOSE", id]);
-        messenger.close();
+      cancel: async () => {
+        this.ws.removeEventListener("open", request);
+        if (this.ws.readyState === WebSocket.OPEN) {
+          await messenger.write(["CLOSE", id]);
+        }
+        await messenger.close();
       },
     }, new CountQueuingStrategy({ highWaterMark: 0 }));
   }
 
-  override async close() {
+  async close() {
     await Promise.all(
       Array.from(this.#subs.values()).map((sub) =>
         sub.lock((writer) => writer.close())
