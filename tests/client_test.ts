@@ -8,7 +8,7 @@ import {
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { MockWebSocket as WebSocket } from "../lib/testing.ts";
+import { MockWebSocket } from "../lib/testing.ts";
 
 const url = "wss://localhost:8080";
 
@@ -82,7 +82,7 @@ describe("Relay", () => {
   let sub_1: ReadableStream<NostrEvent<1>>;
 
   beforeAll(() => {
-    globalThis.WebSocket = WebSocket;
+    globalThis.WebSocket = MockWebSocket;
     relay = new Relay(url);
   });
 
@@ -103,7 +103,7 @@ describe("Relay", () => {
   it("should receive text notes", async () => {
     const reader = sub_1.getReader();
     const read = reader.read();
-    const ws = WebSocket.instances[0];
+    const ws = MockWebSocket.instances[0];
     ws.dispatchEvent(
       new MessageEvent("message", {
         data: JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
@@ -123,7 +123,7 @@ describe("Relay", () => {
   it("should recieve metas and notes simultaneously", async () => {
     const read_0 = sub_0.getReader().read();
     const read_1 = sub_1.getReader().read();
-    const ws = WebSocket.instances[0];
+    const ws = MockWebSocket.instances[0];
     ws.dispatchEvent(
       new MessageEvent("message", {
         data: JSON.stringify(["EVENT", "test-0", { kind: 0 }]),

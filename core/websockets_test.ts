@@ -7,16 +7,16 @@ import {
   it,
 } from "../lib/std/testing.ts";
 import { LazyWebSocket } from "./websockets.ts";
-import { MockWebSocket as WebSocket } from "../lib/testing.ts";
+import { MockWebSocket } from "../lib/testing.ts";
 
 describe("LazyWebSocket", () => {
   let lazy: LazyWebSocket;
-  let socket: WebSocket;
-  let server: WebSocket;
+  let socket: MockWebSocket;
+  let server: MockWebSocket;
   let opened: Promise<true>
 
   beforeAll(() => {
-    globalThis.WebSocket = WebSocket;
+    globalThis.WebSocket = MockWebSocket;
     lazy = new LazyWebSocket("wss://localhost:8080");
   });
 
@@ -52,7 +52,7 @@ describe("LazyWebSocket", () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    socket = WebSocket.instances[0];
+    socket = MockWebSocket.instances[0];
     socket.dispatchEvent(new Event("error"));
     await errored;
   });
