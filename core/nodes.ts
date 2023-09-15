@@ -5,7 +5,7 @@ import { NonExclusiveWritableStream } from "./streams.ts";
 /**
  * Common base class for relays and clients.
  */
-export class NostrNode<W extends NostrMessage>
+export class NostrNode<W extends NostrMessage = NostrMessage>
   extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
 

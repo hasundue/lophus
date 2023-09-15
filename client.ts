@@ -19,7 +19,8 @@ export * from "./core/nips/01.ts";
 /**
  * A class that represents a remote Nostr Relay.
  */
-export class Relay extends NostrNode<ClientToRelayMessage, LazyWebSocket> {
+export class Relay extends NostrNode<ClientToRelayMessage> {
+  declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
 
   readonly #subs = new Map<
