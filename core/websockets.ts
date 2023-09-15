@@ -1,12 +1,6 @@
 import { Notify } from "./x/async.ts";
 
 export type WebSocketEventType = keyof WebSocketEventMap;
-export const WebSocketEventTypes: WebSocketEventType[] = [
-  "close",
-  "error",
-  "message",
-  "open",
-];
 
 export interface WebSocketLike {
   readonly url: string;
@@ -49,13 +43,19 @@ export class LazyWebSocket implements WebSocketLike {
       const ws = new WebSocket(url, protocols);
       ws.addEventListener("open", () => {
         this.#notifier.notifyAll();
-        this.#eventListenerMap.forEach((map, type) => {
+      });
+      this.#eventListenerMap.get("open")?.forEach((_, listener) => {
+        return listener instanceof Function
+          ? listener.call(ws, new Event("open"))
+          : listener.handleEvent(new Event("open"));
+      });
+      this.#eventListenerMap.forEach((map, type) => {
+        if (type !== "open") {
           map.forEach((options, listener) => {
             ws.addEventListener(type, listener, options);
           });
-        });
+        }
       });
-      ws.dispatchEvent(new Event("open"));
       return ws;
     };
     this.url = url.toString();
@@ -121,9 +121,7 @@ export class LazyWebSocket implements WebSocketLike {
     listener: EventListenerOrEventListenerObject,
     options: boolean | AddEventListenerOptions = {},
   ) => {
-    if (this.#ws?.readyState === WebSocket.OPEN) {
-      this.#ws?.addEventListener(type, listener, options);
-    }
+    this.#ws?.addEventListener(type, listener, options);
     const map = this.#eventListenerMap.get(type);
     if (map) {
       map.set(listener, options);

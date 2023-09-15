@@ -1,5 +1,4 @@
 import {
-  afterAll,
   assert,
   assertEquals,
   beforeAll,

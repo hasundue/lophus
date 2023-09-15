@@ -1,6 +1,6 @@
 type MessageEventData = string | ArrayBufferLike | Blob | ArrayBufferView;
 
-export class MockWebSocket extends EventTarget implements globalThis.WebSocket {
+export class MockWebSocket extends EventTarget implements WebSocket {
   static get instances(): MockWebSocket[] {
     return this.#instances;
   }
@@ -57,15 +57,15 @@ export class MockWebSocket extends EventTarget implements globalThis.WebSocket {
   onopen = null;
 
   static get CONNECTING(): number {
-    return this.CONNECTING;
+    return 0;
   }
   static get OPEN(): number {
-    return this.OPEN;
+    return 1;
   }
   static get CLOSING(): number {
-    return this.CLOSING;
+    return 2;
   }
   static get CLOSED(): number {
-    return this.CLOSED;
+    return 3;
   }
 }

@@ -1,30 +1,27 @@
 import {
   afterAll,
-  afterEach,
   assert,
   assertEquals,
-  beforeEach,
   beforeAll,
   describe,
   it,
 } from "../lib/std/testing.ts";
-import { Server } from "../lib/x/mock-socket.ts";
 import { LazyWebSocket } from "./websockets.ts";
+import { MockWebSocket as WebSocket } from "../lib/testing.ts";
 
 describe("LazyWebSocket", () => {
-  let server: Server;
   let lazy: LazyWebSocket;
-  let promise: Promise<boolean>
+  let socket: WebSocket;
+  let server: WebSocket;
+  let opened: Promise<true>
 
   beforeAll(() => {
-    const url = "wss://localhost:8080";
-    server = new Server(url);
-    lazy = new LazyWebSocket(url);
+    globalThis.WebSocket = WebSocket;
+    lazy = new LazyWebSocket("wss://localhost:8080");
   });
 
-  afterAll(async () => {
-    await lazy.close();
-    server.stop();
+  afterAll(() => {
+    lazy.close();
   });
 
   it("should be able to create a LazyWebSocket instance", () => {
@@ -36,7 +33,7 @@ describe("LazyWebSocket", () => {
   });
 
   it("should not open a WebSocket when an event listener is added", () => {
-    promise = new Promise((resolve) => {
+    opened = new Promise((resolve) => {
       lazy.addEventListener("open", () => resolve(true));
     });
     assertEquals(lazy.readyState, WebSocket.CLOSED);
@@ -44,28 +41,28 @@ describe("LazyWebSocket", () => {
 
   it("should trigger the onopen event when an event is sent", async () => {
     await lazy.send("test");
-    assert(await promise);
+    assert(await opened);
   });
 
   it("should open the WebSocket when an event is sent", () => {
     assertEquals(lazy.readyState, WebSocket.OPEN);
   });
 
-  it("should trigger the onerror event when the WebSocket errors", async () => {
-    await lazy.ready();
+  it("should trigger the onerror event when errors", async () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    server.emit("error", new Error("test"));
+    socket = WebSocket.instances[0];
+    socket.dispatchEvent(new Event("error"));
     await errored;
   });
 
-  it("should trigger the onmessage event when the WebSocket receives a message", async () => {
-    await lazy.ready();
+  it("should trigger the onmessage event when receives a message", async () => {
     const messaged = new Promise((resolve) => {
       lazy.addEventListener("message", resolve);
     });
-    server.emit("message", "test");
+    server = socket.remote;
+    server.send("test");
     await messaged;
   });
 
@@ -74,7 +71,7 @@ describe("LazyWebSocket", () => {
     const closed = new Promise((resolve) => {
       lazy.addEventListener("close", resolve);
     });
-    server.emit("close", null);
+    server.close();
     await closed;
   });
 
