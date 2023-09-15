@@ -65,6 +65,11 @@ export class MockWebSocket extends EventTarget implements WebSocket {
   onmessage = null;
   onopen = null;
 
+  addEventListener: WebSocket["addEventListener"] = super.addEventListener;
+  removeEventListener: WebSocket["removeEventListener"] = super
+    .removeEventListener;
+  dispatchEvent: WebSocket["dispatchEvent"] = super.dispatchEvent;
+
   static get CONNECTING(): number {
     return 0;
   }

@@ -1,6 +1,5 @@
 import type {
   ClientToRelayMessage,
-  EventMessage,
   NostrEvent,
   RelayToClientMessage,
   SubscriptionFilter,
@@ -8,12 +7,13 @@ import type {
 import { SubscriptionId } from "./core/types.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 
+export * from "./core/types.ts";
+
 /**
  * A class that represents a remote Nostr client.
  */
 export class Client extends NostrNode<RelayToClientMessage> {
   declare ws: WebSocket;
-
   #events: ReadableStream<NostrEvent>;
   #requests: ReadableStream<[SubscriptionId, SubscriptionFilter]>;
 
@@ -36,13 +36,13 @@ export class Client extends NostrNode<RelayToClientMessage> {
     let enqueueEvent: (ev: NostrEvent) => void;
     this.#events = new ReadableStream<NostrEvent>({
       start: (controller) => {
-        enqueueEvent = controller.enqueue;
+        enqueueEvent = controller.enqueue.bind(controller);
       },
     });
     let enqueueRequest: (req: [SubscriptionId, SubscriptionFilter]) => void;
     this.#requests = new ReadableStream<[SubscriptionId, SubscriptionFilter]>({
       start: (controller) => {
-        enqueueRequest = controller.enqueue;
+        enqueueRequest = controller.enqueue.bind(controller);
       },
     });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
@@ -64,12 +64,13 @@ export class Client extends NostrNode<RelayToClientMessage> {
       }
       // kind === "REQ"
       const filter = msg[2];
-      const channel = new TransformStream<NostrEvent, EventMessage>({
-        transform: (event, controller) => {
-          controller.enqueue(["EVENT", id, event]);
+      const writer = this.getWriter();
+      const writable = new WritableStream<NostrEvent>({
+        write: (event) => {
+          return writer.write(["EVENT", id, event]);
         },
       });
-      this.subscriptions.set(id, channel.writable);
+      this.subscriptions.set(id, writable);
       return enqueueRequest([id, filter]);
     });
   }

@@ -1,9 +1,13 @@
-import { Client } from "../relay.ts";
+import {
+  Client,
+  NostrEvent,
+  RelayToClientMessage,
+  SubscriptionId,
+} from "../relay.ts";
 import {
   afterAll,
   assert,
   assertEquals,
-  assertObjectMatch,
   beforeAll,
   describe,
   it,
@@ -13,10 +17,11 @@ import { MockWebSocket } from "../lib/testing.ts";
 describe("Client", () => {
   let ws: MockWebSocket;
   let client: Client;
+  let subid: SubscriptionId;
 
   beforeAll(() => {
     ws = new MockWebSocket();
-    client = new Client(ws, { logger: console });
+    client = new Client(ws);
   });
   afterAll(() => {
     client.close();
@@ -28,21 +33,60 @@ describe("Client", () => {
     });
   });
 
-  describe("get events()", () => {
+  describe("events", () => {
     it("should return a ReadableStream of events", () => {
       assert(client.events instanceof ReadableStream);
     });
+    it("should receive events", async () => {
+      const ev = { kind: 0 };
+      ws.dispatchEvent(
+        new MessageEvent("message", {
+          data: JSON.stringify(["EVENT", ev]),
+        }),
+      );
+      const reader = client.events.getReader();
+      const { value } = await reader.read();
+      assertEquals(value, ev);
+    });
   });
 
-  describe("get requests()", () => {
+  describe("requests", () => {
     it("should return a ReadableStream of requests", () => {
       assert(client.requests instanceof ReadableStream);
+    });
+    it("should receive requests", async () => {
+      subid = "test" as SubscriptionId;
+      const req = { kinds: [0] };
+      ws.dispatchEvent(
+        new MessageEvent("message", {
+          data: JSON.stringify(["REQ", subid, req]),
+        }),
+      );
+      const reader = client.requests.getReader();
+      const { value } = await reader.read();
+      assertEquals(value, [subid, req]);
     });
   });
 
   describe("subscriptions", () => {
+    let sub: WritableStream<NostrEvent> | undefined;
     it("should return a Map of subscriptions", () => {
       assert(client.subscriptions instanceof Map);
+    });
+    it("should have a subscription", () => {
+      sub = client.subscriptions.get(subid);
+      assert(sub);
+    });
+    it("should be able to deliver an event to a subscription", async () => {
+      const msg = { kind: 0 };
+      const received = new Promise<RelayToClientMessage>((resolve) => {
+        ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
+          resolve(JSON.parse(ev.data));
+        });
+      });
+      // deno-lint-ignore no-explicit-any
+      sub!.getWriter().write(msg as any);
+      assertEquals(await received, ["EVENT", subid, msg]);
     });
   });
 });
