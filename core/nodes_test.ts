@@ -1,5 +1,4 @@
 import { NostrNode } from "./nodes.ts";
-import { RelayToClientMessage } from "../core/nips/01.ts";
 import {
   afterAll,
   assert,
@@ -11,7 +10,7 @@ import {
 import { MockWebSocket } from "../lib/testing.ts";
 
 describe("NostrNode", () => {
-  let node: NostrNode<RelayToClientMessage, WebSocket>;
+  let node: NostrNode;
 
   beforeAll(() => {
     node = new NostrNode(new MockWebSocket());
