@@ -11,7 +11,6 @@ export class MockWebSocket extends EventTarget implements WebSocket {
     this.url = url?.toString() ?? "";
     this.protocol = protocols ? [...protocols].flat()[0] : "";
     MockWebSocket.#instances.push(this);
-
     // Simulate a slow opening of a WebSocket as much as possible.
     queueMicrotask(() => {
       this.#readyState = 1;
@@ -46,11 +45,15 @@ export class MockWebSocket extends EventTarget implements WebSocket {
 
   close(code?: number, reason?: string): void {
     this.#readyState = 2;
-    if (this.#remote) {
-      this.#remote.#readyState = 3;
-      this.#remote.dispatchEvent(new CloseEvent("close", { code, reason }));
-    }
-    this.#readyState = 3;
+    // Simulate a slow closing of a WebSocket as much as possible.
+    queueMicrotask(() => {
+      if (this.#remote) {
+        this.#remote.#readyState = 3;
+        this.#remote.dispatchEvent(new CloseEvent("close", { code, reason }));
+      }
+      this.#readyState = 3;
+      this.dispatchEvent(new CloseEvent("close", { code, reason }));
+    });
   }
 
   send(data: MessageEventData): void {

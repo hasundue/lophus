@@ -53,8 +53,12 @@ describe("MockWebSocket", () => {
         ws.remote.addEventListener("close", () => resolve(true));
       });
     });
-    it("should close the WebSocket", () => {
+    it("should close the WebSocket", async () => {
+      const closed = new Promise<true>((resolve) => {
+        ws.addEventListener("close", () => resolve(true));
+      });
       ws.close();
+      assert(await closed);
       assertEquals(ws.readyState, WebSocket.CLOSED);
     });
     it("should close the remote WebSocket", () => {

@@ -41,9 +41,11 @@ export class LazyWebSocket implements WebSocketLike {
   ) {
     this.#createWebSocket = () => {
       const ws = new WebSocket(url, protocols);
-      ws.addEventListener("open", () => {
-        this.#notifier.notifyAll();
-      });
+      for (const type of ["close", "open"] as const) {
+        ws.addEventListener(type, () => {
+          this.#notifier.notifyAll();
+        });
+      }
       this.#eventListenerMap.forEach((map, type) => {
         map.forEach((options, listener) => {
           ws.addEventListener(type, listener, options);
