@@ -13,7 +13,7 @@ describe("LazyWebSocket", () => {
   let lazy: LazyWebSocket;
   let socket: MockWebSocket;
   let server: MockWebSocket;
-  let opened: Promise<true>
+  let opened: Promise<true>;
 
   beforeAll(() => {
     globalThis.WebSocket = MockWebSocket;
