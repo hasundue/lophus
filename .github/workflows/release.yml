@@ -1,0 +1,23 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        with:
+          package-name: lophus
+          release-type: simple
+          versioning-strategy: always-bump-patch # use this until v0.1.0
+          # bump-minor-pre-major: true
+          # bump-patch-for-minor-pre-major: true
+          include-v-in-tag: false
