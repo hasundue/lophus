@@ -32,7 +32,7 @@ the [Web Streams API][streams-api] integrates with the protocol.
 ## Documentation
 
 - [API Reference](https://deno.land/x/lophus) (WIP)
-- [Examples](https://github.com/hasundue/lophus/tree/main/docs/EXAMPLES.md)
+- [Lophus by Examples](https://github.com/hasundue/lophus-by-example)
 
 ## Supported NIPs
 
