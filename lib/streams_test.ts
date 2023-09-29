@@ -1,9 +1,5 @@
-import {
-  assertArrayIncludes,
-  assertEquals,
-  describe,
-  it,
-} from "../lib/std/testing.ts";
+import { describe, it } from "../lib/std/testing.ts";
+import { assertArrayIncludes, assertEquals } from "../lib/std/assert.ts";
 import { collect } from "../lib/x/streamtools.ts";
 import { Distinctor } from "./streams.ts";
 

@@ -1,4 +1,5 @@
-import { assert, assertEquals, describe, it } from "../lib/std/testing.ts";
+import { describe, it } from "../lib/std/testing.ts";
+import { assert, assertEquals } from "../lib/std/assert.ts";
 import { Timestamp } from "../lib/times.ts";
 import { PrivateKey, PublicKey, Signer, Verifier } from "./signs.ts";
 

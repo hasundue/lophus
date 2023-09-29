@@ -1,11 +1,5 @@
-import {
-  afterAll,
-  assert,
-  assertEquals,
-  beforeAll,
-  describe,
-  it,
-} from "../lib/std/testing.ts";
+import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
+import { assert, assertEquals } from "../lib/std/assert.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 

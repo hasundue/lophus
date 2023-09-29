@@ -1,10 +1,5 @@
-import {
-  assert,
-  assertEquals,
-  beforeAll,
-  describe,
-  it,
-} from "../lib/std/testing.ts";
+import { beforeAll, describe, it } from "../lib/std/testing.ts";
+import { assert, assertEquals } from "../lib/std/assert.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
 describe("NonExclusiveWritableStream", () => {

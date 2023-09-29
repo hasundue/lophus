@@ -1,13 +1,6 @@
 import { NostrEvent, Relay } from "../client.ts";
-import {
-  afterAll,
-  assert,
-  assertEquals,
-  assertObjectMatch,
-  beforeAll,
-  describe,
-  it,
-} from "../lib/std/testing.ts";
+import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
+import { assert, assertEquals, assertObjectMatch } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 
 const url = "wss://localhost:8080";

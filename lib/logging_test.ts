@@ -1,5 +1,6 @@
-import { assert, describe, it } from "../lib/std/testing.ts";
+import { describe, it } from "../lib/std/testing.ts";
 import { ConsoleLogger } from "./logging.ts";
+import { assert } from "../lib/std/assert.ts";
 
 describe("ConsoleLogger", () => {
   it("should be a writable stream", () => {
