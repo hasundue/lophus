@@ -1,4 +1,4 @@
-export { mergeReadableStreams as merge } from "https://deno.land/std@0.187.0/streams/mod.ts";
+export { mergeReadableStreams as merge } from "https://deno.land/std@0.203.0/streams/mod.ts";
 
 /**
  * TransformStream which filters out duplicate values from a stream.
