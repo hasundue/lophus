@@ -1,10 +1,10 @@
 {
   "tasks": {
-    "cache": "deno cache --lock=deno.lock --lock-write ./**/*.ts"
+    "cache": "deno cache --lock=deno.lock --lock-write ./**/*.ts",
     "check": "deno check ./**/*.ts",
     "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
-    "dev": "deno fmt && deno task -q check && deno task -q test",
+    "dev": "deno fmt && deno task -q check && deno task -q test"
   },
-  "exclude": ["dist/"],
+  "exclude": ["dist/"]
 }
