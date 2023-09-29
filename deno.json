@@ -6,5 +6,8 @@
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "dev": "deno fmt && deno task -q check && deno task -q test"
   },
-  "exclude": ["dist/"]
+  "exclude": [
+    "dist/",
+    "CHANGELOG.md"
+  ]
 }
