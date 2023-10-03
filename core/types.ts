@@ -18,6 +18,14 @@ export type Optional<T, K extends keyof T> = Expand<
   & Partial<Pick<T, K>>
 >;
 
+//
+// Promises
+//
+export type PromiseCallbacks<T> = {
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+};
+
 // Logger
 export interface Logger {
   debug?: (...args: unknown[]) => void;

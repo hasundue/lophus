@@ -1,3 +1,4 @@
+import type { PromiseCallbacks } from "./core/types.ts";
 import type {
   ClientToRelayMessage,
   EoseMessage,
@@ -16,6 +17,8 @@ import { NonExclusiveWritableStream } from "./core/streams.ts";
 import { LazyWebSocket } from "./core/websockets.ts";
 import { Lock } from "./core/x/async.ts";
 
+export class EventRejectionError extends Error {}
+
 /**
  * A class that represents a remote Nostr Relay.
  */
@@ -28,7 +31,8 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     Lock<WritableStreamDefaultWriter<EventMessage | EoseMessage>>
   >();
 
-  readonly #published = new Map<EventId, PromiseResolveCallback<OkMessage>>();
+  readonly #publisher = this.getWriter();
+  readonly #published = new Map<EventId, PromiseCallbacks<OkMessage>>();
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -58,18 +62,37 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       }
       if (type === "OK") {
         const [, eid] = msg;
-        const resolve = this.#published.get(eid);
-        if (!resolve) {
-          opts?.logger?.warn?.(type, this.config.name, "Unknown event id");
+        const callbacks = this.#published.get(eid);
+        if (!callbacks) {
+          opts?.logger?.warn?.(type, this.config.name, "Unknown event id", eid);
           return;
         }
-        return resolve(msg);
+        return callbacks.resolve(msg);
       }
       if (type === "EVENT" || type === "EOSE") {
         const [, sid] = msg;
-        return this._notify(sid, msg);
+        return this.#notify(sid, msg);
       }
       opts?.logger?.warn?.(type, this.config.name, "Unknown message type");
+    });
+  }
+
+  async #notify(
+    sid: SubscriptionId,
+    msg: EventMessage | EoseMessage,
+  ) {
+    const messenger = new Lock(this.getWriter());
+    const sub = this.#subs.get(sid);
+    const promise = sub
+      ? sub.lock((writer) => writer.write(msg))
+      // Subscription is already closed. TODO: should we throw an error?
+      : messenger.lock((writer) => writer.write(["CLOSE", sid]));
+    await promise.catch((err) => {
+      if (err instanceof TypeError) {
+        // Stream is already closing or closed.
+        return;
+      }
+      throw err;
     });
   }
 
@@ -140,15 +163,17 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   }
 
   async publish(event: NostrEvent): Promise<void> {
-    const writer = this.getWriter();
-    await writer.ready;
-    await writer.write(["EVENT", event]);
-    writer.releaseLock();
-    const [, , accepted, body] = await new Promise<OkMessage>((resolve) => {
-      this.#published.set(event.id, resolve);
-    });
+    await this.#publisher.ready;
+    // We found this blocks for a long time, so we don't await it.
+    this.#publisher.write(["EVENT", event]);
+    const [, , accepted, body] = await new Promise<OkMessage>(
+      (resolve, reject) => {
+        this.#published.set(event.id, { resolve, reject });
+      },
+    );
+    await this.#publisher.ready;
     if (!accepted) {
-      throw new Error(`Event rejected: ${body}`, { cause: event });
+      throw new EventRejectionError(body, { cause: event });
     }
     this.config.logger?.debug?.("OK", this.config.name, body);
   }
@@ -159,26 +184,12 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
         sub.lock((writer) => writer.close())
       ),
     );
+    await Promise.all(
+      Array.from(this.#published.values()).map(({ reject }) =>
+        reject("Relay closed")
+      ),
+    );
     await super.close();
-  }
-
-  private async _notify(
-    sid: SubscriptionId,
-    msg: EventMessage | EoseMessage,
-  ) {
-    const messenger = new Lock(this.getWriter());
-    const sub = this.#subs.get(sid);
-    const promise = sub
-      ? sub.lock((writer) => writer.write(msg))
-      // Subscription is already closed. TODO: should we throw an error?
-      : messenger.lock((writer) => writer.write(["CLOSE", sid]));
-    await promise.catch((err) => {
-      if (err instanceof TypeError) {
-        // Stream is already closing or closed.
-        return;
-      }
-      throw err;
-    });
   }
 }
 
@@ -205,5 +216,3 @@ export interface RelayLike
   extends NonExclusiveWritableStream<ClientToRelayMessage> {
   subscribe: Relay["subscribe"];
 }
-
-type PromiseResolveCallback<T> = (value: T | PromiseLike<T>) => void;
