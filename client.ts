@@ -176,8 +176,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       (resolve, reject) => {
         this.#published.set(event.id, { resolve, reject });
       },
-    ).finally(async () => {
-      await this.#publisher.ready;
+    ).finally(() => {
       this.#published.delete(event.id);
     });
 

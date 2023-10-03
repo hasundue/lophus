@@ -43,33 +43,47 @@ export class Client extends NostrNode<RelayToClientMessage> {
         enqueueRequest = controller.enqueue.bind(controller);
       },
     });
-    this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
+    const writer = this.getWriter();
+    this.ws.addEventListener("message", async (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
       const msg = JSON.parse(ev.data) as ClientToRelayMessage;
+
       // TODO: Apply backpressure when a queue is full.
+
       const kind = msg[0];
       if (kind === "EVENT") {
-        return enqueueEvent(msg[1]);
+        const event = msg[1];
+
+        // TODO: Validate the event and send OkMessage<false> if necessary.
+
+        await writer.ready;
+        writer.write(["OK", event.id, true, ""]);
+        return enqueueEvent(event);
       }
-      const id = msg[1];
+      const sid = msg[1];
       if (kind === "CLOSE") {
-        const sub = this.subscriptions.get(id);
+        const sub = this.subscriptions.get(sid);
         if (!sub) {
+          this.config.logger?.warn?.("Unknown subscription:", sid);
           return;
         }
-        this.subscriptions.delete(id);
+        this.subscriptions.delete(sid);
         return sub.close();
       }
-      // kind === "REQ"
-      const filter = msg[2];
-      const writer = this.getWriter();
-      const writable = new WritableStream<NostrEvent>({
-        write: (event) => {
-          return writer.write(["EVENT", id, event]);
-        },
-      });
-      this.subscriptions.set(id, writable);
-      return enqueueRequest([id, filter]);
+      if (kind === "REQ") {
+        const filter = msg[2];
+        this.subscriptions.set(
+          sid,
+          new WritableStream<NostrEvent>({
+            write: async (event) => {
+              await writer.ready;
+              return writer.write(["EVENT", sid, event]);
+            },
+          }),
+        );
+        return enqueueRequest([sid, filter]);
+      }
+      this.config.logger?.warn?.("Unknown message kind:", kind);
     });
   }
 
