@@ -1,9 +1,5 @@
-import {
-  Client,
-  NostrEvent,
-  RelayToClientMessage,
-  SubscriptionId,
-} from "../relay.ts";
+import { EventMessage, NostrEvent, SubscriptionId } from "../core/nips/01.ts";
+import { Client } from "../relay.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";
@@ -73,7 +69,7 @@ describe("Client", () => {
     });
     it("should be able to deliver an event to a subscription", async () => {
       const msg = { kind: 0 };
-      const received = new Promise<RelayToClientMessage>((resolve) => {
+      const received = new Promise<EventMessage>((resolve) => {
         ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
           resolve(JSON.parse(ev.data));
         });

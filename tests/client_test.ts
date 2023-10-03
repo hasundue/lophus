@@ -1,4 +1,5 @@
-import { NostrEvent, Relay } from "../client.ts";
+import { NostrEvent } from "../core/nips/01.ts";
+import { Relay } from "../client.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals, assertObjectMatch } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";

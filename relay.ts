@@ -3,11 +3,9 @@ import type {
   NostrEvent,
   RelayToClientMessage,
   SubscriptionFilter,
-} from "./core/types.ts";
-import { SubscriptionId } from "./core/types.ts";
+  SubscriptionId,
+} from "./core/nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
-
-export * from "./core/types.ts";
 
 /**
  * A class that represents a remote Nostr client.
