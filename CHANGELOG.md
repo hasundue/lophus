@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.4](https://github.com/hasundue/lophus/compare/0.0.3...0.0.4) (2023-10-03)
+
+
+### Features
+
+* **client:** add  method ([fd469d1](https://github.com/hasundue/lophus/commit/fd469d10f0268bfc42569b952bff33e9cbd399e3))
+* **client:** update to the latest NIP-01 ([daa0e30](https://github.com/hasundue/lophus/commit/daa0e3014e560ac2f2212650cef9fd4bf322e5d4))
+* **nips:** update NIP-01 definition ([bf3f2f0](https://github.com/hasundue/lophus/commit/bf3f2f082d5b3b95d13f2c38cd46d226f66cc961))
+* **relay:** respond to EVENT messages with OK messages ([bdfbc89](https://github.com/hasundue/lophus/commit/bdfbc8942a4853cce678500183228bce3e37ada5))
+
 ## [0.0.3](https://github.com/hasundue/lophus/compare/0.0.2...0.0.3) (2023-09-29)
 
 
