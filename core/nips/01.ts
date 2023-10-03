@@ -22,11 +22,34 @@ export type EventId = Brand<string, "EventId">;
 export type PublicKey = Brand<string, "PublicKey">;
 export type Timestamp = Brand<number, "EventTimeStamp">;
 
-export type Tag = EventTag | PubKeyTag;
-export type EventTag = ["e", EventId, RecmRelayUrl];
-export type PubKeyTag = ["p", PublicKey, RecmRelayUrl];
+// ----------------------
+// Tags
+// ----------------------
 
-export type RecmRelayUrl = RelayUrl | "";
+export type Tag<T extends TagName = TagName> = [T, ...string[]];
+
+export type TagName = Brand<string, "TagName">;
+export type IndexedEventTag = [IndexedEventTagName, ...string[]];
+
+export type EventTag = ["e", EventId, RecmRelayUrl?];
+export type PubKeyTag = ["p", PublicKey, RecmRelayUrl?];
+export type ParameterizedReplaceableEventTag = [
+  "a",
+  `${EventKind}:${PublicKey}:${TagValue<"d">}`,
+  RecmRelayUrl?,
+];
+export type NonParameterizedReplaceableEventTag = [
+  "a",
+  `${EventKind}:${PublicKey}`,
+  RecmRelayUrl?,
+];
+
+// TODO: Use template literal
+export type IndexedEventTagName = Brand<string, "IndexedEventTagName">;
+// TODO: Use template literal
+export type TagValue<T extends string = string> = Brand<string, `${T}TagValue`>;
+
+export type RecmRelayUrl = RelayUrl;
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
@@ -62,6 +85,7 @@ export type CloseMessage = ["CLOSE", SubscriptionId];
 
 export type RelayToClientMessage =
   | EventMessage
+  | OkMessage
   | EoseMessage
   | NoticeMessage;
 
@@ -70,22 +94,46 @@ export type EventMessage<K extends EventKind = EventKind> = [
   SubscriptionId,
   NostrEvent<K>,
 ];
+export type OkMessage<B extends boolean = boolean> = [
+  "OK",
+  EventId,
+  B,
+  OkMessageBody<B>,
+];
 export type EoseMessage = ["EOSE", SubscriptionId];
-export type NoticeMessage = ["NOTICE", NoticeBody];
+export type NoticeMessage = ["NOTICE", string];
 
 export type SubscriptionId = Brand<string, "SubscriptionId">;
-export type NoticeBody = string;
+export type OkMessageBody<B extends boolean> = B extends true
+  ? "" | OkMessageBodyString
+  : OkMessageBodyString;
+export type OkMessageBodyString = `${OkMessageBodyPrefix}: ${string}`;
+export type OkMessageBodyPrefix =
+  | "duplicate"
+  | "pow"
+  | "blocked"
+  | "rate-limited"
+  | "invalid"
+  | "error";
 
-export interface SubscriptionFilter<K extends EventKind = EventKind> {
-  ids?: EventId[];
-  authors?: PublicKey[];
-  kinds?: K[];
-  "#e"?: EventId[];
-  "#p"?: PublicKey[];
-  since?: Timestamp;
-  until?: Timestamp;
-  limit?: number;
-}
+export type SubscriptionFilter<
+  K extends EventKind = EventKind,
+  T extends IndexedEventTagName = IndexedEventTagName,
+> =
+  & {
+    ids?: EventId[];
+    authors?: PublicKey[];
+    kinds?: K[];
+  }
+  // TODO: Restrict to 1 tag per filter
+  & {
+    [key in `#${T}`]?: TagValue<T>[];
+  }
+  & {
+    since?: Timestamp;
+    until?: Timestamp;
+    limit?: number;
+  };
 
 // ----------------------
 // Basic event kinds
@@ -94,7 +142,24 @@ export interface SubscriptionFilter<K extends EventKind = EventKind> {
 export enum EventKind {
   Metadata = 0,
   TextNote = 1,
-  RecommendRelay = 2,
+}
+
+// deno-lint-ignore no-namespace
+export namespace EventKind {
+  export function isRegularEventKind(kind: EventKind | number): boolean {
+    return 1000 <= kind && kind < 10000;
+  }
+  export function isReplaceableEventKind(kind: EventKind | number): boolean {
+    return (10000 <= kind && kind < 20000) || kind === 0 || kind === 3;
+  }
+  export function isEphemeralEventKind(kind: EventKind | number): boolean {
+    return 20000 <= kind && kind < 30000;
+  }
+  export function isParameterizedReplaceableEventKind(
+    kind: EventKind | number,
+  ): boolean {
+    return 30000 <= kind && kind < 40000;
+  }
 }
 
 export type EventContent = [
