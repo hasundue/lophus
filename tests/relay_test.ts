@@ -1,4 +1,9 @@
-import { EventMessage, NostrEvent, SubscriptionId } from "../core/nips/01.ts";
+import {
+  EventMessage,
+  NostrEvent,
+  OkMessage,
+  SubscriptionId,
+} from "../core/nips/01.ts";
 import { Client } from "../relay.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
@@ -27,8 +32,13 @@ describe("Client", () => {
     it("should return a ReadableStream of events", () => {
       assert(client.events instanceof ReadableStream);
     });
-    it("should receive events", async () => {
-      const ev = { kind: 0 };
+    it("should receive an event and send a OK message", async () => {
+      const ev = { id: "test-ok", kind: 0 };
+      const received = new Promise<OkMessage>((resolve) => {
+        ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
+          resolve(JSON.parse(ev.data));
+        });
+      });
       ws.dispatchEvent(
         new MessageEvent("message", {
           data: JSON.stringify(["EVENT", ev]),
@@ -37,6 +47,7 @@ describe("Client", () => {
       const reader = client.events.getReader();
       const { value } = await reader.read();
       assertEquals(value, ev);
+      assertEquals(await received, ["OK", "test-ok", true, ""]);
     });
   });
 
