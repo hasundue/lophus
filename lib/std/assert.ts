@@ -1,7 +1,5 @@
-export {
-  assert,
-  assertArrayIncludes,
-  assertEquals,
-  assertFalse,
-  assertObjectMatch,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
+export { assert } from "https://deno.land/std@0.203.0/assert/assert.ts";
+export { assertArrayIncludes } from "https://deno.land/std@0.203.0/assert/assert_array_includes.ts";
+export { assertEquals } from "https://deno.land/std@0.203.0/assert/assert_equals.ts";
+export { assertFalse } from "https://deno.land/std@0.203.0/assert/assert_false.ts";
+export { assertObjectMatch } from "https://deno.land/std@0.203.0/assert/assert_object_match.ts";
