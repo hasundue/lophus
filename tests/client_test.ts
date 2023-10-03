@@ -4,13 +4,13 @@ import {
   OkMessage,
   PublishMessage,
 } from "../core/nips/01.ts";
-import { Relay } from "../client.ts";
+import { EventRejected, Relay, RelayClosed } from "../client.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import {
   assert,
   assertEquals,
+  assertInstanceOf,
   assertObjectMatch,
-  assertRejects,
 } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 
@@ -81,8 +81,10 @@ describe("Relay", () => {
     globalThis.WebSocket = MockWebSocket;
     relay = new Relay(url);
   });
-  afterAll(() => {
-    relay.close();
+  afterAll(async () => {
+    if (relay.status === WebSocket.OPEN) {
+      await relay.close();
+    }
   });
 
   it("should not be connected initially", () => {
@@ -146,7 +148,7 @@ describe("Relay", () => {
         (ev: MessageEvent<string>) => {
           const [, event] = JSON.parse(ev.data) as PublishMessage<1>;
           if (event.id === eid) {
-            assertObjectMatch(event, { kind: 1 });
+            assertEquals(event.kind, 1);
             resolve(true);
             ws.remote.send(JSON.stringify(ok));
           }
@@ -158,7 +160,7 @@ describe("Relay", () => {
     await relay.publish(event as any);
     assert(await arrived);
   });
-  it("should receieve a rejecting OK message", async () => {
+  it("should receieve a rejecting OK message and throw EventRejected", async () => {
     const eid = "test-false" as EventId;
     const ok = ["OK", eid, false, "error: test"] satisfies OkMessage<false>;
     const ws = MockWebSocket.instances[0];
@@ -176,8 +178,18 @@ describe("Relay", () => {
       );
     });
     const event = { id: eid, kind: 1 };
-    // deno-lint-ignore no-explicit-any
-    assertRejects(() => relay.publish(event as any));
+    assertInstanceOf(
+      // deno-lint-ignore no-explicit-any
+      await relay.publish(event as any).catch((e) => e),
+      EventRejected,
+    );
     await arrived;
+  });
+  it("should throw RelayClosed when relay is closed before recieving an OK message", async () => {
+    const event = { id: "test-close" as EventId, kind: 1 };
+    // deno-lint-ignore no-explicit-any
+    const published = relay.publish(event as any).catch((e) => e);
+    await relay.close();
+    assertInstanceOf(await published, RelayClosed);
   });
 });
