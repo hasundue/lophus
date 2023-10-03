@@ -1,9 +1,11 @@
 import type {
   ClientToRelayMessage,
   EoseMessage,
+  EventId,
   EventKind,
   EventMessage,
   NostrEvent,
+  OkMessage,
   RelayToClientMessage,
   RelayUrl,
   SubscriptionFilter,
@@ -25,49 +27,51 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   readonly #subs = new Map<
     SubscriptionId,
-    Lock<WritableStreamDefaultWriter<EoseMessage | EventMessage>>
+    Lock<WritableStreamDefaultWriter<EventMessage | EoseMessage>>
   >();
+
+  readonly #published = new Map<EventId, PromiseResolveCallback<OkMessage>>();
 
   constructor(
     init: RelayUrl | RelayInit,
     opts?: RelayOptions,
   ) {
     const url = typeof init === "string" ? init : init.url;
-
     super( // new NostrNode(
       new LazyWebSocket(url),
       { nbuffer: 10, ...opts },
     );
-
     // deno-fmt-ignore
     this.config = {
       url, name: url.slice(6).split("/")[0],
       read: true, write: true, nbuffer: 10, ...opts,
     };
-
-    const messenger = new Lock(this.getWriter());
-
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
+      // TODO: Validate message.
       const msg = JSON.parse(ev.data) as RelayToClientMessage;
+      const type = msg[0];
 
       // TODO: Apply backpressure when a queue is full.
 
-      if (msg[0] === "NOTICE") {
-        return opts?.logger?.info?.(`[notice] ${this.config.name} ${msg[1]}`);
+      if (type === "NOTICE") {
+        // TODO: Should we have a dedicated ReadableStream for this?
+        const body = msg[1];
+        return opts?.logger?.info?.(type, this.config.name, body);
       }
-      const sub = this.#subs.get(msg[1]);
-
-      const promise = sub
-        ? sub.lock((writer) => writer.write(msg))
-        : messenger.lock((writer) => writer.write(["CLOSE", msg[1]]));
-
-      return promise.catch((err) => {
-        if (err instanceof TypeError) {
-          // Stream is already closing or closed.
+      if (type === "OK") {
+        const [, eid] = msg;
+        const resolve = this.#published.get(eid);
+        if (!resolve) {
+          opts?.logger?.warn?.(type, this.config.name, "Unknown event id");
           return;
         }
-        throw err;
-      });
+        return resolve(msg);
+      }
+      if (type === "EVENT" || type === "EOSE") {
+        const [, sid] = msg;
+        return this._notify(sid, msg);
+      }
+      opts?.logger?.warn?.(type, this.config.name, "Unknown message type");
     });
   }
 
@@ -75,7 +79,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
-    const id = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    const sid = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
     opts.realtime ??= true;
     opts.nbuffer ??= this.config.nbuffer;
 
@@ -83,19 +87,28 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent<K>>>;
 
     const writable = new NonExclusiveWritableStream<
-      EoseMessage | EventMessage<K>
+      EventMessage<K> | EoseMessage
     >({
-      write: ([kind, _, event]): Promise<void> | undefined => {
-        switch (kind) {
+      write: (msg): Promise<void> | undefined => {
+        const type = msg[0];
+        switch (type) {
+          case "EVENT": {
+            const [, , event] = msg;
+            this.config.logger?.debug?.(type, this.config.name, event);
+            return controllerLock.lock((cnt) => cnt.enqueue(event));
+          }
           case "EOSE":
-            this.config.logger?.debug?.(`[eose] ${this.config.name} ${id}`);
+            this.config.logger?.debug?.(type, this.config.name, sid);
             if (opts.realtime) {
               return;
             }
             return controllerLock.lock((cnt) => cnt.close());
-          case "EVENT":
-            this.config.logger?.debug?.(`[event] ${this.config.name}`, event);
-            return controllerLock.lock((cnt) => cnt.enqueue(event));
+          default:
+            this.config.logger?.warn?.(
+              type,
+              this.config.name,
+              "Unknown message type",
+            );
         }
       },
       close() {
@@ -103,9 +116,9 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       },
     }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
 
-    this.#subs.set(id, new Lock(writable.getWriter()));
+    this.#subs.set(sid, new Lock(writable.getWriter()));
 
-    const request = () => messenger.write(["REQ", id, ...[filter].flat()]);
+    const request = () => messenger.write(["REQ", sid, ...[filter].flat()]);
 
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
@@ -121,11 +134,25 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       cancel: async () => {
         this.ws.removeEventListener("open", request);
         if (this.ws.readyState === WebSocket.OPEN) {
-          await messenger.write(["CLOSE", id]);
+          await messenger.write(["CLOSE", sid]);
         }
         await messenger.close();
       },
     }, new CountQueuingStrategy({ highWaterMark: 0 }));
+  }
+
+  async publish(event: NostrEvent): Promise<void> {
+    const writer = this.getWriter();
+    await writer.ready;
+    await writer.write(["EVENT", event]);
+    writer.releaseLock();
+    const [, , accepted, body] = await new Promise<OkMessage>((resolve) => {
+      this.#published.set(event.id, resolve);
+    });
+    if (!accepted) {
+      throw new Error(`Event rejected: ${body}`, { cause: event });
+    }
+    this.config.logger?.info?.("OK", this.config.name, body);
   }
 
   async close() {
@@ -135,6 +162,25 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       ),
     );
     await super.close();
+  }
+
+  private async _notify(
+    sid: SubscriptionId,
+    msg: EventMessage | EoseMessage,
+  ) {
+    const messenger = new Lock(this.getWriter());
+    const sub = this.#subs.get(sid);
+    const promise = sub
+      ? sub.lock((writer) => writer.write(msg))
+      // Subscription is already closed. TODO: should we throw an error?
+      : messenger.lock((writer) => writer.write(["CLOSE", sid]));
+    await promise.catch((err) => {
+      if (err instanceof TypeError) {
+        // Stream is already closing or closed.
+        return;
+      }
+      throw err;
+    });
   }
 }
 
@@ -161,3 +207,5 @@ export interface RelayLike
   extends NonExclusiveWritableStream<ClientToRelayMessage> {
   subscribe: Relay["subscribe"];
 }
+
+type PromiseResolveCallback<T> = (value: T | PromiseLike<T>) => void;

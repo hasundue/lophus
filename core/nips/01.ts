@@ -144,20 +144,34 @@ export enum EventKind {
   TextNote = 1,
 }
 
+export type RegularEventKind = Brand<EventKind, "RegularEventKind">;
+export type ReplaceableEventKind = Brand<EventKind, "ReplaceableEventKind">;
+export type EphemeralEventKind = Brand<EventKind, "EphemeralEventKind">;
+export type ParameterizedReplaceableEventKind = Brand<
+  EventKind,
+  "ParameterizedReplaceableEventKind"
+>;
+
 // deno-lint-ignore no-namespace
 export namespace EventKind {
-  export function isRegularEventKind(kind: EventKind | number): boolean {
+  export function isRegularEventKind(
+    kind: EventKind | number,
+  ): kind is RegularEventKind {
     return 1000 <= kind && kind < 10000;
   }
-  export function isReplaceableEventKind(kind: EventKind | number): boolean {
+  export function isReplaceableEventKind(
+    kind: EventKind | number,
+  ): kind is ReplaceableEventKind {
     return (10000 <= kind && kind < 20000) || kind === 0 || kind === 3;
   }
-  export function isEphemeralEventKind(kind: EventKind | number): boolean {
+  export function isEphemeralEventKind(
+    kind: EventKind | number,
+  ): kind is EphemeralEventKind {
     return 20000 <= kind && kind < 30000;
   }
   export function isParameterizedReplaceableEventKind(
     kind: EventKind | number,
-  ): boolean {
+  ): kind is ParameterizedReplaceableEventKind {
     return 30000 <= kind && kind < 40000;
   }
 }
