@@ -1,5 +1,5 @@
+import type { Brand } from "../core/types.ts";
 import type {
-  Brand,
   EventContent,
   EventId,
   EventKind,
@@ -7,7 +7,7 @@ import type {
   NostrEvent,
   Signature,
   Stringified,
-} from "../core/types.ts";
+} from "../core/nips/01.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
 import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";

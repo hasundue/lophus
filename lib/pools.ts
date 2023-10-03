@@ -2,12 +2,12 @@ import type {
   ClientToRelayMessage,
   EventKind,
   SubscriptionFilter,
-} from "../core/types.ts";
+  RelayUrl,
+} from "../core/nips/01.ts";
 import {
   Relay,
   RelayInit,
   RelayLike,
-  RelayUrl,
   SubscriptionOptions,
 } from "../client.ts";
 import { NonExclusiveWritableStream } from "../core/streams.ts";

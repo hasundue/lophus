@@ -10,13 +10,11 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./core/types.ts";
+} from "./core/nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { NonExclusiveWritableStream } from "./core/streams.ts";
 import { LazyWebSocket } from "./core/websockets.ts";
 import { Lock } from "./core/x/async.ts";
-
-export * from "./core/nips/01.ts";
 
 /**
  * A class that represents a remote Nostr Relay.
@@ -152,7 +150,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     if (!accepted) {
       throw new Error(`Event rejected: ${body}`, { cause: event });
     }
-    this.config.logger?.info?.("OK", this.config.name, body);
+    this.config.logger?.debug?.("OK", this.config.name, body);
   }
 
   async close() {

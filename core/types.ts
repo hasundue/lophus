@@ -18,9 +18,6 @@ export type Optional<T, K extends keyof T> = Expand<
   & Partial<Pick<T, K>>
 >;
 
-// NIPs
-export * from "./nips/01.ts";
-
 // Logger
 export interface Logger {
   debug?: (...args: unknown[]) => void;
