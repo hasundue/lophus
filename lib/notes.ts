@@ -1,4 +1,4 @@
-import { TagName, EventKind, NostrEvent, RelayUrl } from "../core/nips/01.ts";
+import { EventKind, NostrEvent, RelayUrl, TagName } from "../core/nips/01.ts";
 import type { Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 
