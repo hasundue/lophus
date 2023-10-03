@@ -1,3 +1,4 @@
+import { Lock } from "./core/x/async.ts";
 import type { PromiseCallbacks } from "./core/types.ts";
 import type {
   ClientToRelayMessage,
@@ -15,9 +16,9 @@ import type {
 import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
 import { NonExclusiveWritableStream } from "./core/streams.ts";
 import { LazyWebSocket } from "./core/websockets.ts";
-import { Lock } from "./core/x/async.ts";
 
-export class EventRejectionError extends Error {}
+export class EventRejected extends Error {}
+export class RelayClosed extends Error {}
 
 /**
  * A class that represents a remote Nostr Relay.
@@ -83,10 +84,12 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   ) {
     const messenger = new Lock(this.getWriter());
     const sub = this.#subs.get(sid);
+
     const promise = sub
       ? sub.lock((writer) => writer.write(msg))
       // Subscription is already closed. TODO: should we throw an error?
       : messenger.lock((writer) => writer.write(["CLOSE", sid]));
+
     await promise.catch((err) => {
       if (err instanceof TypeError) {
         // Stream is already closing or closed.
@@ -164,16 +167,22 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   async publish(event: NostrEvent): Promise<void> {
     await this.#publisher.ready;
-    // We found this blocks for a long time, so we don't await it.
+
+    // We don't await this because it blocks for a long time
     this.#publisher.write(["EVENT", event]);
+
+    // This throws RelayClosed when relay is closed before receiving a response.
     const [, , accepted, body] = await new Promise<OkMessage>(
       (resolve, reject) => {
         this.#published.set(event.id, { resolve, reject });
       },
-    );
-    await this.#publisher.ready;
+    ).finally(async () => {
+      await this.#publisher.ready;
+      this.#published.delete(event.id);
+    });
+
     if (!accepted) {
-      throw new EventRejectionError(body, { cause: event });
+      throw new EventRejected(body, { cause: event });
     }
     this.config.logger?.debug?.("OK", this.config.name, body);
   }
@@ -186,7 +195,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     );
     await Promise.all(
       Array.from(this.#published.values()).map(({ reject }) =>
-        reject("Relay closed")
+        reject(new RelayClosed())
       ),
     );
     await super.close();
