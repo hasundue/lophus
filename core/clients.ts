@@ -4,8 +4,8 @@ import type {
   RelayToClientMessage,
   SubscriptionFilter,
   SubscriptionId,
-} from "./core/nips/01.ts";
-import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
+} from "./nips/01.ts";
+import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 
 /**
  * A class that represents a remote Nostr client.

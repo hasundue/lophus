@@ -4,7 +4,7 @@ import {
   OkMessage,
   PublishMessage,
 } from "../core/nips/01.ts";
-import { EventRejected, Relay, RelayClosed } from "../client.ts";
+import { EventRejected, Relay, RelayClosed } from "./relays.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import {
   assert,

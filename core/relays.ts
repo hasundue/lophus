@@ -1,5 +1,5 @@
-import { Lock } from "./core/x/async.ts";
-import type { PromiseCallbacks } from "./core/types.ts";
+import { Lock } from "./x/async.ts";
+import type { PromiseCallbacks } from "./types.ts";
 import type {
   ClientToRelayMessage,
   EoseMessage,
@@ -12,10 +12,10 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./core/nips/01.ts";
-import { NostrNode, NostrNodeConfig } from "./core/nodes.ts";
-import { NonExclusiveWritableStream } from "./core/streams.ts";
-import { LazyWebSocket } from "./core/websockets.ts";
+} from "./nips/01.ts";
+import { NostrNode, NostrNodeConfig } from "./nodes.ts";
+import { NonExclusiveWritableStream } from "./streams.ts";
+import { LazyWebSocket } from "./websockets.ts";
 
 export class EventRejected extends Error {}
 export class RelayClosed extends Error {}
