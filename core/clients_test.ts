@@ -4,7 +4,7 @@ import {
   OkMessage,
   SubscriptionId,
 } from "../core/nips/01.ts";
-import { Client } from "../relay.ts";
+import { Client } from "./clients.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";
