@@ -6,8 +6,8 @@
 [![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/hasundue/lophus/branch/main/graph/badge.svg?token=s01IMg4nI8)](https://codecov.io/github/hasundue/lophus)
 
-Yet another TypeScript library for [Nostr][nostr], oriented to web standards and
-edge environments.
+Yet another TypeScript implementation of the [Nostr][nostr] protocol, oriented
+to web standards and edge environments.
 
 ## Features
 
@@ -25,17 +25,18 @@ edge environments.
 ## Documentation
 
 - [API Reference](https://deno.land/x/lophus/mod.ts) (WIP)
-- [Lophus by Examples](https://github.com/hasundue/lophus-by-example)
+- [Lophus by Example](https://github.com/hasundue/lophus-by-example)
 
 ## Supported NIPs
 
 - [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic
       protocol
 
-## Acknowledgments
+## References
 
 Development of Lophus is inspired by the following projects:
 
+- [NIPs][nostr-nips] - Nostr Implementation Possibilities
 - [nostr-tools][nostr-tools] - Reference implementation of the protocol in
   TypeScript
 - [nostring][nostring] - A Nostr relay library written in Deno
@@ -44,6 +45,7 @@ Development of Lophus is inspired by the following projects:
 <!-- Links -->
 
 [nostr]: https://nostr.com
+[nostr-nips]: https://github.com/nostr-protocol/nips
 [streams-api]: https://developer.mozilla.org/docs/Web/API/Streams_API
 [modules]: https://github.com/hasundue/lophus/tree/main/lib
 [nostr-tools]: https://github.com/nbd-wtf/nostr-tools
