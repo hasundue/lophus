@@ -41,16 +41,16 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 export type AnyTag = Tag<string>;
 export type IndexedTag = Tag<AlphabetLetter>;
 
-export type Tag<T extends string> = [T, ...TagValueFor[T]];
+export type Tag<T extends string> = [T, ...TagContentFor[T]];
 
-export interface TagValueFor extends Record<string, TagValue> {
+export interface TagContentFor extends Record<string, TagContent> {
   // Event
   "e": [EventId, RelayUrl?];
   // Public key
   "p": [PublicKey, RelayUrl?];
   // (Maybe parameterized) replaceable event
   "a": [
-    `${EventKind}:${PublicKey}:${TagValueFor["d"][0]}`,
+    `${EventKind}:${PublicKey}:${TagValueFor["d"]}`,
     RelayUrl?,
   ] | [
     `${EventKind}:${PublicKey}`,
@@ -61,7 +61,11 @@ export interface TagValueFor extends Record<string, TagValue> {
 }
 
 // TODO: Tighten the type of TagValue
-export type TagValue = (string | undefined)[];
+export type TagContent = (string | undefined)[];
+
+export type TagValueFor = {
+  [T in keyof TagContentFor]: TagContentFor[T][0];
+};
 
 export interface TagFor extends Record<number, AnyTag> {
   0: AnyTag;
@@ -101,7 +105,6 @@ export type EventMessage<K extends EventKind = EventKind> = [
 ];
 export type OkMessage<B extends boolean = boolean> = [
   "OK",
-
   EventId,
   B,
   OkMessageBody<B>,
@@ -123,17 +126,16 @@ export type OkMessageBodyPrefix =
   | "error";
 
 export type SubscriptionFilter<
-  K extends EventKind = EventKind,
-  T extends AlphabetLetter = AlphabetLetter,
+  Ks extends EventKind = EventKind,
+  Ts extends AlphabetLetter = AlphabetLetter,
 > =
   & {
     ids?: EventId[];
     authors?: PublicKey[];
-    kinds?: K[];
+    kinds?: Ks[];
   }
-  // TODO: Restrict to 1 tag per filter
   & {
-    [key in `#${T}`]?: TagValueFor[T][];
+    [T in Ts as `#${T}`]?: TagValueFor[T][];
   }
   & {
     since?: Timestamp;
