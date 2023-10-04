@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/hasundue/lophus/compare/0.0.4...0.0.5) (2023-10-04)
+
+
+### Features
+
+* **nips:** add NIP-02 ([746bd98](https://github.com/hasundue/lophus/commit/746bd988638ba80c5a41ab90fbe698cf6ad0438d))
+
 ## [0.0.4](https://github.com/hasundue/lophus/compare/0.0.3...0.0.4) (2023-10-03)
 
 
