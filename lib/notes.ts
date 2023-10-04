@@ -1,8 +1,8 @@
-import { EventKind, NostrEvent, RelayUrl, TagName } from "../core/nips/01.ts";
+import { NostrEvent, RelayUrl } from "../core/nips/01.ts";
 import type { Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 
-export type TextNote = EventInit<EventKind<1>>;
+export type TextNote = EventInit<1>;
 
 export type TextNoteInit = Optional<TextNote, "kind">;
 
@@ -25,10 +25,10 @@ export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
 
     // deno-fmt-ignore
     const tags = (init.tags ?? []).concat(opts?.replyTo ? [
-      ["e" as TagName, opts.replyTo.id, relayRecommend ?? ""],
-      ["p" as TagName, opts.replyTo.pubkey, relayRecommend ?? ""],
+      ["e", opts.replyTo.id, relayRecommend ?? ""],
+      ["p", opts.replyTo.pubkey, relayRecommend ?? ""],
     ] : []);
 
-    return { ...init, kind: EventKind.$(1), tags };
+    return { ...init, kind: 1, tags };
   }
 }

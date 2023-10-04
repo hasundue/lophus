@@ -1,10 +1,10 @@
 import type {
   ClientToRelayMessage,
-  EventContent,
+  EventContentFor,
   EventKind,
   PrivateKey,
   Stringified,
-  Tag,
+  TagFor,
 } from "../core/nips/01.ts";
 import type { RelayLike } from "../core/relays.ts";
 
@@ -12,8 +12,8 @@ export { EventKind } from "../core/nips/01.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: K;
-  tags?: Tag[];
-  content: EventContent[K] | Stringified<EventContent[K]>;
+  tags?: TagFor[K][];
+  content: EventContentFor[K] | Stringified<EventContentFor[K]>;
 }
 
 import { Signer } from "./signs.ts";

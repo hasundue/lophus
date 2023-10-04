@@ -1,4 +1,3 @@
-import { EventKind } from "../core/nips/01.ts";
 import { describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
 import { Timestamp } from "../lib/times.ts";
@@ -25,7 +24,7 @@ describe("Signer/Verifier", () => {
   const event = {
     pubkey: PublicKey.from(nsec),
     created_at: Timestamp.now,
-    kind: EventKind[1],
+    kind: 1,
     tags: [],
     content: "lophus",
   };

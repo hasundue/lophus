@@ -1,6 +1,5 @@
 import {
   EventId,
-  EventKind,
   MetadataEvent,
   OkMessage,
   PublishMessage,
@@ -93,7 +92,7 @@ describe("Relay", () => {
     assertEquals(relay.status, WebSocket.CLOSED);
   });
   it("should not connect when a subscription is created", () => {
-    sub_1 = relay.subscribe({ kinds: [EventKind[1]] }, { id: "test-1" });
+    sub_1 = relay.subscribe({ kinds: [1] }, { id: "test-1" });
     assert(sub_1 instanceof ReadableStream);
     assertEquals(relay.status, WebSocket.CLOSED);
   });
@@ -112,7 +111,7 @@ describe("Relay", () => {
     reader.releaseLock();
   });
   it("should be able to open multiple subscriptions", () => {
-    sub_0 = relay.subscribe({ kinds: [EventKind[0]], limit: 1 }, {
+    sub_0 = relay.subscribe({ kinds: [0], limit: 1 }, {
       id: "test-0",
     });
     assert(sub_0 instanceof ReadableStream);
@@ -150,7 +149,7 @@ describe("Relay", () => {
       ws.remote.addEventListener(
         "message",
         (ev: MessageEvent<string>) => {
-          const [, event] = JSON.parse(ev.data) as PublishMessage<EventKind<1>>;
+          const [, event] = JSON.parse(ev.data) as PublishMessage<1>;
           if (event.id === eid) {
             assertEquals(event.kind, 1);
             resolve(true);
@@ -172,7 +171,7 @@ describe("Relay", () => {
       ws.remote.addEventListener(
         "message",
         (ev: MessageEvent<string>) => {
-          const [, event] = JSON.parse(ev.data) as PublishMessage<EventKind<1>>;
+          const [, event] = JSON.parse(ev.data) as PublishMessage<1>;
           if (event.id === eid) {
             assertEquals(event.kind, 1);
             resolve(true);
