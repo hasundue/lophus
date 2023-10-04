@@ -1,4 +1,5 @@
 import {
+  EventKind,
   EventMessage,
   NostrEvent,
   OkMessage,
@@ -57,7 +58,7 @@ describe("Client", () => {
     });
     it("should receive requests", async () => {
       subid = "test" as SubscriptionId;
-      const req = { kinds: [0] };
+      const req = { kinds: [EventKind[0]] };
       ws.dispatchEvent(
         new MessageEvent("message", {
           data: JSON.stringify(["REQ", subid, req]),

@@ -2,7 +2,7 @@ import { EventKind, NostrEvent, RelayUrl, TagName } from "../core/nips/01.ts";
 import type { Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 
-export type TextNote = EventInit<EventKind.TextNote>;
+export type TextNote = EventInit<EventKind<1>>;
 
 export type TextNoteInit = Optional<TextNote, "kind">;
 
@@ -29,6 +29,6 @@ export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
       ["p" as TagName, opts.replyTo.pubkey, relayRecommend ?? ""],
     ] : []);
 
-    return { ...init, kind: EventKind.TextNote, tags };
+    return { ...init, kind: EventKind.$(1), tags };
   }
 }

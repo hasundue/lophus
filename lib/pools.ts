@@ -4,7 +4,12 @@ import type {
   RelayUrl,
   SubscriptionFilter,
 } from "../core/nips/01.ts";
-import { Relay, RelayInit, RelayLike, SubscriptionOptions } from "../client.ts";
+import {
+  Relay,
+  RelayInit,
+  RelayLike,
+  SubscriptionOptions,
+} from "../core/relays.ts";
 import { NonExclusiveWritableStream } from "../core/streams.ts";
 import { Distinctor, merge } from "../lib/streams.ts";
 
