@@ -24,7 +24,7 @@ edge environments.
 
 ## Documentation
 
-- [API Reference](https://deno.land/x/lophus) (WIP)
+- [API Reference](https://deno.land/x/lophus/mod.ts) (WIP)
 - [Lophus by Examples](https://github.com/hasundue/lophus-by-example)
 
 ## Supported NIPs
