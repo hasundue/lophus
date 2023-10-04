@@ -38,38 +38,42 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 // Tags
 // ----------------------
 
-export type AnyTag = Tag<string>;
-export type IndexedTag = Tag<AlphabetLetter>;
+export type Tag<T extends TagType = TagType> = {
+  [K in T]: [K, TagValue[K], ...TagParams[K], ...(string | undefined)[]];
+}[T];
 
-export type Tag<T extends string> = [T, ...TagContentFor[T]];
+export type IndexedTagType = TagType & AlphabetLetter;
+export type IndexedTag = Tag<IndexedTagType>;
 
-export interface TagContentFor extends Record<string, TagContent> {
-  // Event
-  "e": [EventId, RelayUrl?];
+export interface TagValue {
+  /** Event tag */
+  "e": EventId;
   // Public key
-  "p": [PublicKey, RelayUrl?];
+  "p": PublicKey;
   // (Maybe parameterized) replaceable event
-  "a": [
-    `${EventKind}:${PublicKey}:${TagValueFor["d"]}`,
-    RelayUrl?,
-  ] | [
-    `${EventKind}:${PublicKey}`,
-    RelayUrl?,
-  ];
+  "a":
+    | `${EventKind}:${PublicKey}:${TagValue["d"]}`
+    | `${EventKind}:${PublicKey}`;
   // Identifier
-  "d": [string];
+  "d": string;
 }
 
-// TODO: Tighten the type of TagValue
-export type TagContent = (string | undefined)[];
+export type TagType = keyof TagValue;
 
-export type TagValueFor = {
-  [T in keyof TagContentFor]: TagContentFor[T][0];
-};
+export interface TagParams extends Record<TagType, (string | undefined)[]> {
+  /** Event */
+  "e": [RelayUrl?];
+  /** Public key */
+  "p": [RelayUrl?];
+  /** (Maybe parameterized) replaceable event */
+  "a": [RelayUrl?];
+  /** Identifier */
+  "d": [];
+}
 
-export interface TagFor extends Record<number, AnyTag> {
-  0: AnyTag;
-  1: AnyTag;
+export interface TagFor extends Record<EventKind, Tag> {
+  0: Tag;
+  1: Tag;
 }
 
 // ----------------------
@@ -78,41 +82,45 @@ export interface TagFor extends Record<number, AnyTag> {
 
 export type RelayUrl = `wss://${string}` | `ws://${string}`;
 
+export type SubscriptionId = Brand<string, "SubscriptionId">;
+
 export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
 
-export type ClientToRelayMessage =
-  | PublishMessage
-  | SubscribeMessage
-  | CloseMessage;
+export type ClientToRelayMessage<
+  T extends ClientToRelayMessageType = ClientToRelayMessageType,
+> = [T, ...ClientToRelayMessageContentFor[T]];
 
-export type PublishMessage<K extends EventKind = EventKind> = [
-  "EVENT",
-  NostrEvent<K>,
-];
-export type SubscribeMessage = ["REQ", SubscriptionId, ...SubscriptionFilter[]];
-export type CloseMessage = ["CLOSE", SubscriptionId];
+export enum ClientToRelayMessageType {
+  EVENT = "EVENT",
+  REQ = "REQ",
+  CLOSE = "CLOSE",
+}
 
-export type RelayToClientMessage =
-  | EventMessage
-  | OkMessage
-  | EoseMessage
-  | NoticeMessage;
+export interface ClientToRelayMessageContentFor {
+  EVENT: [NostrEvent];
+  REQ: [SubscriptionId, ...SubscriptionFilter[]];
+  CLOSE: [SubscriptionId];
+}
 
-export type EventMessage<K extends EventKind = EventKind> = [
-  "EVENT",
-  SubscriptionId,
-  NostrEvent<K>,
-];
+export type RelayToClientMessage<
+  T extends RelayToClientMessageType = RelayToClientMessageType,
+> = [T, ...RelayToClientMessageContentFor[T]];
+
+export interface RelayToClientMessageContentFor {
+  "EVENT": [SubscriptionId, NostrEvent];
+  "OK": OkMessage;
+  "EOSE": [SubscriptionId];
+  "NOTICE": [string];
+}
+export type RelayToClientMessageType = keyof RelayToClientMessageContentFor;
+
 export type OkMessage<B extends boolean = boolean> = [
   "OK",
   EventId,
   B,
   OkMessageBody<B>,
 ];
-export type EoseMessage = ["EOSE", SubscriptionId];
-export type NoticeMessage = ["NOTICE", string];
 
-export type SubscriptionId = Brand<string, "SubscriptionId">;
 export type OkMessageBody<B extends boolean> = B extends true
   ? "" | OkMessageBodyString
   : OkMessageBodyString;
@@ -127,7 +135,7 @@ export type OkMessageBodyPrefix =
 
 export type SubscriptionFilter<
   Ks extends EventKind = EventKind,
-  Ts extends AlphabetLetter = AlphabetLetter,
+  Ts extends IndexedTagType = IndexedTagType,
 > =
   & {
     ids?: EventId[];
@@ -135,7 +143,7 @@ export type SubscriptionFilter<
     kinds?: Ks[];
   }
   & {
-    [T in Ts as `#${T}`]?: TagValueFor[T][];
+    [T in Ts as `#${T}`]?: TagValue[T][];
   }
   & {
     since?: Timestamp;
