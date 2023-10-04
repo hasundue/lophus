@@ -139,42 +139,67 @@ export type SubscriptionFilter<
 // Basic event kinds
 // ----------------------
 
-export enum EventKind {
-  Metadata = 0,
-  TextNote = 1,
-}
+export type EventKind<T extends number = number> = Brand<T, "EventKind">;
 
-export type RegularEventKind = Brand<EventKind, "RegularEventKind">;
-export type ReplaceableEventKind = Brand<EventKind, "ReplaceableEventKind">;
-export type EphemeralEventKind = Brand<EventKind, "EphemeralEventKind">;
-export type ParameterizedReplaceableEventKind = Brand<
-  EventKind,
-  "ParameterizedReplaceableEventKind"
+export type MetadataEvent = NostrEvent<EventKind<0>>;
+export type TextNoteEvent = NostrEvent<EventKind<1>>;
+
+// TODO: Use template literal for T
+
+export type RegularEventKind<T extends number = number> = Brand<
+  T,
+  "EventKind",
+  "Regular"
 >;
+export type ReplaceableEventKind<T extends number = number> = Brand<
+  T,
+  "EventKind",
+  "Replaceable"
+>;
+export type EphemeralEventKind<T extends number = number> = Brand<
+  T,
+  "EventKind",
+  "Ephemeral"
+>;
+export type ParameterizedReplaceableEventKind<T extends number = number> =
+  Brand<
+    T,
+    "EventKind",
+    "ParameterizedReplaceable"
+  >;
 
-// deno-lint-ignore no-namespace
-export namespace EventKind {
-  export function isRegularEventKind(
-    kind: EventKind | number,
+export const EventKind = {
+  0: 0 as EventKind<0>,
+  Metadata: 0 as EventKind<0>,
+
+  1: 1 as EventKind<1>,
+  TextNote: 1 as EventKind<1>,
+
+  $<T extends number>(kind: T): EventKind<T> {
+    return kind as EventKind<T>;
+  },
+
+  isRegularEventKind(
+    kind: EventKind,
   ): kind is RegularEventKind {
     return 1000 <= kind && kind < 10000;
-  }
-  export function isReplaceableEventKind(
-    kind: EventKind | number,
+  },
+  isReplaceableEventKind(
+    kind: EventKind,
   ): kind is ReplaceableEventKind {
     return (10000 <= kind && kind < 20000) || kind === 0 || kind === 3;
-  }
-  export function isEphemeralEventKind(
-    kind: EventKind | number,
+  },
+  isEphemeralEventKind(
+    kind: EventKind,
   ): kind is EphemeralEventKind {
     return 20000 <= kind && kind < 30000;
-  }
-  export function isParameterizedReplaceableEventKind(
-    kind: EventKind | number,
+  },
+  isParameterizedReplaceableEventKind(
+    kind: EventKind,
   ): kind is ParameterizedReplaceableEventKind {
     return 30000 <= kind && kind < 40000;
-  }
-}
+  },
+};
 
 export type EventContent = [
   MetadataContent,

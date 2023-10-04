@@ -6,7 +6,7 @@ import type {
   Stringified,
   Tag,
 } from "../core/nips/01.ts";
-import type { RelayLike } from "../client.ts";
+import type { RelayLike } from "../core/relays.ts";
 
 export { EventKind } from "../core/nips/01.ts";
 

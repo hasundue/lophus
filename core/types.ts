@@ -1,7 +1,8 @@
 /**
  * Constructor of branded types
  */
-export type Brand<K, T> = K & { __brand: T };
+// deno-lint-ignore no-explicit-any
+export type Brand<T, B, K = any> = T & { __brand: B; __kind: K };
 
 //
 // Records and maps
