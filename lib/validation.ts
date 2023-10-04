@@ -45,3 +45,5 @@ EventKind.isParameterizedReplaceableEventKind = (
 ): kind is ParameterizedReplaceableEventKind => {
   return 30000 <= kind && kind < 40000;
 };
+
+export { EventKind } from "../nips/01.ts";

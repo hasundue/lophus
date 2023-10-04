@@ -2,7 +2,7 @@
 // NIP-01: Nostr Basic Protocol
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
-import { Brand } from "../core/types.ts";
+import type { AlphabetLetter, Brand } from "../core/types.ts";
 
 // ----------------------
 // Events and signatures
@@ -22,38 +22,6 @@ export type EventId = Brand<string, "EventId">;
 export type PublicKey = Brand<string, "PublicKey">;
 export type Timestamp = Brand<number, "EventTimeStamp">;
 
-// ----------------------
-// Tags
-// ----------------------
-
-export interface TagFor {
-  0: AnyTag;
-  1: AnyTag;
-  2: AnyTag;
-}
-
-export type AnyTag = string[];
-
-export type IndexedEventTag = [IndexedEventTagName, ...string[]];
-
-export type EventTag = ["e", EventId, RelayUrl?];
-export type PubKeyTag = ["p", PublicKey, RelayUrl?];
-export type ParameterizedReplaceableEventTag = [
-  "a",
-  `${EventKind}:${PublicKey}:${TagValue<"d">}`,
-  RelayUrl?,
-];
-export type NonParameterizedReplaceableEventTag = [
-  "a",
-  `${EventKind}:${PublicKey}`,
-  RelayUrl?,
-];
-
-// TODO: Use template literal
-export type IndexedEventTagName = Brand<string, "IndexedEventTagName">;
-// TODO: Use template literal
-export type TagValue<T extends string = string> = Brand<string, `${T}TagValue`>;
-
 export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
 
@@ -67,10 +35,44 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 ];
 
 // ----------------------
+// Tags
+// ----------------------
+
+export type AnyTag = Tag<string>;
+export type IndexedTag = Tag<AlphabetLetter>;
+
+export type Tag<T extends string> = [T, ...TagValueFor[T]];
+
+export interface TagValueFor extends Record<string, TagValue> {
+  // Event
+  "e": [EventId, RelayUrl?];
+  // Public key
+  "p": [PublicKey, RelayUrl?];
+  // (Maybe parameterized) replaceable event
+  "a": [
+    `${EventKind}:${PublicKey}:${TagValueFor["d"][0]}`,
+    RelayUrl?,
+  ] | [
+    `${EventKind}:${PublicKey}`,
+    RelayUrl?,
+  ];
+  // Identifier
+  "d": [string];
+}
+
+// TODO: Tighten the type of TagValue
+export type TagValue = (string | undefined)[];
+
+export interface TagFor {
+  0: AnyTag;
+  1: AnyTag;
+}
+
+// ----------------------
 // Communication
 // ----------------------
 
-export type RelayUrl = `wss://${string}`;
+export type RelayUrl = `wss://${string}` | `ws://${string}`;
 
 export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
 
@@ -122,7 +124,7 @@ export type OkMessageBodyPrefix =
 
 export type SubscriptionFilter<
   K extends EventKind = EventKind,
-  T extends IndexedEventTagName = IndexedEventTagName,
+  T extends AlphabetLetter = AlphabetLetter,
 > =
   & {
     ids?: EventId[];
@@ -131,7 +133,7 @@ export type SubscriptionFilter<
   }
   // TODO: Restrict to 1 tag per filter
   & {
-    [key in `#${T}`]?: TagValue<T>[];
+    [key in `#${T}`]?: TagValueFor[T][];
   }
   & {
     since?: Timestamp;
@@ -140,23 +142,19 @@ export type SubscriptionFilter<
   };
 
 // ----------------------
-// Basic event kinds
+// Event kinds
 // ----------------------
 
 export enum EventKind {
   Metadata = 0,
   TextNote = 1,
-  /**
-   * @deprecated
-   */
-  RecommendRelay = 2,
 }
 
 export type MetadataEvent = NostrEvent<0>;
 export type TextNoteEvent = NostrEvent<1>;
 
 //
-// TODO: Use template literal
+// TODO: Use template literal for narrowing EventKind
 //
 export type RegularEventKind = Brand<EventKind, "Regular">;
 export type ReplaceableEventKind = Brand<EventKind, "Replaceable">;
@@ -169,7 +167,6 @@ export type ParameterizedReplaceableEventKind = Brand<
 export interface EventContentFor extends Record<EventKind, unknown> {
   0: MetadataContent;
   1: string;
-  2: RelayUrl;
 }
 
 export interface MetadataContent {
@@ -178,7 +175,7 @@ export interface MetadataContent {
   picture: Url;
 }
 
-export type Url = Brand<string, "Url"> | "";
+export type Url = `https://${string}` | `http://${string}`;
 
 // ----------------------
 // Utility types

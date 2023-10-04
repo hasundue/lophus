@@ -3,12 +3,10 @@ import type {
   EventContentFor,
   EventKind,
   PrivateKey,
+  RelayLike,
   Stringified,
   TagFor,
-} from "../nips/01.ts";
-import type { RelayLike } from "../core/relays.ts";
-
-export { EventKind } from "../nips/01.ts";
+} from "../mod.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: K;
