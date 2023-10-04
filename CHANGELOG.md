@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.6](https://github.com/hasundue/lophus/compare/0.0.5...0.0.6) (2023-10-04)
+
+
+### Bug Fixes
+
+* **nips/01:** fix SubscriptionFilter interface ([2ef24d0](https://github.com/hasundue/lophus/commit/2ef24d0a0c3853467043640e79d71a8bfac7ff56))
+
 ## [0.0.5](https://github.com/hasundue/lophus/compare/0.0.4...0.0.5) (2023-10-04)
 
 
