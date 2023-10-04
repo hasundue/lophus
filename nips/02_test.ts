@@ -1,7 +1,7 @@
 import { describe, it } from "../lib/std/testing.ts";
 import { assert } from "../lib/std/assert.ts";
-import { env } from "../lib/env.ts";
 import { EventInit } from "../lib/events.ts";
+import type { PublicKey } from "../mod.ts";
 import "./02.ts";
 
 describe("EventInit<3>", () => {
@@ -10,7 +10,7 @@ describe("EventInit<3>", () => {
       kind: 3,
       content: "",
       tags: [
-        ["p", env.PUBLIC_KEY, "wss://nos.lol", "string"],
+        ["p", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
     assert(init);
@@ -21,7 +21,7 @@ describe("EventInit<3>", () => {
       content: "",
       tags: [
         // @ts-expect-error: tag name should be "p"
-        ["e", env.PUBLIC_KEY, "wss://nos.lol", "string"],
+        ["e", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
     assert(init);
@@ -32,7 +32,7 @@ describe("EventInit<3>", () => {
       // @ts-expect-error: content should be empty string
       content: "string",
       tags: [
-        ["p", env.PUBLIC_KEY, "wss://nos.lol", "string"],
+        ["p", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
     assert(init);
