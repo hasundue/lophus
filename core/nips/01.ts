@@ -13,8 +13,8 @@ export interface NostrEvent<K extends EventKind = EventKind> {
   pubkey: PublicKey;
   created_at: Timestamp;
   kind: K;
-  tags: Tag[];
-  content: Stringified<EventContent[K]>;
+  tags: TagFor[K][];
+  content: Stringified<EventContentFor[K]>;
   sig: Signature;
 }
 
@@ -26,30 +26,33 @@ export type Timestamp = Brand<number, "EventTimeStamp">;
 // Tags
 // ----------------------
 
-export type Tag<T extends TagName = TagName> = [T, ...string[]];
+export interface TagFor {
+  0: AnyTag;
+  1: AnyTag;
+  2: AnyTag;
+}
 
-export type TagName = Brand<string, "TagName">;
+export type AnyTag = string[];
+
 export type IndexedEventTag = [IndexedEventTagName, ...string[]];
 
-export type EventTag = ["e", EventId, RecmRelayUrl?];
-export type PubKeyTag = ["p", PublicKey, RecmRelayUrl?];
+export type EventTag = ["e", EventId, RelayUrl?];
+export type PubKeyTag = ["p", PublicKey, RelayUrl?];
 export type ParameterizedReplaceableEventTag = [
   "a",
   `${EventKind}:${PublicKey}:${TagValue<"d">}`,
-  RecmRelayUrl?,
+  RelayUrl?,
 ];
 export type NonParameterizedReplaceableEventTag = [
   "a",
   `${EventKind}:${PublicKey}`,
-  RecmRelayUrl?,
+  RelayUrl?,
 ];
 
 // TODO: Use template literal
 export type IndexedEventTagName = Brand<string, "IndexedEventTagName">;
 // TODO: Use template literal
 export type TagValue<T extends string = string> = Brand<string, `${T}TagValue`>;
-
-export type RecmRelayUrl = RelayUrl;
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
@@ -59,8 +62,8 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   pubkey: PublicKey,
   created_at: Timestamp,
   kind: K,
-  tags: Tag[],
-  content: Stringified<EventContent[K]>,
+  tags: TagFor[K][],
+  content: Stringified<EventContentFor[K]>,
 ];
 
 // ----------------------
@@ -96,6 +99,7 @@ export type EventMessage<K extends EventKind = EventKind> = [
 ];
 export type OkMessage<B extends boolean = boolean> = [
   "OK",
+
   EventId,
   B,
   OkMessageBody<B>,
@@ -139,10 +143,17 @@ export type SubscriptionFilter<
 // Basic event kinds
 // ----------------------
 
-export type EventKind<T extends number = number> = Brand<T, "EventKind">;
+export enum EventKind {
+  Metadata = 0,
+  TextNote = 1,
+  /**
+   * @deprecated
+   */
+  RecommendRelay = 2,
+}
 
-export type MetadataEvent = NostrEvent<EventKind<0>>;
-export type TextNoteEvent = NostrEvent<EventKind<1>>;
+export type MetadataEvent = NostrEvent<0>;
+export type TextNoteEvent = NostrEvent<1>;
 
 // TODO: Use template literal for T
 
@@ -168,44 +179,35 @@ export type ParameterizedReplaceableEventKind<T extends number = number> =
     "ParameterizedReplaceable"
   >;
 
-export const EventKind = {
-  0: 0 as EventKind<0>,
-  Metadata: 0 as EventKind<0>,
-
-  1: 1 as EventKind<1>,
-  TextNote: 1 as EventKind<1>,
-
-  $<T extends number>(kind: T): EventKind<T> {
-    return kind as EventKind<T>;
-  },
-
-  isRegularEventKind(
+// deno-lint-ignore no-namespace
+export namespace EventKind {
+  export function isRegularEventKind(
     kind: EventKind,
   ): kind is RegularEventKind {
     return 1000 <= kind && kind < 10000;
-  },
-  isReplaceableEventKind(
+  }
+  export function isReplaceableEventKind(
     kind: EventKind,
   ): kind is ReplaceableEventKind {
-    return (10000 <= kind && kind < 20000) || kind === 0 || kind === 3;
-  },
-  isEphemeralEventKind(
+    return (10000 <= kind && kind < 20000) || kind === 0;
+  }
+  export function isEphemeralEventKind(
     kind: EventKind,
   ): kind is EphemeralEventKind {
     return 20000 <= kind && kind < 30000;
-  },
-  isParameterizedReplaceableEventKind(
+  }
+  export function isParameterizedReplaceableEventKind(
     kind: EventKind,
   ): kind is ParameterizedReplaceableEventKind {
     return 30000 <= kind && kind < 40000;
-  },
-};
+  }
+}
 
-export type EventContent = [
-  MetadataContent,
-  string,
-  RelayUrl,
-];
+export interface EventContentFor extends Record<EventKind, unknown> {
+  0: MetadataContent;
+  1: string;
+  2: RelayUrl;
+}
 
 export interface MetadataContent {
   name: string;
