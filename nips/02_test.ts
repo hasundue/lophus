@@ -1,7 +1,8 @@
-import { describe, it } from "../std/testing.ts";
-import { assert } from "../std/assert.ts";
-import { env } from "../env.ts";
-import { EventInit } from "../events.ts";
+import { describe, it } from "../lib/std/testing.ts";
+import { assert } from "../lib/std/assert.ts";
+import { env } from "../lib/env.ts";
+import { EventInit } from "../lib/events.ts";
+import "./02.ts";
 
 describe("EventInit<3>", () => {
   it("valid", () => {
@@ -21,6 +22,17 @@ describe("EventInit<3>", () => {
       tags: [
         // @ts-expect-error: tag name should be "p"
         ["e", env.PUBLIC_KEY, "wss://nos.lol", "string"],
+      ],
+    } satisfies EventInit<3>;
+    assert(init);
+  });
+  it("content should be empty string", () => {
+    const init = {
+      kind: 3,
+      // @ts-expect-error: content should be empty string
+      content: "string",
+      tags: [
+        ["p", env.PUBLIC_KEY, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
     assert(init);

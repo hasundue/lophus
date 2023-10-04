@@ -12,7 +12,7 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./nips/01.ts";
+} from "../nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { LazyWebSocket } from "./websockets.ts";

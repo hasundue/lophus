@@ -1,4 +1,4 @@
-import { NostrEvent, RelayUrl } from "../core/nips/01.ts";
+import { NostrEvent, RelayUrl } from "../nips/01.ts";
 import type { Optional } from "../core/types.ts";
 import { EventInit } from "./events.ts";
 

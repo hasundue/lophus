@@ -2,7 +2,7 @@
 // NIP-01: Nostr Basic Protocol
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
-import { Brand } from "../types.ts";
+import { Brand } from "../core/types.ts";
 
 // ----------------------
 // Events and signatures
@@ -155,53 +155,16 @@ export enum EventKind {
 export type MetadataEvent = NostrEvent<0>;
 export type TextNoteEvent = NostrEvent<1>;
 
-// TODO: Use template literal for T
-
-export type RegularEventKind<T extends number = number> = Brand<
-  T,
-  "EventKind",
-  "Regular"
+//
+// TODO: Use template literal
+//
+export type RegularEventKind = Brand<EventKind, "Regular">;
+export type ReplaceableEventKind = Brand<EventKind, "Replaceable">;
+export type EphemeralEventKind = Brand<EventKind, "Ephemeral">;
+export type ParameterizedReplaceableEventKind = Brand<
+  EventKind,
+  "ParameterizedReplaceable"
 >;
-export type ReplaceableEventKind<T extends number = number> = Brand<
-  T,
-  "EventKind",
-  "Replaceable"
->;
-export type EphemeralEventKind<T extends number = number> = Brand<
-  T,
-  "EventKind",
-  "Ephemeral"
->;
-export type ParameterizedReplaceableEventKind<T extends number = number> =
-  Brand<
-    T,
-    "EventKind",
-    "ParameterizedReplaceable"
-  >;
-
-// deno-lint-ignore no-namespace
-export namespace EventKind {
-  export function isRegularEventKind(
-    kind: EventKind,
-  ): kind is RegularEventKind {
-    return 1000 <= kind && kind < 10000;
-  }
-  export function isReplaceableEventKind(
-    kind: EventKind,
-  ): kind is ReplaceableEventKind {
-    return (10000 <= kind && kind < 20000) || kind === 0;
-  }
-  export function isEphemeralEventKind(
-    kind: EventKind,
-  ): kind is EphemeralEventKind {
-    return 20000 <= kind && kind < 30000;
-  }
-  export function isParameterizedReplaceableEventKind(
-    kind: EventKind,
-  ): kind is ParameterizedReplaceableEventKind {
-    return 30000 <= kind && kind < 40000;
-  }
-}
 
 export interface EventContentFor extends Record<EventKind, unknown> {
   0: MetadataContent;

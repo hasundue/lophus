@@ -5,10 +5,10 @@ import type {
   PrivateKey,
   Stringified,
   TagFor,
-} from "../core/nips/01.ts";
+} from "../nips/01.ts";
 import type { RelayLike } from "../core/relays.ts";
 
-export { EventKind } from "../core/nips/01.ts";
+export { EventKind } from "../nips/01.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: K;

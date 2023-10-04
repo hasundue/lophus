@@ -7,7 +7,7 @@ import type {
   NostrEvent,
   Signature,
   Stringified,
-} from "../core/nips/01.ts";
+} from "../nips/01.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
 import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
