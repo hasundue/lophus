@@ -1,5 +1,5 @@
-import { NostrEvent, RelayUrl } from "../nips/01.ts";
-import type { Optional } from "../core/types.ts";
+import type { NostrEvent, RelayUrl } from "../mod.ts";
+import type { Optional } from "./types.ts";
 import { EventInit } from "./events.ts";
 
 export type TextNote = EventInit<1>;
