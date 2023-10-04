@@ -63,7 +63,7 @@ export interface TagValueFor extends Record<string, TagValue> {
 // TODO: Tighten the type of TagValue
 export type TagValue = (string | undefined)[];
 
-export interface TagFor {
+export interface TagFor extends Record<number, AnyTag> {
   0: AnyTag;
   1: AnyTag;
 }
