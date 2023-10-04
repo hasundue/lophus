@@ -1,4 +1,4 @@
-import type { NostrMessage } from "./nips/01.ts";
+import type { NostrMessage } from "../nips/01.ts";
 import type { Logger } from "./types.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";

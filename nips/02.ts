@@ -1,6 +1,6 @@
-import { NostrEvent } from "../../core/nips/01.ts";
+import { NostrEvent } from "./01.ts";
 
-declare module "../../core/nips/01.ts" {
+declare module "./01.ts" {
   enum EventKind {
     ContactList = 3,
   }

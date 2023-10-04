@@ -4,8 +4,11 @@ import type {
   RelayToClientMessage,
   SubscriptionFilter,
   SubscriptionId,
-} from "./nips/01.ts";
+} from "../nips/01.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
+
+export type ClientConfig = NostrNodeConfig;
+export type ClientOptions = Partial<ClientConfig>;
 
 /**
  * A class that represents a remote Nostr client.
@@ -95,6 +98,3 @@ export class Client extends NostrNode<RelayToClientMessage> {
     return this.#requests;
   }
 }
-
-export type ClientConfig = NostrNodeConfig;
-export type ClientOptions = Partial<ClientConfig>;

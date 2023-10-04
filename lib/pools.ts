@@ -3,7 +3,7 @@ import type {
   EventKind,
   RelayUrl,
   SubscriptionFilter,
-} from "../core/nips/01.ts";
+} from "../nips/01.ts";
 import {
   Relay,
   RelayInit,

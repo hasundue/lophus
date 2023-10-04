@@ -4,7 +4,7 @@ import {
   OkMessage,
   PublishMessage,
   TextNoteEvent,
-} from "../core/nips/01.ts";
+} from "../nips/01.ts";
 import { EventRejected, Relay, RelayClosed } from "./relays.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import {
