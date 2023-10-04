@@ -6,8 +6,8 @@
 [![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/hasundue/lophus/branch/main/graph/badge.svg?token=s01IMg4nI8)](https://codecov.io/github/hasundue/lophus)
 
-Yet another TypeScript implementation of the [Nostr][nostr] protocol, oriented
-to web standards and edge environments.
+Lophus is a TypeScript library for development of [Nostr][nostr] clients and
+relays, oriented to web standards and edge environments.
 
 ## Features
 
