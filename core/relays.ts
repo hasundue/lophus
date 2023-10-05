@@ -2,12 +2,9 @@ import { Lock } from "./x/async.ts";
 import type { PromiseCallbacks } from "./types.ts";
 import type {
   ClientToRelayMessage,
-  EoseMessage,
   EventId,
   EventKind,
-  EventMessage,
   NostrEvent,
-  OkMessage,
   RelayToClientMessage,
   RelayUrl,
   SubscriptionFilter,
@@ -29,11 +26,13 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   readonly #subs = new Map<
     SubscriptionId,
-    Lock<WritableStreamDefaultWriter<EventMessage | EoseMessage>>
+    Lock<WritableStreamDefaultWriter<RelayToClientMessage<"EVENT" | "EOSE">>>
   >();
-
-  readonly #publisher = this.getWriter();
-  readonly #published = new Map<EventId, PromiseCallbacks<OkMessage>>();
+  readonly #published = new Map<
+    EventId,
+    PromiseCallbacks<RelayToClientMessage<"OK">>
+  >();
+  readonly #messenger = this.getWriter();
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -80,7 +79,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   async #notify(
     sid: SubscriptionId,
-    msg: EventMessage | EoseMessage,
+    msg: RelayToClientMessage<"EVENT" | "EOSE">,
   ) {
     const messenger = new Lock(this.getWriter());
     const sub = this.#subs.get(sid);
@@ -111,7 +110,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     let controllerLock: Lock<ReadableStreamDefaultController<NostrEvent<K>>>;
 
     const writable = new NonExclusiveWritableStream<
-      EventMessage<K> | EoseMessage
+      RelayToClientMessage<"EVENT" | "EOSE", K>
     >({
       write: (msg): Promise<void> | undefined => {
         const type = msg[0];
@@ -166,13 +165,13 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   }
 
   async publish(event: NostrEvent): Promise<void> {
-    await this.#publisher.ready;
+    await this.#messenger.ready;
 
     // We don't await this because it blocks for a long time
-    this.#publisher.write(["EVENT", event]);
+    this.#messenger.write(["EVENT", event]);
 
     // This throws RelayClosed when relay is closed before receiving a response.
-    const [, , accepted, body] = await new Promise<OkMessage>(
+    const [, , accepted, body] = await new Promise<RelayToClientMessage<"OK">>(
       (resolve, reject) => {
         this.#published.set(event.id, { resolve, reject });
       },
@@ -180,7 +179,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       this.#published.delete(event.id);
     });
 
-    if (!accepted) {
+    if (accepted !== true) {
       throw new EventRejected(body, { cause: event });
     }
     this.config.logger?.debug?.("OK", this.config.name, body);

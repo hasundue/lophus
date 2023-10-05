@@ -1,8 +1,8 @@
 import {
+  ClientToRelayMessage,
   EventId,
   MetadataEvent,
-  OkMessage,
-  PublishMessage,
+  RelayToClientMessage,
   TextNoteEvent,
 } from "../nips/01.ts";
 import { EventRejected, Relay, RelayClosed } from "./relays.ts";
@@ -143,13 +143,14 @@ describe("Relay", () => {
   });
   it("should publish an event and recieve an accepting OK message", async () => {
     const eid = "test-true" as EventId;
-    const ok = ["OK", eid, true, ""] satisfies OkMessage<true>;
+    const ok = ["OK", eid, true, ""] satisfies RelayToClientMessage<"OK">;
     const ws = MockWebSocket.instances[0];
     const arrived = new Promise<true>((resolve) => {
       ws.remote.addEventListener(
         "message",
         (ev: MessageEvent<string>) => {
-          const [, event] = JSON.parse(ev.data) as PublishMessage<1>;
+          // deno-fmt-ignore
+          const [, event] = JSON.parse(ev.data) as ClientToRelayMessage<"EVENT">;
           if (event.id === eid) {
             assertEquals(event.kind, 1);
             resolve(true);
@@ -165,17 +166,19 @@ describe("Relay", () => {
   });
   it("should receieve a rejecting OK message and throw EventRejected", async () => {
     const eid = "test-false" as EventId;
-    const ok = ["OK", eid, false, "error: test"] satisfies OkMessage<false>;
+    // deno-fmt-ignore
+    const msg = ["OK", eid, false, "error: test"] satisfies RelayToClientMessage<"OK">
     const ws = MockWebSocket.instances[0];
     const arrived = new Promise<true>((resolve) => {
       ws.remote.addEventListener(
         "message",
         (ev: MessageEvent<string>) => {
-          const [, event] = JSON.parse(ev.data) as PublishMessage<1>;
+          // deno-fmt-ignore
+          const [, event] = JSON.parse(ev.data) as ClientToRelayMessage<"EVENT">;
           if (event.id === eid) {
             assertEquals(event.kind, 1);
             resolve(true);
-            ws.remote.send(JSON.stringify(ok));
+            ws.remote.send(JSON.stringify(msg));
           }
         },
       );

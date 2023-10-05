@@ -20,6 +20,25 @@ describe("Tag", () => {
     // @ts-expect-error: tag value of public key tag should be PublicKey
     const tag = ["p", ""] satisfies Tag;
   });
+  it("valid replaceable event tag", () => {
+    const pubkey = "" as PublicKey;
+    const tag = ["a", `0:${pubkey}`] satisfies Tag;
+  });
+  it("valid replaceable event tag with identifier", () => {
+    const pubkey = "" as PublicKey;
+    const tag = ["a", `0:${pubkey}:identifier`] satisfies Tag;
+  });
+  it("tag value of replaceable event tag should have the specified format", () => {
+    // @ts-expect-error: tag value of replaceable event tag should have the specified format
+    const tag = ["a", ""] satisfies Tag;
+  });
+  it("valid identifier tag", () => {
+    const tag = ["d", ""] satisfies Tag;
+  });
+  it("tag value of identifier tag should be string", () => {
+    // @ts-expect-error: tag value of identifier tag should be string
+    const tag = ["d", 0] satisfies Tag;
+  });
 });
 
 describe("SubscriptionFilter", () => {

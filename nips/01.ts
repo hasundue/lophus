@@ -39,11 +39,12 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 // ----------------------
 
 export type Tag<T extends TagType = TagType> = {
-  [K in T]: [K, TagValue[K], ...TagParams[K], ...(string | undefined)[]];
+  [K in T]: [K, TagValue[K], ...TagParams[K], ...TagParam[]];
 }[T];
 
 export type IndexedTagType = TagType & AlphabetLetter;
 export type IndexedTag = Tag<IndexedTagType>;
+export type TagParam = string | undefined;
 
 export interface TagValue {
   /** Event tag */
@@ -60,8 +61,8 @@ export interface TagValue {
 
 export type TagType = keyof TagValue;
 
-export interface TagParams extends Record<TagType, (string | undefined)[]> {
-  /** Event */
+export interface TagParams extends Record<TagType, TagParam[]> {
+  /** Event ID */
   "e": [RelayUrl?];
   /** Public key */
   "p": [RelayUrl?];
@@ -81,51 +82,50 @@ export interface TagFor extends Record<EventKind, Tag> {
 // ----------------------
 
 export type RelayUrl = `wss://${string}` | `ws://${string}`;
-
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 
 export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
 
 export type ClientToRelayMessage<
   T extends ClientToRelayMessageType = ClientToRelayMessageType,
-> = [T, ...ClientToRelayMessageContentFor[T]];
+  K extends EventKind = EventKind,
+> = {
+  [U in T]: [U, ...ClientToRelayMessageContent<K>[U]];
+}[T];
 
-export enum ClientToRelayMessageType {
-  EVENT = "EVENT",
-  REQ = "REQ",
-  CLOSE = "CLOSE",
-}
-
-export interface ClientToRelayMessageContentFor {
-  EVENT: [NostrEvent];
-  REQ: [SubscriptionId, ...SubscriptionFilter[]];
+export interface ClientToRelayMessageContent<K extends EventKind = EventKind> {
+  EVENT: [NostrEvent<K>];
+  REQ: [SubscriptionId, ...SubscriptionFilter<K>[]];
   CLOSE: [SubscriptionId];
 }
+export type ClientToRelayMessageType = keyof ClientToRelayMessageContent;
 
 export type RelayToClientMessage<
   T extends RelayToClientMessageType = RelayToClientMessageType,
-> = [T, ...RelayToClientMessageContentFor[T]];
+  K extends EventKind = EventKind,
+> = {
+  [U in T]: [U, ...RelayToClientMessageContent<K>[U]];
+}[T];
 
-export interface RelayToClientMessageContentFor {
-  "EVENT": [SubscriptionId, NostrEvent];
-  "OK": OkMessage;
-  "EOSE": [SubscriptionId];
-  "NOTICE": [string];
+export interface RelayToClientMessageContent<K extends EventKind = EventKind> {
+  EVENT: [SubscriptionId, NostrEvent<K>];
+  OK: OkMessageContent;
+  EOSE: [SubscriptionId];
+  NOTICE: [string];
 }
-export type RelayToClientMessageType = keyof RelayToClientMessageContentFor;
+export type RelayToClientMessageType = keyof RelayToClientMessageContent;
 
-export type OkMessage<B extends boolean = boolean> = [
-  "OK",
+type OkMessageContent<B extends boolean = boolean> = [
   EventId,
   B,
   OkMessageBody<B>,
 ];
 
-export type OkMessageBody<B extends boolean> = B extends true
+type OkMessageBody<B extends boolean> = B extends true
   ? "" | OkMessageBodyString
   : OkMessageBodyString;
-export type OkMessageBodyString = `${OkMessageBodyPrefix}: ${string}`;
-export type OkMessageBodyPrefix =
+type OkMessageBodyString = `${OkMessageBodyPrefix}: ${string}`;
+type OkMessageBodyPrefix =
   | "duplicate"
   | "pow"
   | "blocked"
