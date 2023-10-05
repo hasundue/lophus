@@ -1,5 +1,5 @@
 import { describe, it } from "../lib/std/testing.ts";
-import { assert } from "../lib/std/assert.ts";
+import { assertType, Has } from "../lib/std/testing.ts";
 import { EventInit } from "../lib/events.ts";
 import type { PublicKey } from "../mod.ts";
 import "./02.ts";
@@ -13,7 +13,7 @@ describe("EventInit<3>", () => {
         ["p", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
-    assert(init);
+    assertType<Has<typeof init, EventInit<3>>>(true);
   });
   it('tag name should be "p"', () => {
     const init = {
@@ -24,7 +24,7 @@ describe("EventInit<3>", () => {
         ["e", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
-    assert(init);
+    assertType<Has<typeof init, EventInit<3>>>(false);
   });
   it("content should be empty string", () => {
     const init = {
@@ -35,6 +35,6 @@ describe("EventInit<3>", () => {
         ["p", "test" as PublicKey, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
-    assert(init);
+    assertType<Has<typeof init, EventInit<3>>>(false);
   });
 });

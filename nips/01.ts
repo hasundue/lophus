@@ -93,7 +93,7 @@ export type ClientToRelayMessage<
   [U in T]: [U, ...ClientToRelayMessageContent<K>[U]];
 }[T];
 
-export interface ClientToRelayMessageContent<K extends EventKind = EventKind> {
+interface ClientToRelayMessageContent<K extends EventKind = EventKind> {
   EVENT: [NostrEvent<K>];
   REQ: [SubscriptionId, ...SubscriptionFilter<K>[]];
   CLOSE: [SubscriptionId];
@@ -107,7 +107,7 @@ export type RelayToClientMessage<
   [U in T]: [U, ...RelayToClientMessageContent<K>[U]];
 }[T];
 
-export interface RelayToClientMessageContent<K extends EventKind = EventKind> {
+interface RelayToClientMessageContent<K extends EventKind = EventKind> {
   EVENT: [SubscriptionId, NostrEvent<K>];
   OK: OkMessageContent;
   EOSE: [SubscriptionId];
@@ -115,16 +115,27 @@ export interface RelayToClientMessageContent<K extends EventKind = EventKind> {
 }
 export type RelayToClientMessageType = keyof RelayToClientMessageContent;
 
-type OkMessageContent<B extends boolean = boolean> = [
+type OkMessageContent<
+  K extends EventKind = EventKind,
+  B extends boolean = boolean,
+> = [
   EventId,
   B,
-  OkMessageBody<B>,
+  OkMessageBody<K, B>,
 ];
-type OkMessageBody<B extends boolean> = B extends true
-  ? "" | OkMessageBodyString
-  : OkMessageBodyString;
-type OkMessageBodyString = `${OkMessageBodyPrefix}: ${string}`;
-type OkMessageBodyPrefix =
+
+type OkMessageBody<K extends EventKind, B extends boolean> = B extends true
+  ? string
+  : `${OkMessageBodyPrefixFor[K]}: ${string}`;
+
+// deno-lint-ignore no-empty-interface
+interface OkMessageBodyPrefixFor extends DefaultOkMessageBodyPrefixFor {}
+
+type DefaultOkMessageBodyPrefixFor = {
+  [K in EventKind]: DefaultOkMessageBodyPrefix;
+};
+
+type DefaultOkMessageBodyPrefix =
   | "duplicate"
   | "pow"
   | "blocked"
