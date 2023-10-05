@@ -2,7 +2,7 @@
 // NIP-01: Nostr Basic Protocol
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
-import type { AlphabetLetter, Brand } from "../core/types.ts";
+import type { AlphabetLetter, Brand, Stringified, Url } from "../core/types.ts";
 
 // ----------------------
 // Events and signatures
@@ -120,7 +120,6 @@ type OkMessageContent<B extends boolean = boolean> = [
   B,
   OkMessageBody<B>,
 ];
-
 type OkMessageBody<B extends boolean> = B extends true
   ? "" | OkMessageBodyString
   : OkMessageBodyString;
@@ -184,11 +183,3 @@ export interface MetadataContent {
   about: string;
   picture: Url;
 }
-
-export type Url = `https://${string}` | `http://${string}`;
-
-// ----------------------
-// Utility types
-// ----------------------
-
-export type Stringified<T> = string & { __content: T };
