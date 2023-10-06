@@ -17,6 +17,25 @@ import { LazyWebSocket } from "./websockets.ts";
 export class EventRejected extends Error {}
 export class RelayClosed extends Error {}
 
+export interface RelayConfig extends NostrNodeConfig {
+  url: RelayUrl;
+  name: string;
+  read: boolean;
+  write: boolean;
+}
+
+export type RelayOptions = Partial<RelayConfig>;
+
+export interface RelayInit extends RelayOptions {
+  url: RelayUrl;
+}
+
+export interface SubscriptionOptions {
+  id: string;
+  realtime: boolean;
+  nbuffer: number;
+}
+
 /**
  * A class that represents a remote Nostr Relay.
  */
@@ -199,25 +218,6 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     await super.close();
   }
 }
-
-export type RelayConfig = NostrNodeConfig & {
-  url: RelayUrl;
-  name: string;
-  read: boolean;
-  write: boolean;
-};
-
-export type RelayOptions = Partial<RelayConfig>;
-
-export type RelayInit = {
-  url: RelayUrl;
-} & RelayOptions;
-
-export type SubscriptionOptions = {
-  id: string;
-  realtime: boolean;
-  nbuffer: number;
-};
 
 export interface RelayLike
   extends NonExclusiveWritableStream<ClientToRelayMessage> {
