@@ -3,25 +3,23 @@ import type { Logger } from "./types.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
-export interface NostrNodeConfig<N extends NIP> {
+export interface NostrNodeConfig {
   logger?: Logger;
   nbuffer: number;
-  nips: N[];
 }
 
-export type NostrNodeOptions<N extends NIP> = Partial<NostrNodeConfig<N>>;
+export type NostrNodeOptions = Partial<NostrNodeConfig>;
 
 /**
  * Common base class for relays and clients.
  */
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
-  N extends NIP = NIP,
 > extends NonExclusiveWritableStream<W> {
-  readonly config: Readonly<NostrNodeConfig<N>>;
+  readonly config: Readonly<NostrNodeConfig>;
   constructor(
     protected ws: WebSocketLike,
-    opts: NostrNodeOptions<N> = { nips: NIPs as N[] },
+    opts: NostrNodeOptions = {},
   ) {
     super({
       write: async (msg) => {
@@ -33,7 +31,7 @@ export class NostrNode<
         await this.ws.close();
       },
     });
-    this.config = { nbuffer: 10, nips: NIPs, ...opts };
+    this.config = { nbuffer: 10, ...opts };
     this.ws.addEventListener("open", () => {
       opts.logger?.debug?.("[ws] open");
     });
@@ -49,6 +47,3 @@ export class NostrNode<
     return this.ws.readyState;
   }
 }
-
-export const NIPs = [1, 2, 42] as const;
-export type NIP = typeof NIPs[number];
