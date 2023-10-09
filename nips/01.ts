@@ -3,6 +3,7 @@
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
 import type { AlphabetLetter, Brand, Stringified, Url } from "../core/types.ts";
+import { NIPs } from "../core/nips.ts";
 
 // ----------------------
 // Events and signatures
@@ -132,7 +133,7 @@ export type OkMessageBodyPrefix<K extends EventKind> = K extends
   : DefaultOkMessageBodyPrefix;
 
 // deno-lint-ignore no-empty-interface
-export interface OkMessageBodyPrefixFor {}
+export interface OkMessageBodyPrefixFor extends Record<EventKind, string> {}
 
 export type DefaultOkMessageBodyPrefix =
   | "duplicate"
@@ -193,3 +194,5 @@ export interface MetadataContent {
   about: string;
   picture: Url;
 }
+
+NIPs.register(1);

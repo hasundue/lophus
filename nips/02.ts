@@ -1,3 +1,4 @@
+import { NIPs } from "../core/nips.ts";
 import { NostrEvent } from "./01.ts";
 
 declare module "./01.ts" {
@@ -13,3 +14,5 @@ declare module "./01.ts" {
 }
 
 export type ContactListEvent = NostrEvent<3>;
+
+NIPs.register(2);
