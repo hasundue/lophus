@@ -1,10 +1,15 @@
-import type { Stringified } from "./types.ts";
 import type {
   ClientToRelayMessage,
+  EventKind,
+  NostrEvent,
   RelayToClientMessage,
   RelayToClientMessageType,
   RelayUrl,
+  SubscriptionFilter,
+  SubscriptionId,
 } from "../nips/01.ts";
+import type { Stringified } from "./types.ts";
+import { NonExclusiveWritableStream } from "./streams.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import { type NIP, NIPs } from "./nips.ts";
@@ -23,40 +28,23 @@ export interface RelayInit extends RelayOptions {
   url: RelayUrl;
 }
 
-export class RelayEvent<
-  T extends RelayToClientMessageType = RelayToClientMessageType,
-> extends MessageEvent<RelayToClientMessage<T>> {}
+export interface SubscriptionOptions {
+  id: string;
+  realtime: boolean;
+  nbuffer: number;
+}
 
-export type RelayEventListener<T extends RelayToClientMessageType> = (
+export type SubscriptionEventListener<T extends SubscriptionEventType> = (
   this: Relay,
   ev: RelayEvent<T>,
-  // deno-lint-ignore no-explicit-any
-) => any;
-
-export type RelayEventListenerObject<T extends RelayToClientMessageType> = {
-  handleEvent(
-    this: Relay,
-    ev: RelayEvent<T>,
-    // deno-lint-ignore no-explicit-any
-  ): any;
-};
+) => void;
 
 /**
  * A class that represents a remote Nostr Relay.
  */
 export class Relay extends NostrNode<ClientToRelayMessage> {
-  declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
-
-  declare addEventListener: <T extends RelayToClientMessageType>(
-    type: T,
-    listener: RelayEventListener<T> | RelayEventListenerObject<T> | null,
-  ) => void;
-  declare removeEventListener: <T extends RelayToClientMessageType>(
-    type: T,
-    listener: RelayEventListener<T> | RelayEventListenerObject<T> | null,
-  ) => void;
-  declare dispatchEvent: (event: RelayEvent) => boolean;
+  declare ws: LazyWebSocket;
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -91,32 +79,69 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     );
   }
 
-  protected importRelayExtension(nip: NIP) {
-    try {
-      return import(`../nips/${nip}/relays.ts`) as Promise<
-        RelayExtensionModule
-      >;
-    } catch {
-      this.config.logger?.debug?.(
-        `Relay extension is not provided for NIP-${nip}`,
-      );
-      return undefined;
-    }
+  subscribe<K extends EventKind>(
+    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
+    opts: Partial<SubscriptionOptions> = {},
+  ): ReadableStream<NostrEvent<K>> {
+    const sid = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
+    opts.realtime ??= true;
+    opts.nbuffer ??= this.config.nbuffer;
+
+    const messenger = this.getWriter();
+    const request = () => messenger.write(["REQ", sid, ...[filter].flat()]);
+
+    return new ReadableStream<NostrEvent<K>>({
+      start: () => {
+        new BroadcastChannel(sid).addEventListener(
+          "message",
+          async (ev: MessageEvent<SubscriptionMessage>) => {
+            const msg = ev.data;
+            const type = msg[0];
+            NIPs.registered.forEach(async (nip) => {
+              const mod = await this.importRelayExtension(nip);
+              if (!mod) return;
+              for (
+                const entry of entries(mod.default.handleSubscriptionEvent)
+              ) {
+                this.addSubscriptionEventListenerEntry(entry);
+              }
+            });
+          },
+        );
+        this.ws.addEventListener("open", request);
+        if (this.ws.readyState === WebSocket.OPEN) {
+          return request();
+        }
+      },
+      pull: () => {
+        return this.ws.ready();
+      },
+      cancel: async () => {
+        this.ws.removeEventListener("open", request);
+        if (this.ws.readyState === WebSocket.OPEN) {
+          await messenger.write(["CLOSE", sid]);
+        }
+        return messenger.close();
+      },
+    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
   }
 
-  protected addEventListenerEntry<T extends RelayToClientMessageType>(
-    entry: [T, RelayExtension["handleRelayEvent"][T]],
+  protected addSubscriptionEventListenerEntry<
+    T extends SubscriptionEventType,
+  >(
+    entry: [T, RelayExtension["handleSubscriptionEvent"][T]],
   ) {
     if (entry[1]) this.addEventListener(entry[0], entry[1]);
   }
 }
 
-export interface RelayExtensionModule {
-  default: RelayExtension;
-}
+export type SubscriptionEventType = "EVENT" | "EOSE";
 
-export interface RelayExtension {
-  handleRelayEvent: {
-    [T in RelayToClientMessageType]?: RelayEventListener<T>;
-  };
+export type SubscriptionMessage<
+  T extends SubscriptionEventType = SubscriptionEventType,
+> = RelayToClientMessage<T>;
+
+export interface RelayLike
+  extends NonExclusiveWritableStream<ClientToRelayMessage> {
+  subscribe: Relay["subscribe"];
 }

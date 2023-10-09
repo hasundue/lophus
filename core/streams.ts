@@ -1,6 +1,6 @@
 import { Lock } from "./x/async.ts";
 
-export class NonExclusiveWritableStream<W = unknown> extends EventTarget
+export class NonExclusiveWritableStream<W = unknown>
   implements WritableStream<W> {
   readonly locked = false;
 
@@ -11,7 +11,6 @@ export class NonExclusiveWritableStream<W = unknown> extends EventTarget
     underlyingSink: UnderlyingSink<W>,
     strategy?: QueuingStrategy<W>,
   ) {
-    super();
     this.#writer = new Lock(
       new WritableStream<W>(underlyingSink, strategy).getWriter(),
     );
