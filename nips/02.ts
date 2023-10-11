@@ -1,18 +1,18 @@
-import { NIPs } from "../core/nips.ts";
 import { NostrEvent } from "./01.ts";
 
 declare module "./01.ts" {
+  enum NIP {
+    ContactList = 2,
+  }
   enum EventKind {
     ContactList = 3,
   }
-  interface EventContentFor {
-    3: "";
-  }
-  interface TagFor {
-    3: ["p", PublicKey, RelayUrl, string];
+  interface EventKindRecord {
+    3: {
+      Tag: ["p", PublicKey, RelayUrl, string];
+      Content: "";
+    };
   }
 }
 
 export type ContactListEvent = NostrEvent<3>;
-
-NIPs.register(2);

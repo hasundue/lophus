@@ -1,27 +1,25 @@
 import "../01.ts";
 
 declare module "../01.ts" {
+  enum NIP {
+    Authentication = 42,
+  }
   enum EventKind {
     ClientAuth = 22242,
   }
-  interface TagFor {
-    22242: Tag<"relay" | "challenge">;
+  interface EventKindRecord {
+    22242: {
+      Tag: Tag<"relay" | "challenge">;
+      Content: "";
+      ResponsePrefix: "restricted";
+    };
   }
-  interface TagValue {
-    "relay": RelayUrl;
-    "challenge": string;
-  }
-  interface EventContentFor {
-    22242: "";
+  interface TagContent {
+    "relay": [RelayUrl];
+    "challenge": [string];
   }
   interface RelayToClientMessageContent {
     AUTH: [challenge: string];
-  }
-  interface OkMessageBodyPrefixFor {
-    22242: "restricted";
-  }
-  interface NoticeMessageBodyPrefixFor {
-    22242: "restricted";
   }
   interface ClientToRelayMessageContent {
     AUTH: [NostrEvent<22242>];

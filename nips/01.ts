@@ -3,7 +3,10 @@
 // https://github.com/nostr-protocol/nips/blob/master/01.md
 //
 import type { AlphabetLetter, Brand, Stringified, Url } from "../core/types.ts";
-import { NIPs } from "../core/nips.ts";
+
+export enum NIP {
+  BasicProtocol = 1,
+}
 
 // ----------------------
 // Events and signatures
@@ -14,8 +17,8 @@ export interface NostrEvent<K extends EventKind = EventKind> {
   pubkey: PublicKey;
   created_at: Timestamp;
   kind: K;
-  tags: TagFor[K][];
-  content: Stringified<EventContentFor[K]>;
+  tags: TagFor<K>[];
+  content: Stringified<EventContentFor<K>>;
   sig: Signature;
 }
 
@@ -31,8 +34,8 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   pubkey: PublicKey,
   created_at: Timestamp,
   kind: K,
-  tags: TagFor[K][],
-  content: Stringified<EventContentFor[K]>,
+  tags: TagFor<K>[],
+  content: Stringified<EventContentFor<K>>,
 ];
 
 // ----------------------
@@ -40,43 +43,33 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 // ----------------------
 
 export type Tag<T extends TagType = TagType> = {
-  [K in T]: [K, TagValue[K], ...TagParams[K], ...TagParam[]];
+  [K in T]: [K, TagValue<K>, ...TagParams<K>, ...TagParam[]];
 }[T];
 
 export type IndexedTagType = TagType & AlphabetLetter;
 export type IndexedTag = Tag<IndexedTagType>;
 export type TagParam = string | undefined;
 
-export interface TagValue {
-  /** Event tag */
-  "e": EventId;
-  // Public key
-  "p": PublicKey;
-  // (Maybe parameterized) replaceable event
-  "a":
-    | `${EventKind}:${PublicKey}:${TagValue["d"]}`
-    | `${EventKind}:${PublicKey}`;
-  // Identifier
-  "d": string;
-}
-
-export type TagType = keyof TagValue;
-
-export interface TagParams extends Record<TagType, TagParam[]> {
+export interface TagContent {
   /** Event ID */
-  "e": [RelayUrl?];
+  "e": [EventId, RelayUrl?];
   /** Public key */
-  "p": [RelayUrl?];
+  "p": [PublicKey, RelayUrl?];
   /** (Maybe parameterized) replaceable event */
-  "a": [RelayUrl?];
+  "a":
+    | [`${EventKind}:${PublicKey}:${TagValue<"d">}`, RelayUrl?]
+    | [`${EventKind}:${PublicKey}`, RelayUrl?];
   /** Identifier */
-  "d": [];
+  "d": [string];
 }
 
-export interface TagFor extends Record<EventKind, Tag> {
-  0: Tag;
-  1: Tag;
-}
+export type TagType = keyof TagContent;
+export type TagValue<T extends TagType> = TagContent[T][0];
+export type TagParams<T extends TagType> = TagContent[T] extends [
+  TagValue<T>,
+  ...infer P,
+] ? P
+  : never;
 
 // ----------------------
 // Communication
@@ -93,6 +86,12 @@ export type ClientToRelayMessage<
 > = {
   [U in T]: [U, ...ClientToRelayMessageContent<K>[U]];
 }[T];
+
+export enum SubscriptionMessageTypeEnum {
+  EVENT = "EVENT",
+  REQ = "REQ",
+  CLOSE = "CLOSE",
+}
 
 export interface ClientToRelayMessageContent<K extends EventKind = EventKind> {
   EVENT: [NostrEvent<K>];
@@ -126,16 +125,9 @@ export type OkMessageContent<
 ];
 
 export type OkMessageBody<K extends EventKind, B extends boolean> = B extends
-  true ? string : `${OkMessageBodyPrefix<K>}: ${string}`;
+  true ? string : `${ResponsePrefixFor<K>}: ${string}`;
 
-export type OkMessageBodyPrefix<K extends EventKind> =  OkMessageBodyPrefixFor[K];
-
-export interface OkMessageBodyPrefixFor extends Record<EventKind, string> {
-  0: DefaultOkMessageBodyPrefix;
-  1: DefaultOkMessageBodyPrefix;
-}
-
-export type DefaultOkMessageBodyPrefix =
+export type DefaultResponsePrefix =
   | "duplicate"
   | "pow"
   | "blocked"
@@ -144,16 +136,16 @@ export type DefaultOkMessageBodyPrefix =
   | "error";
 
 export type SubscriptionFilter<
-  Ks extends EventKind = EventKind,
-  Ts extends IndexedTagType = IndexedTagType,
+  K extends EventKind = EventKind,
+  T extends IndexedTagType = IndexedTagType,
 > =
   & {
     ids?: EventId[];
     authors?: PublicKey[];
-    kinds?: Ks[];
+    kinds?: K[];
   }
   & {
-    [T in Ts as `#${T}`]?: TagValue[T][];
+    [U in T as `#${U}`]?: TagValue<U>[];
   }
   & {
     since?: Timestamp;
@@ -170,6 +162,32 @@ export enum EventKind {
   TextNote = 1,
 }
 
+export interface EventKindRecord extends Record<EventKind, EventKindSpecEntry> {
+  0: {
+    Tag: Tag;
+    Content: MetadataContent;
+  };
+  1: {
+    Tag: Tag;
+    Content: string;
+  };
+}
+
+export interface EventKindSpecEntry {
+  Tag: Tag;
+  Content: unknown;
+  ResponsePrefix?: string;
+}
+
+export type TagFor<K extends EventKind> = EventKindRecord[K]["Tag"];
+
+export type EventContentFor<K extends EventKind> =
+  EventKindRecord[K]["Content"];
+
+export type ResponsePrefixFor<K extends EventKind = EventKind> =
+  EventKindRecord[K] extends { ResponsePrefix: infer P extends string } ? P
+    : DefaultResponsePrefix;
+
 export type MetadataEvent = NostrEvent<0>;
 export type TextNoteEvent = NostrEvent<1>;
 
@@ -184,15 +202,8 @@ export type ParameterizedReplaceableEventKind = Brand<
   "ParameterizedReplaceable"
 >;
 
-export interface EventContentFor extends Record<EventKind, unknown> {
-  0: MetadataContent;
-  1: string;
-}
-
 export interface MetadataContent {
   name: string;
   about: string;
   picture: Url;
 }
-
-NIPs.register(1);
