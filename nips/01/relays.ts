@@ -1,18 +1,18 @@
 import {
   PublicationEvent,
   RelayHandlers,
-  SubscriptionMessageEvent,
+  SubscriptionEvent,
 } from "../../core/relays.ts";
 
 export default {
-  handleRelayToClientMessageEvent(ev) {
+  handleRelayToClientMessage(ev) {
     const msg = ev.data;
     const type = msg[0];
     switch (type) {
       case "EVENT":
       case "EOSE": {
         const sid = msg[1];
-        return this.dispatchEvent(new SubscriptionMessageEvent(sid, { data: msg }));
+        return this.dispatchEvent(new SubscriptionEvent(sid, { data: msg }));
       }
       case "OK": {
         const eid = msg[1];
@@ -20,11 +20,17 @@ export default {
       }
       case "NOTICE": {
         const notice = msg[1];
-        return console.log(notice);
+        return this.config?.logger?.info?.(notice);
       }
     }
   },
-  handleSubscriptionMessage(ev) {
-    const { id, message, controller } = ev.data;
+  handleSubscriptionMessage({ message, controller }) {
+    const type = message[0];
+    switch (type) {
+      case "EVENT": {
+        const [, , event] = message;
+        return controller.enqueue(event);
+      }
+    }
   },
 } satisfies RelayHandlers;

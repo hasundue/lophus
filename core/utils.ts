@@ -1,13 +1,23 @@
 /**
- * Type-safe Object.entries
+ * Type-safe Object.entries and related functions
  *
  * Ref: https://dev.to/harry0000/a-bit-convenient-typescript-type-definitions-for-objectentries-d6g
  */
-export function entries<T extends Record<string, unknown>>(
-  object: T,
-): ReadonlyArray<Entry<T>> {
-  return Object.entries(object) as unknown as ReadonlyArray<Entry<T>>;
-}
+export const Record = {
+  keys<T extends Record<string, unknown>>(object: T): ReadonlyArray<keyof T> {
+    return Object.keys(object) as unknown as ReadonlyArray<keyof T>;
+  },
+  values<T extends Record<string, unknown>>(
+    object: T,
+  ): ReadonlyArray<T[keyof T]> {
+    return Object.values(object) as unknown as ReadonlyArray<T[keyof T]>;
+  },
+  entries<T extends Record<string, unknown>>(
+    object: T,
+  ): ReadonlyArray<Entry<T>> {
+    return Object.entries(object) as unknown as ReadonlyArray<Entry<T>>;
+  },
+};
 
 type Entry<T extends Record<string, unknown>> = T extends
   readonly [unknown, ...unknown[]] ? TupleEntry<T>
@@ -29,3 +39,11 @@ type ObjectEntry<T extends unknown> = T extends Record<string, unknown>
     : never
   : never
   : never;
+
+/**
+ * An object contains utility functions for enums
+ */
+export const Enum = {
+  numbers: <T extends Record<string, string | number>>(e: T) =>
+    Object.values(e).filter((v) => typeof v === "number") as number[],
+};
