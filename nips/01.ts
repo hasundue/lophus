@@ -108,7 +108,7 @@ export type RelayToClientMessage<
   [U in T]: [U, ...RelayToClientMessageContent<K>[U]];
 }[T];
 
-interface RelayToClientMessageContent<K extends EventKind = EventKind> {
+export interface RelayToClientMessageContent<K extends EventKind = EventKind> {
   EVENT: [SubscriptionId, NostrEvent<K>];
   OK: OkMessageContent;
   EOSE: [SubscriptionId];
@@ -128,12 +128,12 @@ export type OkMessageContent<
 export type OkMessageBody<K extends EventKind, B extends boolean> = B extends
   true ? string : `${OkMessageBodyPrefix<K>}: ${string}`;
 
-export type OkMessageBodyPrefix<K extends EventKind> = K extends
-  keyof OkMessageBodyPrefixFor ? OkMessageBodyPrefixFor[K]
-  : DefaultOkMessageBodyPrefix;
+export type OkMessageBodyPrefix<K extends EventKind> =  OkMessageBodyPrefixFor[K];
 
-// deno-lint-ignore no-empty-interface
-export interface OkMessageBodyPrefixFor extends Record<EventKind, string> {}
+export interface OkMessageBodyPrefixFor extends Record<EventKind, string> {
+  0: DefaultOkMessageBodyPrefix;
+  1: DefaultOkMessageBodyPrefix;
+}
 
 export type DefaultOkMessageBodyPrefix =
   | "duplicate"

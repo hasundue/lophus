@@ -98,6 +98,7 @@
     "https://deno.land/x/async@v2.0.2/lock.ts": "fd7dc5b54c72d0093072adddb1691e1ae4a801c55b2015589454ea60f1c59adb",
     "https://deno.land/x/async@v2.0.2/mutex.ts": "312dcad7468c82f84fd018be157df451361ed19bdc12fd59af8d12b2e6c3ae28",
     "https://deno.land/x/async@v2.0.2/notify.ts": "3127ab5835c97527fdf978a5ec5844d71a2fd62a75988db6f175aac6f61259d0",
+    "https://deno.land/x/async@v2.0.2/queue.ts": "4df05fbaf376d37379224b68b2b8506a45be835f799139437e7bfc143db5127f",
     "https://deno.land/x/deno_cache@0.4.1/auth_tokens.ts": "5fee7e9155e78cedf3f6ff3efacffdb76ac1a76c86978658d9066d4fb0f7326e",
     "https://deno.land/x/deno_cache@0.4.1/cache.ts": "51f72f4299411193d780faac8c09d4e8cbee951f541121ef75fcc0e94e64c195",
     "https://deno.land/x/deno_cache@0.4.1/deno_dir.ts": "f2a9044ce8c7fe1109004cda6be96bf98b08f478ce77e7a07f866eff1bdd933f",

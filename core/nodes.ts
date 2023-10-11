@@ -1,5 +1,6 @@
 import type { NostrMessage } from "../nips/01.ts";
 import type { Logger } from "./types.ts";
+import { entries } from "./utils.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { type NIP, NIPs } from "./nips.ts";
@@ -12,12 +13,16 @@ export interface NostrNodeConfig {
 export type NostrNodeOptions = Partial<NostrNodeConfig>;
 
 export class NostrNodeEvent<
-  T extends NostrMessage = NostrMessage,
-> extends MessageEvent<T> {}
+  N,
+  R = N extends NostrNode<infer R> ? R : NostrMessage,
+> extends MessageEvent<R> {}
 
-export type NostrNodeEventListener<T extends NostrMessage = NostrMessage> = (
+export type NostrNodeEventListener<
+  R extends NostrMessage = NostrMessage,
+  T extends R[0] = R[0],
+> = (
   this: NostrNode,
-  ev: NostrNodeEvent<T>,
+  ev: NostrNodeEvent<R, T>,
   // deno-lint-ignore no-explicit-any
 ) => any;
 
@@ -31,39 +36,16 @@ export type NostrNodeEventListenerObject<
   ): any;
 };
 
-class NostrNodeEventTarget<
-  W extends NostrMessage = NostrMessage,
-> extends EventTarget {
-  declare addEventListener: <T extends W[0]>(
-    type: T,
-    listener:
-      | NostrNodeEventListener<W>
-      | NostrNodeEventListenerObject<W>
-      | null,
-  ) => void;
-  declare removeEventListener: <T extends W[0]>(
-    type: T,
-    listener:
-      | NostrNodeEventListener<W>
-      | NostrNodeEventListenerObject<W>
-      | null,
-  ) => void;
-  declare dispatchEvent: (event: NostrNodeEvent<W>) => boolean;
-}
-
 export interface NostrNodeExtension<
-  W extends NostrMessage = NostrMessage,
+  R extends NostrMessage = NostrMessage,
 > {
-  handleEvent: {
-    [T in W[0]]?: RelayEventListener<T>;
-  };
-  handleSubscriptionEvent: {
-    [T in W[0]]?: SubscriptionEventListener<T>;
+  handleNostrNodeEvent: {
+    [T in R[0]]?: NostrNodeEventListener<R, T>;
   };
 }
 
-export interface RelayExtensionModule {
-  default: RelayExtension;
+export interface NostrNodeExtensionModule {
+  default: NostrNodeExtension;
 }
 
 /**
@@ -73,7 +55,6 @@ export class NostrNode<
   W extends NostrMessage = NostrMessage,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
-  readonly #eventTarget = new NostrNodeEventTarget<W>();
 
   constructor(
     protected ws: WebSocketLike,
@@ -99,39 +80,42 @@ export class NostrNode<
     this.ws.addEventListener("message", (ev) => {
       opts.logger?.debug?.("[ws] recv", ev.data);
     });
+    this.installExtensions();
   }
 
   get status(): WebSocketReadyState {
     return this.ws.readyState;
   }
 
-  protected installExtensions() {
-    return Promise.all(
+  protected async installExtensions(): Promise<true> {
+    await Promise.all(
       Array.from(NIPs.registered.values()).map(async (nip) => {
         const mod = await this.importExtension(nip);
         if (!mod) return;
-        for (const entry of entries(mod.default.handleRelayEvent)) {
+        for (const entry of entries(mod.default.handleNostrNodeEvent)) {
           this.addEventListenerEntry(entry);
         }
       }),
     );
+    return true;
   }
 
   protected importExtension(nip: NIP) {
+    const file = basename(import.meta.url);
     try {
-      return import(`../nips/${nip}/relays.ts`) as Promise<
-        RelayExtensionModule
+      return import(`../nips/${nip}/${file}`) as Promise<
+        NostrNodeExtensionModule
       >;
     } catch {
       this.config.logger?.debug?.(
-        `Relay extension is not provided for NIP-${nip}`,
+        `NostrNode extension is not provided for NIP-${nip}`,
       );
       return undefined;
     }
   }
 
-  protected addEventListenerEntry<T extends RelayToClientMessageType>(
-    entry: [T, RelayExtension["handleRelayEvent"][T]],
+  protected addEventListenerEntry<T extends W[0]>(
+    entry: [T, NostrNodeExtension["handleNostrNodeEvent"][T]],
   ) {
     if (entry[1]) this.addEventListener(entry[0], entry[1]);
   }
