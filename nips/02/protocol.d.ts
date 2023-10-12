@@ -1,6 +1,6 @@
-import { NostrEvent } from "./01.ts";
+import "../../core/protocol.d.ts";
 
-declare module "./01.ts" {
+declare module "../../core/protocol.d.ts" {
   enum NIP {
     ContactList = 2,
   }
@@ -14,5 +14,3 @@ declare module "./01.ts" {
     };
   }
 }
-
-export type ContactListEvent = NostrEvent<3>;

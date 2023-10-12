@@ -1,11 +1,17 @@
-import "../01.ts";
+import "../../core/protocol.d.ts";
 
-declare module "../01.ts" {
+declare module "../../core/protocol.d.ts" {
   enum NIP {
     Authentication = 42,
   }
   enum EventKind {
     ClientAuth = 22242,
+  }
+  interface RelayToClientMessageRecord {
+    AUTH: [challenge: string];
+  }
+  interface ClientToRelayMessageRecord {
+    AUTH: [NostrEvent<22242>];
   }
   interface EventKindRecord {
     22242: {
@@ -14,14 +20,8 @@ declare module "../01.ts" {
       ResponsePrefix: "restricted";
     };
   }
-  interface TagContent {
+  interface TagRecord {
     "relay": [RelayUrl];
     "challenge": [string];
-  }
-  interface RelayToClientMessageContent {
-    AUTH: [challenge: string];
-  }
-  interface ClientToRelayMessageContent {
-    AUTH: [NostrEvent<22242>];
   }
 }

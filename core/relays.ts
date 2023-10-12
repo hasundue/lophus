@@ -1,4 +1,4 @@
-import { NIP } from "../nips/01.ts";
+import type { Stringified } from "./types.ts";
 import type {
   ClientToRelayMessage,
   EventId,
@@ -10,8 +10,8 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "../nips/01.ts";
-import type { Stringified } from "./types.ts";
+} from "./protocol.d.ts";
+import { NIP } from "./protocol.d.ts";
 import { Enum } from "./utils.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
@@ -48,9 +48,9 @@ export interface RelayInit extends RelayOptions {
 }
 
 export interface SubscriptionOptions {
-  id: string;
-  realtime: boolean;
-  nbuffer: number;
+  id?: string;
+  realtime?: boolean;
+  nbuffer?: number;
 }
 
 /**
@@ -90,11 +90,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   readonly config: Readonly<RelayConfig>;
 
-  protected readonly handlers = {
-    RelayToClientMessage: new Set<RelayToClientMessageHandler>(),
-    SubscriptionMessage: new Set<SubscriptionMessageHandler>(),
-    PublicationMessage: new Set<PublicationMessageHandler>(),
-  };
+  protected readonly handlers = RelayHandlerSet.init();
   protected readonly ready: Promise<true>;
 
   constructor(
@@ -115,8 +111,8 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       "message",
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
         // TODO: Validate message.
-        const message = JSON.parse(ev.data) as RelayToClientMessage;
-        return this.handleRelayToClientMessage({ message });
+        const msg = JSON.parse(ev.data) as RelayToClientMessage;
+        return this.handleRelayToClientMessage({ msg, relay: this });
       },
     );
     this.ready = this.addRelayHandlers();
@@ -124,27 +120,22 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   protected async addRelayHandlers(): Promise<true> {
     for await (const nip of Enum.numbers(NIP)) {
-      const module = await import(
+      const { default: extension } = await import(
         new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
       ) as RelayExtensionModule;
-      const handlers = module.default;
-      if (handlers.handleRelayToClientMessage) {
-        this.handlers.RelayToClientMessage.add(
-          handlers.handleRelayToClientMessage,
-        );
-      }
-      if (handlers.handleSubscriptionMessage) {
-        this.handlers.SubscriptionMessage.add(
-          handlers.handleSubscriptionMessage,
-        );
-      }
-      if (handlers.handlePublicationMessage) {
-        this.handlers.PublicationMessage.add(
-          handlers.handlePublicationMessage,
-        );
+      for (const name in extension) {
+        const key = name as keyof RelayHandlerSet;
+        this.addRelayHandler(key, extension[key]!);
       }
     }
     return true;
+  }
+
+  protected addRelayHandler<K extends keyof RelayHandlerSet>(
+    key: K,
+    handler: NonNullable<RelayHandlers[K]>,
+  ): void {
+    this.handlers[key].add(handler);
   }
 
   protected async handleRelayToClientMessage(
@@ -152,7 +143,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   ): Promise<void> {
     await this.ready;
     await Promise.all(
-      [...this.handlers.RelayToClientMessage].map((handler) =>
+      [...this.handlers.handleRelayToClientMessage].map((handler) =>
         handler.bind(this)(context)
       ),
     );
@@ -163,7 +154,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   ): Promise<void> {
     await this.ready;
     await Promise.all(
-      [...this.handlers.SubscriptionMessage].map((handler) =>
+      [...this.handlers.handleSubscriptionMessage].map((handler) =>
         handler.bind(this)(context)
       ),
     );
@@ -174,7 +165,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   ): Promise<void> {
     await this.ready;
     await Promise.all(
-      [...this.handlers.PublicationMessage].map((handler) =>
+      [...this.handlers.handlePublicationMessage].map((handler) =>
         handler.bind(this)(context)
       ),
     );
@@ -182,11 +173,11 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   subscribe<K extends EventKind>(
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
-    opts: Partial<SubscriptionOptions> = {},
+    options: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
-    const sid = (opts.id ?? crypto.randomUUID()) as SubscriptionId;
-    opts.realtime ??= true;
-    opts.nbuffer ??= this.config.nbuffer;
+    const sid = (options.id ?? crypto.randomUUID()) as SubscriptionId;
+    options.realtime ??= true;
+    options.nbuffer ??= this.config.nbuffer;
 
     function request() {
       return messenger.write(["REQ", sid, ...[filter].flat()]);
@@ -198,7 +189,12 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
         this.addEventListener(
           sid,
           (ev: SubscriptionEvent<K>) =>
-            this.handleSubscriptionMessage({ message: ev.data, controller }),
+            this.handleSubscriptionMessage({
+              msg: ev.data,
+              controller,
+              options,
+              relay: this,
+            }),
         );
         if (this.ws.readyState === WebSocket.OPEN) {
           return request();
@@ -216,7 +212,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
         }
         return messenger.close();
       },
-    }, new CountQueuingStrategy({ highWaterMark: opts.nbuffer }));
+    }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
 
   async publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
@@ -226,14 +222,14 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     // We don't await this because it blocks for a long time
     writer.write(["EVENT", event]);
 
-    const message = await new Promise<PublicationMessage<K>>((resolve) =>
+    const msg = await new Promise<PublicationMessage<K>>((resolve) =>
       this.addEventListener(
         event.id,
         (ev: PublicationEvent<K>) => resolve(ev.data),
         { once: true },
       )
     );
-    return this.handlePublicationMessage({ message, event });
+    return this.handlePublicationMessage({ msg, event, relay: this });
   }
 }
 
@@ -275,6 +271,18 @@ export class PublicationEvent<
 // Extensions
 // ----------------------
 
+type RelayHandlerSet = {
+  [K in keyof Required<RelayHandlers>]: Set<NonNullable<RelayHandlers[K]>>;
+};
+
+const RelayHandlerSet = {
+  init: (): RelayHandlerSet => ({
+    handleRelayToClientMessage: new Set<RelayToClientMessageHandler>(),
+    handleSubscriptionMessage: new Set<SubscriptionMessageHandler>(),
+    handlePublicationMessage: new Set<PublicationMessageHandler>(),
+  }),
+};
+
 export interface RelayExtensionModule {
   default: RelayHandlers;
 }
@@ -292,7 +300,6 @@ export type RelayToClientMessageHandler<
   T extends RelayToClientMessageType = RelayToClientMessageType,
   K extends EventKind = EventKind,
 > = (
-  this: Relay,
   context: RelayToClientMessageContext<T, K>,
 ) => void;
 
@@ -300,7 +307,8 @@ export interface RelayToClientMessageContext<
   T extends RelayToClientMessageType = RelayToClientMessageType,
   K extends EventKind = EventKind,
 > {
-  message: RelayToClientMessage<T, K>;
+  msg: RelayToClientMessage<T, K>;
+  relay: Relay;
 }
 
 /**
@@ -319,8 +327,10 @@ export type SubscriptionMessageHandler = (
 ) => void;
 
 export interface SubscriptionMessageContext {
-  message: SubscriptionMessage;
+  msg: SubscriptionMessage;
+  options: SubscriptionOptions;
   controller: ReadableStreamDefaultController<NostrEvent>;
+  relay: Relay;
 }
 
 /**
@@ -339,6 +349,7 @@ export type PublicationMessageHandler = (
 ) => void;
 
 export interface PublicationMessageContext {
-  message: PublicationMessage;
+  msg: PublicationMessage;
   event: NostrEvent;
+  relay: Relay;
 }

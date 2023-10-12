@@ -1,10 +1,10 @@
 import {
   ClientToRelayMessage,
   EventId,
-  MetadataEvent,
+  NostrEvent,
   RelayToClientMessage,
-  TextNoteEvent,
-} from "../nips/01.ts";
+} from "./protocol.d.ts";
+import "../nips/01/protocol.d.ts";
 import { EventRejected, Relay, RelayClosed } from "./relays.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import {
@@ -75,8 +75,8 @@ describe("Relay constructor", () => {
 describe("Relay", () => {
   const url = "wss://localhost:8080";
   let relay: Relay;
-  let sub_0: ReadableStream<MetadataEvent>;
-  let sub_1: ReadableStream<TextNoteEvent>;
+  let sub_0: ReadableStream<NostrEvent<0>>;
+  let sub_1: ReadableStream<NostrEvent<1>>;
 
   beforeAll(() => {
     globalThis.WebSocket = MockWebSocket;
