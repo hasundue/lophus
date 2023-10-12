@@ -28,11 +28,14 @@ jobs:
       - name: Run linter
         run: deno lint
 
+      - name: Cache dependencies
+        run: deno task cache
+
+      - name: Run static check
+        run: deno task check
+
       - name: Run tests
-        run: deno test -A --coverage=./coverage_profile
-        env: 
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          PUBLIC_KEY: ${{ env.PUBLIC_KEY }}
+        run: deno task test --coverage=./coverage_profile
 
       - name: Create coverage report
         run: deno coverage ./coverage_profile --lcov --output=./coverage.lcov

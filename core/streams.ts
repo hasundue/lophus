@@ -1,16 +1,23 @@
 import { Lock } from "./x/async.ts";
 
-export class NonExclusiveWritableStream<W = unknown>
+/**
+ * A writable stream that can be written to by multiple writers at the same time.
+ *
+ * It is not essential for this class to extend `EventTarget`, but it is
+ * convenient for the `NostrNode` class to be able to extend this class and
+ * `EventTarget` at the same time.
+ */
+export class NonExclusiveWritableStream<W = unknown> extends EventTarget
   implements WritableStream<W> {
   readonly locked = false;
 
   readonly #writer: Lock<WritableStreamDefaultWriter<W>>;
-  readonly #aborter = new AbortController();
 
   constructor(
     underlyingSink: UnderlyingSink<W>,
     strategy?: QueuingStrategy<W>,
   ) {
+    super();
     this.#writer = new Lock(
       new WritableStream<W>(underlyingSink, strategy).getWriter(),
     );
@@ -23,22 +30,14 @@ export class NonExclusiveWritableStream<W = unknown>
   }
 
   getWriter() {
-    const channel = this.#channel();
-    const writer = channel.getWriter();
-
-    // Close the channel when the lock gets released
-    writer.closed.catch(() => channel.close());
-
-    return writer;
+    return this.#channel().getWriter();
   }
 
   close(): Promise<void> {
-    this.#aborter.abort();
     return this.#writer.lock((writer) => writer.close());
   }
 
   abort(): Promise<void> {
-    this.#aborter.abort();
     return this.#writer.lock((writer) => writer.abort());
   }
 }

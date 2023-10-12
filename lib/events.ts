@@ -4,14 +4,14 @@ import type {
   EventKind,
   PrivateKey,
   RelayLike,
-  Stringified,
   TagFor,
 } from "../mod.ts";
+import { Stringified } from "../core/types.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: K;
-  tags?: TagFor[K][];
-  content: EventContentFor[K] | Stringified<EventContentFor[K]>;
+  tags?: TagFor<K>[];
+  content: EventContentFor<K> | Stringified<EventContentFor<K>>;
 }
 
 import { Signer } from "./signs.ts";

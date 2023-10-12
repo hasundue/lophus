@@ -7,7 +7,7 @@ export type TextNote = EventInit<1>;
 export type TextNoteInit = Optional<TextNote, "kind">;
 
 export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
-  constructor(readonly opts: { relay_recommend?: RelayUrl } = {}) {
+  constructor(readonly opts: { recommendedRelay?: RelayUrl } = {}) {
     super({
       transform: (event, controller) => {
         controller.enqueue(this.compose(event));
@@ -18,17 +18,18 @@ export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
     init: TextNoteInit,
     opts?: {
       replyTo?: NostrEvent;
-      relayRecommend?: RelayUrl;
+      recommendedRelay?: RelayUrl;
     },
   ): TextNote {
-    const relayRecommend = opts?.relayRecommend ?? this.opts.relay_recommend;
-
-    // deno-fmt-ignore
-    const tags = (init.tags ?? []).concat(opts?.replyTo ? [
-      ["e", opts.replyTo.id, relayRecommend ?? ""],
-      ["p", opts.replyTo.pubkey, relayRecommend ?? ""],
-    ] : []);
-
+    const relay = opts?.recommendedRelay ?? this.opts.recommendedRelay;
+    const tags = (init.tags ?? []).concat(
+      opts?.replyTo
+        ? [
+          ["e", opts.replyTo.id, relay],
+          ["p", opts.replyTo.pubkey, relay],
+        ]
+        : [],
+    );
     return { ...init, kind: 1, tags };
   }
 }

@@ -5,8 +5,7 @@
 // ----------------------
 // Branded types
 // ----------------------
-// deno-lint-ignore no-explicit-any
-export type Brand<T, B, K = any> = T & { __brand: B; __kind: K };
+export type Brand<T, B> = T & { __brand: B };
 
 // ----------------------
 // Promises
@@ -19,6 +18,10 @@ export type PromiseCallbacks<T> = {
 // ----------------------
 // Strings
 // ----------------------
+
+export type Url = `https://${string}` | `http://${string}`;
+export type Stringified<T> = string & { __content: T };
+
 // deno-fmt-ignore
 export type AlphabetLetter =
   | "a" | "b" | "c" | "d" | "e" | "f" | "g"

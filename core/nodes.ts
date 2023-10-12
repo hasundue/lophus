@@ -1,18 +1,63 @@
-import type { NostrMessage } from "../nips/01.ts";
+import type { NostrMessage } from "./protocol.d.ts";
 import type { Logger } from "./types.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
+export interface NostrNodeConfig {
+  logger?: Logger;
+  nbuffer: number;
+}
+
+export type NostrNodeOptions = Partial<NostrNodeConfig>;
+
+export class NostrNodeEvent<
+  N,
+  R = N extends NostrNode<infer R> ? R : NostrMessage,
+> extends MessageEvent<R> {}
+
+export type NostrNodeEventListener<
+  R extends NostrMessage = NostrMessage,
+  T extends R[0] = R[0],
+> = (
+  this: NostrNode,
+  ev: NostrNodeEvent<R, T>,
+  // deno-lint-ignore no-explicit-any
+) => any;
+
+export type NostrNodeEventListenerObject<
+  T extends NostrMessage = NostrMessage,
+> = {
+  handleEvent(
+    this: NostrNode,
+    ev: NostrNodeEvent<T>,
+    // deno-lint-ignore no-explicit-any
+  ): any;
+};
+
+export interface NostrNodeExtension<
+  R extends NostrMessage = NostrMessage,
+> {
+  handleNostrNodeEvent: {
+    [T in R[0]]?: NostrNodeEventListener<R, T>;
+  };
+}
+
+export interface NostrNodeExtensionModule {
+  default: NostrNodeExtension;
+}
+
 /**
  * Common base class for relays and clients.
  */
-export class NostrNode<W extends NostrMessage = NostrMessage>
-  extends NonExclusiveWritableStream<W> {
+export class NostrNode<
+  W extends NostrMessage = NostrMessage,
+> extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
+  protected readonly aborter = new AbortController();
 
   constructor(
     protected ws: WebSocketLike,
-    opts: Partial<NostrNodeConfig> = {},
+    opts: NostrNodeOptions = {},
   ) {
     super({
       write: async (msg) => {
@@ -39,9 +84,9 @@ export class NostrNode<W extends NostrMessage = NostrMessage>
   get status(): WebSocketReadyState {
     return this.ws.readyState;
   }
-}
 
-export type NostrNodeConfig = {
-  nbuffer: number;
-  logger?: Logger;
-};
+  close() {
+    this.aborter.abort();
+    return super.close();
+  }
+}

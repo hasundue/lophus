@@ -4,7 +4,7 @@ import type {
   RelayToClientMessage,
   SubscriptionFilter,
   SubscriptionId,
-} from "../nips/01.ts";
+} from "./protocol.d.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 
 export type ClientConfig = NostrNodeConfig;
@@ -63,8 +63,8 @@ export class Client extends NostrNode<RelayToClientMessage> {
         writer.write(["OK", event.id, true, ""]);
         return enqueueEvent(event);
       }
-      const sid = msg[1];
       if (kind === "CLOSE") {
+        const sid = msg[1];
         const sub = this.subscriptions.get(sid);
         if (!sub) {
           this.config.logger?.warn?.("Unknown subscription:", sid);
@@ -74,6 +74,7 @@ export class Client extends NostrNode<RelayToClientMessage> {
         return sub.close();
       }
       if (kind === "REQ") {
+        const sid = msg[1];
         const filter = msg[2];
         this.subscriptions.set(
           sid,

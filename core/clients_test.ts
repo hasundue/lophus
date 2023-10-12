@@ -1,9 +1,8 @@
 import {
-  EventMessage,
   NostrEvent,
-  OkMessage,
+  RelayToClientMessage,
   SubscriptionId,
-} from "../nips/01.ts";
+} from "./protocol.d.ts";
 import { Client } from "./clients.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
@@ -34,7 +33,7 @@ describe("Client", () => {
     });
     it("should receive an event and send a OK message", async () => {
       const ev = { id: "test-ok", kind: 0 };
-      const received = new Promise<OkMessage>((resolve) => {
+      const received = new Promise<RelayToClientMessage<"OK">>((resolve) => {
         ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
           resolve(JSON.parse(ev.data));
         });
@@ -80,7 +79,7 @@ describe("Client", () => {
     });
     it("should be able to deliver an event to a subscription", async () => {
       const msg = { kind: 0 };
-      const received = new Promise<EventMessage>((resolve) => {
+      const received = new Promise<RelayToClientMessage<"EVENT">>((resolve) => {
         ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
           resolve(JSON.parse(ev.data));
         });

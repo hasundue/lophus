@@ -1,4 +1,4 @@
-import type { Brand } from "../core/types.ts";
+import type { Brand, Stringified } from "../core/types.ts";
 import type {
   EventContentFor,
   EventId,
@@ -6,7 +6,6 @@ import type {
   EventSerializePrecursor,
   NostrEvent,
   Signature,
-  Stringified,
 } from "../mod.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
@@ -55,7 +54,7 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
       tags: [],
       ...event,
       pubkey: PublicKey.from(this.nsec),
-      content: JSON.stringify(event.content) as Stringified<EventContentFor[K]>,
+      content: JSON.stringify(event.content) as Stringified<EventContentFor<K>>,
     } satisfies UnsignedEvent<K>;
 
     const hash = sha256(this.#encoder.encode(serialize(unsigned)));

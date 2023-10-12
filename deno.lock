@@ -94,6 +94,7 @@
     "https://deno.land/std@0.203.0/streams/zip_readable_streams.ts": "721c5bce8862c8225e60995b2d61c7b1b1d5b5178b60d303a01f453d5c26bb62",
     "https://deno.land/std@0.203.0/testing/_test_suite.ts": "30f018feeb3835f12ab198d8a518f9089b1bcb2e8c838a8b615ab10d5005465c",
     "https://deno.land/std@0.203.0/testing/bdd.ts": "3f446df5ef8e856a869e8eec54c8482590415741ff0b6358a00c43486cc15769",
+    "https://deno.land/std@0.203.0/testing/types.ts": "6832887bea73ee3549dda953a8df41f8bfa8790219ab56a3b94b984a71a3b3e9",
     "https://deno.land/x/async@v2.0.2/lock.ts": "fd7dc5b54c72d0093072adddb1691e1ae4a801c55b2015589454ea60f1c59adb",
     "https://deno.land/x/async@v2.0.2/mutex.ts": "312dcad7468c82f84fd018be157df451361ed19bdc12fd59af8d12b2e6c3ae28",
     "https://deno.land/x/async@v2.0.2/notify.ts": "3127ab5835c97527fdf978a5ec5844d71a2fd62a75988db6f175aac6f61259d0",
