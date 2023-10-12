@@ -3,6 +3,7 @@ import type {
   ClientToRelayMessage,
   EventId,
   EventKind,
+  NIP,
   NostrEvent,
   RelayToClientMessage,
   RelayToClientMessageType,
@@ -10,8 +11,6 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.ts";
-import { NIP } from "./protocol.ts";
-import { Enum } from "./utils.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
@@ -21,7 +20,7 @@ import { LazyWebSocket } from "./websockets.ts";
 // ----------------------
 
 export class EventRejected extends Error {}
-export class RelayClosed extends Error {}
+export class ConnectionClosed extends Error {}
 
 // ----------------------
 // Interfaces
@@ -36,6 +35,7 @@ export interface RelayLike
 export interface RelayConfig extends NostrNodeConfig {
   url: RelayUrl;
   name: string;
+  nips: NIP[];
   read: boolean;
   write: boolean;
 }
@@ -103,7 +103,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     );
     // deno-fmt-ignore
     this.config = {
-      url, name: new URL(url).hostname,
+      url, name: new URL(url).hostname, nips: [1],
       read: true, write: true, nbuffer: 10, ...opts,
     };
     this.ws.addEventListener(
@@ -118,13 +118,13 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   }
 
   protected async addRelayHandlers(): Promise<true> {
-    for await (const nip of Enum.numbers(NIP)) {
-      const { default: extension } = await import(
+    for await (const nip of this.config.nips) {
+      const { default: handlers } = await import(
         new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
       ) as RelayExtensionModule;
-      for (const name in extension) {
+      for (const name in handlers) {
         const key = name as keyof RelayHandlerSet;
-        this.addRelayHandler(key, extension[key]!);
+        this.addRelayHandler(key, handlers[key]!);
       }
     }
     return true;
@@ -159,8 +159,8 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     );
   }
 
-  protected async handlePublicationMessage(
-    context: PublicationMessageContext,
+  protected async handlePublicationMessage<K extends EventKind>(
+    context: PublicationMessageContext<K>,
   ): Promise<void> {
     await this.ready;
     await Promise.all(
@@ -186,7 +186,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         this.addEventListener(
-          `${sid}:start`,
+          `${sid}:receive`,
           (ev: SubscriptionEvent<K>) =>
             this.handleSubscriptionMessage({
               msg: ev.data,
@@ -217,22 +217,28 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
   /**
    * Publish an event to the relay and wait for a response.
    *
-   * @param event The event to publish
+   * @throws {EventRejected} If the event is rejected by the relay
+   * @throws {ConnectionClosed} If the WebSocket connection to the relay is closed
    */
   async publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     const writer = this.getWriter();
     await writer.ready;
 
-    // We don't await this because it blocks for a long time
+    // We don't await this promise because we want to send the event
     writer.write(["EVENT", event]);
 
-    const msg = await new Promise<PublicationMessage<K>>((resolve) =>
+    const msg = await new Promise<PublicationMessage<K>>((resolve, reject) => {
       this.addEventListener(
         `${event.id}:response`,
         (ev: PublicationEvent<K>) => resolve(ev.data),
-        { once: true },
-      )
-    );
+        { once: true, signal: this.aborter.signal },
+      );
+      this.ws.addEventListener(
+        "close",
+        () => reject(new ConnectionClosed()),
+        { once: true, signal: this.aborter.signal },
+      );
+    });
     return this.handlePublicationMessage({ msg, event, relay: this });
   }
 }
@@ -370,13 +376,13 @@ export type PublicationMessage<K extends EventKind = EventKind> = {
 
 export type PublicationMessageType = PublicationMessage[0];
 
-export type PublicationMessageHandler = (
+export type PublicationMessageHandler<K extends EventKind = EventKind> = (
   this: Relay,
-  context: PublicationMessageContext,
+  context: PublicationMessageContext<K>,
 ) => void;
 
-export interface PublicationMessageContext {
-  msg: PublicationMessage;
-  event: NostrEvent;
+export interface PublicationMessageContext<K extends EventKind> {
+  msg: PublicationMessage<K>;
+  event: NostrEvent<K>;
   relay: Relay;
 }

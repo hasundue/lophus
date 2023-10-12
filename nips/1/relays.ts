@@ -1,4 +1,5 @@
 import {
+  EventRejected,
   PublicationEvent,
   RelayHandlers,
   SubscriptionEvent,
@@ -7,6 +8,7 @@ import {
 export default {
   handleRelayToClientMessage({ msg, relay }) {
     const type = msg[0];
+    relay.config.logger?.debug?.(relay.config.name, msg);
     switch (type) {
       case "EVENT":
       case "EOSE": {
@@ -40,5 +42,18 @@ export default {
         }
       }
     }
+  },
+  handlePublicationMessage({ msg, event }) {
+    const type = msg[0];
+    if (type !== "OK") {
+      // This NIP only supports OK messages.
+      return;
+    }
+    const accepted = msg[2];
+    if (accepted) {
+      return;
+    }
+    const reason = msg[3];
+    throw new EventRejected(reason, { cause: event });
   },
 } satisfies RelayHandlers;

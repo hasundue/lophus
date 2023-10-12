@@ -53,6 +53,7 @@ export class NostrNode<
   W extends NostrMessage = NostrMessage,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
+  protected readonly aborter = new AbortController();
 
   constructor(
     protected ws: WebSocketLike,
@@ -82,5 +83,10 @@ export class NostrNode<
 
   get status(): WebSocketReadyState {
     return this.ws.readyState;
+  }
+
+  close() {
+    this.aborter.abort();
+    return super.close()
   }
 }

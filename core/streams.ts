@@ -30,13 +30,7 @@ export class NonExclusiveWritableStream<W = unknown> extends EventTarget
   }
 
   getWriter() {
-    const channel = this.#channel();
-    const writer = channel.getWriter();
-
-    // Close the channel when the lock gets released
-    writer.closed.catch(() => channel.close());
-
-    return writer;
+    return this.#channel().getWriter();
   }
 
   close(): Promise<void> {

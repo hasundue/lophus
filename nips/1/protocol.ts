@@ -11,7 +11,7 @@ import "../../core/protocol.ts";
 import type { Url } from "../../core/types.ts";
 
 declare module "../../core/protocol.ts" {
-  export enum NIP {
+  enum NIP {
     BasicProtocol = 1,
   }
   enum EventKind {
@@ -41,7 +41,7 @@ declare module "../../core/protocol.ts" {
     K extends EventKind = EventKind,
   > {
     EVENT: [SubscriptionId, NostrEvent<K>];
-    OK: OkMessageContent;
+    OK: OkMessageContent<K, true> | OkMessageContent<K, false>;
     EOSE: [SubscriptionId];
     NOTICE: [string];
   }
