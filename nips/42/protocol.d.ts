@@ -1,6 +1,6 @@
-import "../../core/protocol.ts";
+import "../../core/protocol.d.ts";
 
-declare module "../../core/protocol.ts" {
+declare module "../../core/protocol.d.ts" {
   enum NIP {
     Authentication = 42,
   }

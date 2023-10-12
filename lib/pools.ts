@@ -4,7 +4,7 @@ import type {
   NostrEvent,
   RelayUrl,
   SubscriptionFilter,
-} from "../core/protocol.ts";
+} from "../core/protocol.d.ts";
 import {
   Relay,
   RelayInit,

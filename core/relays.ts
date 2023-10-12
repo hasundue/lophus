@@ -10,7 +10,7 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./protocol.ts";
+} from "./protocol.d.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";

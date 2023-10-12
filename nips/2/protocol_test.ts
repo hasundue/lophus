@@ -1,8 +1,8 @@
 import { describe, it } from "../../lib/std/testing.ts";
 import { assertType, Has } from "../../lib/std/testing.ts";
 import { EventInit } from "../../lib/events.ts";
-import type { PublicKey } from "../../core/protocol.ts";
-import "./protocol.ts";
+import type { PublicKey } from "../../core/protocol.d.ts";
+import "./protocol.d.ts";
 
 describe("EventInit<3>", () => {
   it("valid", () => {

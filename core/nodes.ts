@@ -1,4 +1,4 @@
-import type { NostrMessage } from "./protocol.ts";
+import type { NostrMessage } from "./protocol.d.ts";
 import type { Logger } from "./types.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
@@ -87,6 +87,6 @@ export class NostrNode<
 
   close() {
     this.aborter.abort();
-    return super.close()
+    return super.close();
   }
 }

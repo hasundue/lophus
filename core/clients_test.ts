@@ -2,7 +2,7 @@ import {
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "./protocol.ts";
+} from "./protocol.d.ts";
 import { Client } from "./clients.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";

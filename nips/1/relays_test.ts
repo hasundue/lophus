@@ -3,10 +3,9 @@ import {
   EventId,
   NostrEvent,
   RelayToClientMessage,
-} from "../../core/protocol.ts";
-import "./protocol.ts";
+} from "../../core/protocol.d.ts";
+import "./protocol.d.ts";
 import { ConnectionClosed, EventRejected, Relay } from "../../core/relays.ts";
-import "./protocol.ts";
 import { afterAll, beforeAll, describe, it } from "../../lib/std/testing.ts";
 import {
   assert,

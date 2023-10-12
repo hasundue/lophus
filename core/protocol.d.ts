@@ -4,7 +4,7 @@
  * Implementation of unextendable part of NIP-01 (Nostr basic protocol):
  * https://github.com/nostr-protocol/nips/blob/master/01.md
  *
- * See also `../../nips/01/protocol.ts` for the extendable part.
+ * See also `../../nips/01/protocol.d.ts` for the extendable part.
  *
  * @module
  */

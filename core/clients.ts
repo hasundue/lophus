@@ -4,7 +4,7 @@ import type {
   RelayToClientMessage,
   SubscriptionFilter,
   SubscriptionId,
-} from "./protocol.ts";
+} from "./protocol.d.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
 
 export type ClientConfig = NostrNodeConfig;
