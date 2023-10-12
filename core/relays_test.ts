@@ -1,5 +1,5 @@
 import { Relay } from "./relays.ts";
-import { beforeAll, describe, it } from "../lib/std/testing.ts";
+import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals, assertObjectMatch } from "../lib/std/assert.ts";
 
 const url = "wss://localhost:8080";
@@ -10,6 +10,9 @@ describe("Relay", () => {
   describe("constructed with url only", () => {
     beforeAll(() => {
       relay = new Relay(url);
+    });
+    afterAll(() => {
+      relay.close();
     });
     it("should be constructable", () => {
       assert(relay instanceof Relay);
@@ -27,6 +30,9 @@ describe("Relay", () => {
         write: true,
       });
     });
+    it("should not be connected initially", () => {
+      assertEquals(relay.status, WebSocket.CLOSED);
+    });
   });
 
   describe("constructed with url and options", () => {
@@ -39,6 +45,9 @@ describe("Relay", () => {
         nbuffer: 20,
         logger,
       });
+    });
+    afterAll(() => {
+      relay.close();
     });
     it("should be constructable", () => {
       assert(relay instanceof Relay);
@@ -53,10 +62,5 @@ describe("Relay", () => {
         logger,
       });
     });
-  });
-
-  it("should not be connected initially", () => {
-    relay = new Relay(url);
-    assertEquals(relay.status, WebSocket.CLOSED);
   });
 });
