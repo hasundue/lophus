@@ -4,9 +4,9 @@ import {
   ParameterizedReplaceableEventKind,
   RegularEventKind,
   ReplaceableEventKind,
-} from "../nips/01.ts";
+} from "../core/protocol.ts";
 
-declare module "../nips/01.ts" {
+declare module "../core/protocol.ts" {
   namespace EventKind {
     export function isRegularEventKind(
       kind: EventKind,
@@ -46,4 +46,4 @@ EventKind.isParameterizedReplaceableEventKind = (
   return 30000 <= kind && kind < 40000;
 };
 
-export { EventKind } from "../nips/01.ts";
+export { EventKind } from "../core/protocol.ts";

@@ -4,6 +4,8 @@
  * Implementation of unextendable part of NIP-01 (Nostr basic protocol):
  * https://github.com/nostr-protocol/nips/blob/master/01.md
  *
+ * See also `../../nips/01/protocol.ts` for the extendable part.
+ *
  * @module
  */
 
@@ -13,19 +15,19 @@ import type { AlphabetLetter, Brand, Stringified } from "./types.ts";
 // Extendable interfaces
 // ----------------------
 
-declare enum NIP {}
-declare enum EventKind {}
+export enum NIP {}
+export enum EventKind {}
 
-declare interface EventKindRecord
+export interface EventKindRecord
   extends Record<EventKind, EventKindRecordEntry> {}
 
-declare interface TagRecord {}
+export interface TagRecord {}
 
-declare interface ClientToRelayMessageRecord<
+export interface ClientToRelayMessageRecord<
   K extends EventKind = EventKind,
 > {}
 
-declare interface RelayToClientMessageRecord<
+export interface RelayToClientMessageRecord<
   K extends EventKind = EventKind,
 > {}
 
@@ -33,7 +35,7 @@ declare interface RelayToClientMessageRecord<
 // Events and signatures
 // ----------------------
 
-declare interface NostrEvent<K extends EventKind = EventKind> {
+export interface NostrEvent<K extends EventKind = EventKind> {
   id: EventId;
   pubkey: PublicKey;
   created_at: Timestamp;
@@ -43,14 +45,14 @@ declare interface NostrEvent<K extends EventKind = EventKind> {
   sig: Signature;
 }
 
-declare type EventId = Brand<string, "EventId">;
-declare type PublicKey = Brand<string, "PublicKey">;
-declare type Timestamp = Brand<number, "EventTimeStamp">;
+export type EventId = Brand<string, "EventId">;
+export type PublicKey = Brand<string, "PublicKey">;
+export type Timestamp = Brand<number, "EventTimeStamp">;
 
-declare type PrivateKey = Brand<string, "PrivateKey">;
-declare type Signature = Brand<string, "EventSignature">;
+export type PrivateKey = Brand<string, "PrivateKey">;
+export type Signature = Brand<string, "EventSignature">;
 
-declare type EventSerializePrecursor<K extends EventKind = EventKind> = [
+export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   header: 0,
   pubkey: PublicKey,
   created_at: Timestamp,
@@ -63,50 +65,50 @@ declare type EventSerializePrecursor<K extends EventKind = EventKind> = [
 // Tags
 // ----------------------
 
-declare type TagType = keyof TagRecord;
-declare type TagParam = string | undefined;
+export type TagType = keyof TagRecord;
+export type TagParam = string | undefined;
 
-declare type Tag<T extends TagType = TagType> = {
+export type Tag<T extends TagType = TagType> = {
   [K in T]: [K, TagValue<K>, ...TagParams<K>, ...TagParam[]];
 }[T];
 
-declare type IndexedTagType = TagType & AlphabetLetter;
-declare type IndexedTag = Tag<IndexedTagType>;
+export type IndexedTagType = TagType & AlphabetLetter;
+export type IndexedTag = Tag<IndexedTagType>;
 
-declare type TagValue<T extends TagType> = TagRecord[T][0];
-declare type TagParams<T extends TagType> = TagRecord[T] extends [
+export type TagValue<T extends TagType> = TagRecord[T][0];
+export type TagParams<T extends TagType> = TagRecord[T] extends [
   TagValue<T>,
   ...infer P,
 ] ? P
   : never;
-declare type TagFor<K extends EventKind> = EventKindRecord[K]["Tag"];
+export type TagFor<K extends EventKind> = EventKindRecord[K]["Tag"];
 
 // ----------------------
 // Communication
 // ----------------------
 
-declare type RelayUrl = `wss://${string}` | `ws://${string}`;
-declare type SubscriptionId = Brand<string, "SubscriptionId">;
+export type RelayUrl = `wss://${string}` | `ws://${string}`;
+export type SubscriptionId = Brand<string, "SubscriptionId">;
 
-declare type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
+export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
 
-declare type ClientToRelayMessage<
+export type ClientToRelayMessage<
   T extends ClientToRelayMessageType = ClientToRelayMessageType,
   K extends EventKind = EventKind,
 > = {
   [U in T]: [U, ...ClientToRelayMessageRecord<K>[U]];
 }[T];
-declare type ClientToRelayMessageType = keyof ClientToRelayMessageRecord;
+export type ClientToRelayMessageType = keyof ClientToRelayMessageRecord;
 
-declare type RelayToClientMessage<
+export type RelayToClientMessage<
   T extends RelayToClientMessageType = RelayToClientMessageType,
   K extends EventKind = EventKind,
 > = {
   [U in T]: [U, ...RelayToClientMessageRecord<K>[U]];
 }[T];
-declare type RelayToClientMessageType = keyof RelayToClientMessageRecord;
+export type RelayToClientMessageType = keyof RelayToClientMessageRecord;
 
-declare type OkMessageContent<
+export type OkMessageContent<
   K extends EventKind = EventKind,
   B extends boolean = boolean,
 > = [
@@ -115,10 +117,10 @@ declare type OkMessageContent<
   OkMessageBody<K, B>,
 ];
 
-declare type OkMessageBody<K extends EventKind, B extends boolean> = B extends
+export type OkMessageBody<K extends EventKind, B extends boolean> = B extends
   true ? string : `${ResponsePrefixFor<K>}: ${string}`;
 
-declare type DefaultResponsePrefix =
+export type DefaultResponsePrefix =
   | "duplicate"
   | "pow"
   | "blocked"
@@ -126,7 +128,7 @@ declare type DefaultResponsePrefix =
   | "invalid"
   | "error";
 
-declare type SubscriptionFilter<
+export type SubscriptionFilter<
   K extends EventKind = EventKind,
   T extends IndexedTagType = IndexedTagType,
 > =
@@ -148,23 +150,23 @@ declare type SubscriptionFilter<
 // Events
 // ----------------------
 
-declare interface EventKindRecordEntry {
+export interface EventKindRecordEntry {
   Tag: Tag;
   Content: unknown;
   ResponsePrefix?: string;
 }
 
-declare type EventContentFor<K extends EventKind> =
+export type EventContentFor<K extends EventKind> =
   EventKindRecord[K]["Content"];
 
-declare type ResponsePrefixFor<K extends EventKind = EventKind> =
+export type ResponsePrefixFor<K extends EventKind = EventKind> =
   EventKindRecord[K] extends { ResponsePrefix: infer P extends string } ? P
     : DefaultResponsePrefix;
 
-declare type RegularEventKind = Brand<EventKind, "Regular">;
-declare type ReplaceableEventKind = Brand<EventKind, "Replaceable">;
-declare type EphemeralEventKind = Brand<EventKind, "Ephemeral">;
-declare type ParameterizedReplaceableEventKind = Brand<
+export type RegularEventKind = Brand<EventKind, "Regular">;
+export type ReplaceableEventKind = Brand<EventKind, "Replaceable">;
+export type EphemeralEventKind = Brand<EventKind, "Ephemeral">;
+export type ParameterizedReplaceableEventKind = Brand<
   EventKind,
   "ParameterizedReplaceable"
 >;

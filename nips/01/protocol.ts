@@ -7,11 +7,11 @@
  * @module
  */
 
-import "../../core/protocol.d.ts";
+import "../../core/protocol.ts";
 import type { Url } from "../../core/types.ts";
 
-declare module "../../core/protocol.d.ts" {
-  enum NIP {
+declare module "../../core/protocol.ts" {
+  export enum NIP {
     BasicProtocol = 1,
   }
   enum EventKind {

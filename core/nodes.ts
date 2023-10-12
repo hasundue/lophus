@@ -1,9 +1,7 @@
-import type { NostrMessage } from "../nips/01.ts";
+import type { NostrMessage } from "./protocol.ts";
 import type { Logger } from "./types.ts";
-import { entries } from "./utils.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
-import { type NIP, NIPs } from "./nips.ts";
 
 export interface NostrNodeConfig {
   logger?: Logger;
@@ -80,43 +78,9 @@ export class NostrNode<
     this.ws.addEventListener("message", (ev) => {
       opts.logger?.debug?.("[ws] recv", ev.data);
     });
-    this.installExtensions();
   }
 
   get status(): WebSocketReadyState {
     return this.ws.readyState;
-  }
-
-  protected async installExtensions(): Promise<true> {
-    await Promise.all(
-      Array.from(NIPs.registered.values()).map(async (nip) => {
-        const mod = await this.importExtension(nip);
-        if (!mod) return;
-        for (const entry of entries(mod.default.handleNostrNodeEvent)) {
-          this.addEventListenerEntry(entry);
-        }
-      }),
-    );
-    return true;
-  }
-
-  protected importExtension(nip: NIP) {
-    const file = basename(import.meta.url);
-    try {
-      return import(`../nips/${nip}/${file}`) as Promise<
-        NostrNodeExtensionModule
-      >;
-    } catch {
-      this.config.logger?.debug?.(
-        `NostrNode extension is not provided for NIP-${nip}`,
-      );
-      return undefined;
-    }
-  }
-
-  protected addEventListenerEntry<T extends W[0]>(
-    entry: [T, NostrNodeExtension["handleNostrNodeEvent"][T]],
-  ) {
-    if (entry[1]) this.addEventListener(entry[0], entry[1]);
   }
 }

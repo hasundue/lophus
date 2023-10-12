@@ -1,9 +1,10 @@
 import type {
   ClientToRelayMessage,
   EventKind,
+  NostrEvent,
   RelayUrl,
   SubscriptionFilter,
-} from "../mod.ts";
+} from "../core/protocol.ts";
 import {
   Relay,
   RelayInit,
@@ -48,6 +49,12 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
   ) {
     const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));
     return merge(...subs).pipeThrough(new Distinctor((m) => m.id));
+  }
+
+  async publish<K extends EventKind>(
+    msg: NostrEvent<K>,
+  ) {
+    await Promise.all(this.relays.map((r) => r.publish(msg)));
   }
 
   // ----------------------

@@ -1,8 +1,9 @@
 import { describe, it } from "../../lib/std/testing.ts";
 import { assertType, Has } from "../../lib/std/testing.ts";
-import type { EventId, PublicKey } from "../../core/protocol.d.ts";
+import type { EventId, PublicKey } from "../../core/protocol.ts";
 import { Timestamp } from "../../lib/times.ts";
-import { SubscriptionFilter, Tag } from "../../core/protocol.d.ts";
+import { SubscriptionFilter, Tag } from "../../core/protocol.ts";
+import "./protocol.ts";
 
 describe("Tag", () => {
   it("valid event tag", () => {

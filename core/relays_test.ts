@@ -3,8 +3,8 @@ import {
   EventId,
   NostrEvent,
   RelayToClientMessage,
-} from "./protocol.d.ts";
-import "../nips/01/protocol.d.ts";
+} from "./protocol.ts";
+import "../nips/01/protocol.ts";
 import { EventRejected, Relay, RelayClosed } from "./relays.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import {
@@ -31,7 +31,7 @@ describe("Relay constructor", () => {
       assertEquals(relay.config.url, url);
     });
     it("should have a name", () => {
-      assertEquals(relay.config.name, "localhost:8080");
+      assertEquals(relay.config.name, "localhost");
     });
     it("should have default options", () => {
       assertObjectMatch(relay.config, {

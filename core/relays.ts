@@ -5,13 +5,12 @@ import type {
   EventKind,
   NostrEvent,
   RelayToClientMessage,
-  RelayToClientMessageContent,
   RelayToClientMessageType,
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./protocol.d.ts";
-import { NIP } from "./protocol.d.ts";
+} from "./protocol.ts";
+import { NIP } from "./protocol.ts";
 import { Enum } from "./utils.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 import { NostrNode, NostrNodeConfig } from "./nodes.ts";
@@ -187,7 +186,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         this.addEventListener(
-          sid,
+          `${sid}:start`,
           (ev: SubscriptionEvent<K>) =>
             this.handleSubscriptionMessage({
               msg: ev.data,
@@ -215,6 +214,11 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
 
+  /**
+   * Publish an event to the relay and wait for a response.
+   *
+   * @param event The event to publish
+   */
   async publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     const writer = this.getWriter();
     await writer.ready;
@@ -224,7 +228,7 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
     const msg = await new Promise<PublicationMessage<K>>((resolve) =>
       this.addEventListener(
-        event.id,
+        `${event.id}:response`,
         (ev: PublicationEvent<K>) => resolve(ev.data),
         { once: true },
       )
@@ -237,7 +241,14 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 // Events
 // ----------------------
 
-export type RelayEventType = SubscriptionId | EventId;
+export type RelayEventType = SubscriptionEventType | PublicationEventType;
+
+export type SubscriptionEventType =
+  `${SubscriptionId}:${SubscriptionEventKind}`;
+export type PublicationEventType = `${EventId}:${PublicationEventKind}`;
+
+export type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
+export type PublicationEventKind = "publish" | "response";
 
 export type RelayEventListener<
   T extends RelayEventType = RelayEventType,
@@ -255,20 +266,35 @@ export type RelayEventListenerObject<
 export type RelayEvent<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
-> = T extends SubscriptionId ? SubscriptionEvent<K> | SubscriptionEvent<K>
-  : T extends EventId ? PublicationEvent<K>
+> = T extends SubscriptionEventType
+  ? SubscriptionEvent<K> | SubscriptionEvent<K>
+  : T extends PublicationEventType ? PublicationEvent<K>
   : never;
 
 export class SubscriptionEvent<
   K extends EventKind,
-> extends MessageEvent<SubscriptionMessage<K>> {}
+> extends MessageEvent<SubscriptionMessage<K>> {
+  constructor(
+    type: SubscriptionEventType,
+    init?: MessageEventInit<SubscriptionMessage<K>>,
+  ) {
+    super(type, init);
+  }
+}
 
 export class PublicationEvent<
   K extends EventKind,
-> extends MessageEvent<PublicationMessage<K>> {}
+> extends MessageEvent<PublicationMessage<K>> {
+  constructor(
+    type: PublicationEventType,
+    init?: MessageEventInit<PublicationMessage<K>>,
+  ) {
+    super(type, init);
+  }
+}
 
 // ----------------------
-// Extensions
+// Event handlers
 // ----------------------
 
 type RelayHandlerSet = {
@@ -315,7 +341,7 @@ export interface RelayToClientMessageContext<
  * A handler for responses to subscription requests
  */
 export type SubscriptionMessage<K extends EventKind = EventKind> = {
-  [T in RelayToClientMessageType]: RelayToClientMessageContent<K>[T][0] extends
+  [T in RelayToClientMessageType]: RelayToClientMessage<T, K>[1] extends
     SubscriptionId ? RelayToClientMessage<T, K> : never;
 }[RelayToClientMessageType];
 
@@ -337,8 +363,9 @@ export interface SubscriptionMessageContext {
  * A handler for responses to publications
  */
 export type PublicationMessage<K extends EventKind = EventKind> = {
-  [T in RelayToClientMessageType]: RelayToClientMessageContent[T][0] extends
-    EventId ? RelayToClientMessage<T, K> : never;
+  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
+    ? RelayToClientMessage<T, K>
+    : never;
 }[RelayToClientMessageType];
 
 export type PublicationMessageType = PublicationMessage[0];

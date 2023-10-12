@@ -1,6 +1,6 @@
-import "../../core/protocol.d.ts";
+import "../../core/protocol.ts";
 
-declare module "../../core/protocol.d.ts" {
+declare module "../../core/protocol.ts" {
   enum NIP {
     ContactList = 2,
   }

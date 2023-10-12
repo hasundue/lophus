@@ -1,5 +1,4 @@
 import type { RelayHandlers } from "../../core/relays.ts";
-import "./mod.ts";
 
 export default {
   handleRelayToClientMessage({ msg }) {
