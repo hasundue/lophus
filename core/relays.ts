@@ -160,42 +160,33 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     options: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
-    const sid = (options.id ?? crypto.randomUUID()) as SubscriptionId;
     options.realtime ??= true;
     options.nbuffer ??= this.config.nbuffer;
-
-    function request() {
-      return messenger.write(["REQ", sid, ...[filter].flat()]);
-    }
-    const messenger = this.getWriter();
-
+    const context = {
+      id: (options.id ?? crypto.randomUUID()) as SubscriptionId,
+      filters: [filter].flat(),
+      options,
+      relay: this,
+    };
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         this.addEventListener(
-          `${sid}:receive`,
+          `${context.id}:receive`,
           (ev: SubscriptionEvent<K>) =>
             this.handle("SubscriptionMessage", {
               message: ev.data,
               controller,
-              options,
-              relay: this,
+              ...context,
             }),
         );
-        if (this.ws.readyState === WebSocket.OPEN) {
-          return request();
-        }
-        this.ws.addEventListener("open", request);
+        this.handle("StartSubscription", { controller, ...context });
       },
       pull: async () => {
         await this.ws.ready();
         // TODO: backpressure
       },
-      cancel: async () => {
-        this.ws.removeEventListener("open", request);
-        if (this.ws.readyState === WebSocket.OPEN) {
-          await messenger.write(["CLOSE", sid]);
-        }
-        return messenger.close();
+      cancel: (reason) => {
+        return this.handle("CloseSubscription", { reason, ...context });
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -355,10 +346,15 @@ type SubscriptionMessageHandler<K extends EventKind = EventKind> = (
   context: SubscriptionMessageContext<K>,
 ) => void;
 
-interface SubscriptionMessageContext<K extends EventKind>
-  extends RelayEventContext {
-  message: SubscriptionMessage<K>;
+interface SubscriptionContext<K extends EventKind> extends RelayEventContext {
+  id: SubscriptionId;
+  filters: SubscriptionFilter<K>[];
   options: SubscriptionOptions;
+}
+
+interface SubscriptionMessageContext<K extends EventKind>
+  extends SubscriptionContext<K> {
+  message: SubscriptionMessage<K>;
   controller: ReadableStreamDefaultController<NostrEvent<K>>;
 }
 
@@ -400,7 +396,7 @@ type StartSubscriptionHandler<K extends EventKind = EventKind> = (
 ) => void;
 
 interface StartSubscriptionContext<K extends EventKind>
-  extends RelayEventContext {
+  extends SubscriptionContext<K> {
   controller: ReadableStreamDefaultController<NostrEvent<K>>;
 }
 
@@ -412,6 +408,6 @@ type CloseSubscriptionHandler<K extends EventKind = EventKind> = (
 ) => void;
 
 interface CloseSubscriptionContext<K extends EventKind>
-  extends RelayEventContext {
-  controller: ReadableStreamDefaultController<NostrEvent<K>>;
+  extends SubscriptionContext<K> {
+  reason: unknown;
 }

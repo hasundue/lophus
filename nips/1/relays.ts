@@ -29,6 +29,7 @@ export default {
       }
     }
   },
+
   handleSubscriptionMessage({ message, options, controller }) {
     const type = message[0];
     switch (type) {
@@ -43,6 +44,7 @@ export default {
       }
     }
   },
+
   handlePublicationMessage({ message, event }) {
     const type = message[0];
     if (type !== "OK") {
@@ -56,8 +58,27 @@ export default {
     const reason = message[3];
     throw new EventRejected(reason, { cause: event });
   },
+
   handlePublish({ event, relay }) {
     const writer = relay.getWriter();
     writer.ready.then(() => writer.write(["EVENT", event]));
+  },
+
+  handleStartSubscription({ filters, id, relay }) {
+    const messenger = relay.getWriter();
+    const request = () => messenger.write(["REQ", id, ...filters]);
+    if (relay.ws.readyState === WebSocket.OPEN) {
+      request();
+    }
+    // To start the subscription when the relay (re)connects.
+    relay.ws.addEventListener("open", request);
+  },
+
+  async handleCloseSubscription({ id, relay }) {
+    const messenger = relay.getWriter();
+    if (relay.ws.readyState === WebSocket.OPEN) {
+      await messenger.write(["CLOSE", id]);
+    }
+    return messenger.close();
   },
 } satisfies RelayExtensionModule["default"];
