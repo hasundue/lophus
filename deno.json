@@ -5,7 +5,9 @@
     "check": "deno check ./**/*.ts",
     "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
-    "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test"
+    "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
+    "run": "deno run --allow-read --allow-env --allow-net=deno.land,npmjs.org",
+    "update": "deno task -q run https://deno.land/x/molt/cli.ts check ./**/*.ts"
   },
   "exclude": [
     "dist/",
