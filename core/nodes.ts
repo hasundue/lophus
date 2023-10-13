@@ -4,7 +4,7 @@ import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
 export interface NostrNodeConfig {
-  logger?: Logger;
+  logger: Logger;
   nbuffer: number;
 }
 
@@ -51,6 +51,7 @@ export interface NostrNodeExtensionModule {
  */
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
+  E extends NodeEventType = NodeEventType,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
   protected readonly aborter = new AbortController();
@@ -61,24 +62,13 @@ export class NostrNode<
   ) {
     super({
       write: async (msg) => {
-        opts.logger?.debug?.("[node] send", msg);
         await this.ws.send(JSON.stringify(msg));
       },
       close: async () => {
-        opts.logger?.debug?.("[node] close");
         await this.ws.close();
       },
     });
-    this.config = { nbuffer: 10, ...opts };
-    this.ws.addEventListener("open", () => {
-      opts.logger?.debug?.("[ws] open");
-    });
-    this.ws.addEventListener("close", () => {
-      opts.logger?.debug?.("[ws] close");
-    });
-    this.ws.addEventListener("message", (ev) => {
-      opts.logger?.debug?.("[ws] recv", ev.data);
-    });
+    this.config = { logger: {}, nbuffer: 10, ...opts };
   }
 
   get status(): WebSocketReadyState {
@@ -90,3 +80,5 @@ export class NostrNode<
     return super.close();
   }
 }
+
+type NodeEventType = string;
