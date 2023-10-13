@@ -247,29 +247,28 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 // Events
 // ----------------------
 
-export type RelayEventType = SubscriptionEventType | PublicationEventType;
+type RelayEventType = SubscriptionEventType | PublicationEventType;
 
-export type SubscriptionEventType =
-  `${SubscriptionId}:${SubscriptionEventKind}`;
+type SubscriptionEventType = `${SubscriptionId}:${SubscriptionEventKind}`;
 export type PublicationEventType = `${EventId}:${PublicationEventKind}`;
 
-export type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
-export type PublicationEventKind = "publish" | "response";
+type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
+type PublicationEventKind = "publish" | "response";
 
-export type RelayEventListener<
+type RelayEventListener<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > // deno-lint-ignore no-explicit-any
  = (this: Relay, ev: RelayEvent<T, K>) => any;
 
-export type RelayEventListenerObject<
+type RelayEventListenerObject<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > = { // deno-lint-ignore no-explicit-any
   handleEvent(this: Relay, ev: RelayEvent<T, K>): any;
 };
 
-export type RelayEvent<
+type RelayEvent<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > = T extends SubscriptionEventType
@@ -315,7 +314,7 @@ const RelayHandlerSet = {
   }),
 };
 
-export interface RelayExtensionModule {
+interface RelayExtensionModule {
   default: RelayHandlers;
 }
 
@@ -346,19 +345,16 @@ export interface RelayToClientMessageContext<
 /**
  * A handler for responses to subscription requests
  */
-export type SubscriptionMessage<K extends EventKind = EventKind> = {
+type SubscriptionMessage<K extends EventKind = EventKind> = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T, K>[1] extends
     SubscriptionId ? RelayToClientMessage<T, K> : never;
 }[RelayToClientMessageType];
 
-export type SubscriptionMessageType = SubscriptionMessage[0];
-
-export type SubscriptionMessageHandler = (
-  this: Relay,
+type SubscriptionMessageHandler = (
   context: SubscriptionMessageContext,
 ) => void;
 
-export interface SubscriptionMessageContext {
+interface SubscriptionMessageContext {
   msg: SubscriptionMessage;
   options: SubscriptionOptions;
   controller: ReadableStreamDefaultController<NostrEvent>;
@@ -368,20 +364,17 @@ export interface SubscriptionMessageContext {
 /**
  * A handler for responses to publications
  */
-export type PublicationMessage<K extends EventKind = EventKind> = {
+type PublicationMessage<K extends EventKind = EventKind> = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
     ? RelayToClientMessage<T, K>
     : never;
 }[RelayToClientMessageType];
 
-export type PublicationMessageType = PublicationMessage[0];
-
-export type PublicationMessageHandler<K extends EventKind = EventKind> = (
-  this: Relay,
+type PublicationMessageHandler<K extends EventKind = EventKind> = (
   context: PublicationMessageContext<K>,
 ) => void;
 
-export interface PublicationMessageContext<K extends EventKind> {
+interface PublicationMessageContext<K extends EventKind> {
   msg: PublicationMessage<K>;
   event: NostrEvent<K>;
   relay: Relay;
