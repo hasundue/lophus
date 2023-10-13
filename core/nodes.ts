@@ -56,7 +56,7 @@ export class NostrNode<
   protected readonly aborter = new AbortController();
 
   constructor(
-    protected ws: WebSocketLike,
+    readonly ws: WebSocketLike,
     opts: NostrNodeOptions = {},
   ) {
     super({

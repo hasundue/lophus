@@ -1,10 +1,10 @@
-import type { RelayHandlers } from "../../core/relays.ts";
+import type { RelayExtensionModule } from "../../core/relays.ts";
 
 export default {
-  handleRelayToClientMessage({ msg }) {
-    const type = msg[0];
+  handleRelayToClientMessage({ message }) {
+    const type = message[0];
     if (type === "AUTH") {
-      console.log("AUTH", msg);
+      console.log("AUTH", message);
     }
   },
-} satisfies RelayHandlers;
+} satisfies RelayExtensionModule["default"];

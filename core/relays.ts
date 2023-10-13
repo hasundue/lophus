@@ -89,8 +89,8 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 
   readonly config: Readonly<RelayConfig>;
 
-  protected readonly handlers = RelayHandlerSet.init();
-  protected readonly ready: Promise<true>;
+  protected readonly handlers: RelayHandlerSet = {};
+  protected readonly ready: Promise<void>;
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -110,14 +110,17 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
       "message",
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
         // TODO: Validate message.
-        const msg = JSON.parse(ev.data) as RelayToClientMessage;
-        return this.handleRelayToClientMessage({ msg, relay: this });
+        const message = JSON.parse(ev.data) as RelayToClientMessage;
+        return this.handle("RelayToClientMessage", {
+          message,
+          relay: this,
+        });
       },
     );
     this.ready = this.addRelayHandlers();
   }
 
-  protected async addRelayHandlers(): Promise<true> {
+  protected async addRelayHandlers(): Promise<void> {
     for await (const nip of this.config.nips) {
       const { default: handlers } = await import(
         new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
@@ -127,89 +130,63 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
         this.addRelayHandler(key, handlers[key]!);
       }
     }
-    return true;
   }
 
   protected addRelayHandler<K extends keyof RelayHandlerSet>(
     key: K,
-    handler: NonNullable<RelayHandlers[K]>,
+    handler: RelayHandlers[K],
   ): void {
-    this.handlers[key].add(handler);
+    if (!this.handlers[key]) {
+      this.handlers[key] = new Set([handler]) as RelayHandlerSet[K];
+    }
+    this.handlers[key]!.add(handler);
   }
 
-  protected async handleRelayToClientMessage(
-    context: RelayToClientMessageContext,
+  protected async handle<T extends RelayHandlerTarget>(
+    target: T,
+    context: Parameters<RelayHandlers[`handle${T}`]>[0],
   ): Promise<void> {
     await this.ready;
-    await Promise.all(
-      [...this.handlers.handleRelayToClientMessage].map((handler) =>
-        handler.bind(this)(context)
-      ),
-    );
-  }
-
-  protected async handleSubscriptionMessage(
-    context: SubscriptionMessageContext,
-  ): Promise<void> {
-    await this.ready;
-    await Promise.all(
-      [...this.handlers.handleSubscriptionMessage].map((handler) =>
-        handler.bind(this)(context)
-      ),
-    );
-  }
-
-  protected async handlePublicationMessage<K extends EventKind>(
-    context: PublicationMessageContext<K>,
-  ): Promise<void> {
-    await this.ready;
-    await Promise.all(
-      [...this.handlers.handlePublicationMessage].map((handler) =>
-        handler.bind(this)(context)
-      ),
-    );
+    const handlers = this.handlers[`handle${target}`];
+    if (handlers) {
+      await Promise.all(
+        // @ts-ignore FIXME: TypeScript doesn't infer the type of `context` correctly
+        [...handlers].map((handler) => handler(context)),
+      );
+    }
   }
 
   subscribe<K extends EventKind>(
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     options: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
-    const sid = (options.id ?? crypto.randomUUID()) as SubscriptionId;
     options.realtime ??= true;
     options.nbuffer ??= this.config.nbuffer;
-
-    function request() {
-      return messenger.write(["REQ", sid, ...[filter].flat()]);
-    }
-    const messenger = this.getWriter();
-
+    const context = {
+      id: (options.id ?? crypto.randomUUID()) as SubscriptionId,
+      filters: [filter].flat(),
+      options,
+      relay: this,
+    };
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         this.addEventListener(
-          `${sid}:receive`,
+          `${context.id}:receive`,
           (ev: SubscriptionEvent<K>) =>
-            this.handleSubscriptionMessage({
-              msg: ev.data,
+            this.handle("SubscriptionMessage", {
+              message: ev.data,
               controller,
-              options,
-              relay: this,
+              ...context,
             }),
         );
-        if (this.ws.readyState === WebSocket.OPEN) {
-          return request();
-        }
-        this.ws.addEventListener("open", request);
+        this.handle("StartSubscription", { controller, ...context });
       },
       pull: async () => {
         await this.ws.ready();
         // TODO: backpressure
       },
-      cancel: async () => {
-        this.ws.removeEventListener("open", request);
-        if (this.ws.readyState === WebSocket.OPEN) {
-          await messenger.write(["CLOSE", sid]);
-        }
-        return messenger.close();
+      cancel: (reason) => {
+        return this.handle("CloseSubscription", { reason, ...context });
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -220,17 +197,21 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
    * @throws {EventRejected} If the event is rejected by the relay
    * @throws {ConnectionClosed} If the WebSocket connection to the relay is closed
    */
-  async publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
-    const writer = this.getWriter();
-    await writer.ready;
+  publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
+    // We await the response instead of awaiting this
+    this.handle("Publish", { event, relay: this });
 
-    // We don't await this promise because we want to send the event
-    writer.write(["EVENT", event]);
-
-    const msg = await new Promise<PublicationMessage<K>>((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       this.addEventListener(
         `${event.id}:response`,
-        (ev: PublicationEvent<K>) => resolve(ev.data),
+        (ev: PublicationEvent<K>) =>
+          resolve(
+            this.handle("PublicationMessage", {
+              message: ev.data,
+              event,
+              relay: this,
+            } as PublicationMessageContext<K>),
+          ),
         { once: true, signal: this.aborter.signal },
       );
       this.ws.addEventListener(
@@ -239,7 +220,6 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
         { once: true, signal: this.aborter.signal },
       );
     });
-    return this.handlePublicationMessage({ msg, event, relay: this });
   }
 }
 
@@ -247,29 +227,28 @@ export class Relay extends NostrNode<ClientToRelayMessage> {
 // Events
 // ----------------------
 
-export type RelayEventType = SubscriptionEventType | PublicationEventType;
+type RelayEventType = SubscriptionEventType | PublicationEventType;
 
-export type SubscriptionEventType =
-  `${SubscriptionId}:${SubscriptionEventKind}`;
-export type PublicationEventType = `${EventId}:${PublicationEventKind}`;
+type SubscriptionEventType = `${SubscriptionId}:${SubscriptionEventKind}`;
+type PublicationEventType = `${EventId}:${PublicationEventKind}`;
 
-export type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
-export type PublicationEventKind = "publish" | "response";
+type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
+type PublicationEventKind = "publish" | "response";
 
-export type RelayEventListener<
+type RelayEventListener<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > // deno-lint-ignore no-explicit-any
  = (this: Relay, ev: RelayEvent<T, K>) => any;
 
-export type RelayEventListenerObject<
+type RelayEventListenerObject<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > = { // deno-lint-ignore no-explicit-any
   handleEvent(this: Relay, ev: RelayEvent<T, K>): any;
 };
 
-export type RelayEvent<
+type RelayEvent<
   T extends RelayEventType = RelayEventType,
   K extends EventKind = EventKind,
 > = T extends SubscriptionEventType
@@ -303,86 +282,132 @@ export class PublicationEvent<
 // Event handlers
 // ----------------------
 
+type RelayHandlerTarget =
+  | "RelayToClientMessage"
+  | "SubscriptionMessage"
+  | "PublicationMessage"
+  | "Publish"
+  | "StartSubscription"
+  | "CloseSubscription";
+
 type RelayHandlerSet = {
-  [K in keyof Required<RelayHandlers>]: Set<NonNullable<RelayHandlers[K]>>;
+  [K in keyof RelayHandlers]?: Set<RelayHandlers[K]>;
 };
 
-const RelayHandlerSet = {
-  init: (): RelayHandlerSet => ({
-    handleRelayToClientMessage: new Set<RelayToClientMessageHandler>(),
-    handleSubscriptionMessage: new Set<SubscriptionMessageHandler>(),
-    handlePublicationMessage: new Set<PublicationMessageHandler>(),
-  }),
-};
-
-export interface RelayExtensionModule {
-  default: RelayHandlers;
+export interface RelayExtensionModule<K extends EventKind = EventKind> {
+  default: Partial<RelayHandlers<K>>;
 }
 
-export interface RelayHandlers {
-  handleRelayToClientMessage?: RelayToClientMessageHandler;
-  handleSubscriptionMessage?: SubscriptionMessageHandler;
-  handlePublicationMessage?: PublicationMessageHandler;
+/**
+ * A set of handlers for relay events
+ */
+export interface RelayHandlers<K extends EventKind = EventKind> {
+  handleRelayToClientMessage: RelayToClientMessageHandler<K>;
+  handleSubscriptionMessage: SubscriptionMessageHandler<K>;
+  handlePublicationMessage: PublicationMessageHandler<K>;
+  handlePublish: PublishHandler<K>;
+  handleStartSubscription: StartSubscriptionHandler<K>;
+  handleCloseSubscription: CloseSubscriptionHandler<K>;
+}
+
+/**
+ * Common context for all relay events
+ */
+interface RelayEventContext {
+  relay: Relay;
 }
 
 /**
  * A handler for general messages from the relay
  */
 export type RelayToClientMessageHandler<
-  T extends RelayToClientMessageType = RelayToClientMessageType,
   K extends EventKind = EventKind,
+  T extends RelayToClientMessageType = RelayToClientMessageType,
 > = (
-  context: RelayToClientMessageContext<T, K>,
+  context: RelayToClientMessageContext<K, T>,
 ) => void;
 
 export interface RelayToClientMessageContext<
-  T extends RelayToClientMessageType = RelayToClientMessageType,
   K extends EventKind = EventKind,
-> {
-  msg: RelayToClientMessage<T, K>;
-  relay: Relay;
+  T extends RelayToClientMessageType = RelayToClientMessageType,
+> extends RelayEventContext {
+  message: RelayToClientMessage<T, K>;
 }
 
 /**
  * A handler for responses to subscription requests
  */
-export type SubscriptionMessage<K extends EventKind = EventKind> = {
+type SubscriptionMessage<K extends EventKind = EventKind> = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T, K>[1] extends
     SubscriptionId ? RelayToClientMessage<T, K> : never;
 }[RelayToClientMessageType];
 
-export type SubscriptionMessageType = SubscriptionMessage[0];
-
-export type SubscriptionMessageHandler = (
-  this: Relay,
-  context: SubscriptionMessageContext,
+type SubscriptionMessageHandler<K extends EventKind = EventKind> = (
+  context: SubscriptionMessageContext<K>,
 ) => void;
 
-export interface SubscriptionMessageContext {
-  msg: SubscriptionMessage;
+interface SubscriptionContext<K extends EventKind> extends RelayEventContext {
+  id: SubscriptionId;
+  filters: SubscriptionFilter<K>[];
   options: SubscriptionOptions;
-  controller: ReadableStreamDefaultController<NostrEvent>;
-  relay: Relay;
+}
+
+interface SubscriptionMessageContext<K extends EventKind>
+  extends SubscriptionContext<K> {
+  message: SubscriptionMessage<K>;
+  controller: ReadableStreamDefaultController<NostrEvent<K>>;
 }
 
 /**
  * A handler for responses to publications
  */
-export type PublicationMessage<K extends EventKind = EventKind> = {
+type PublicationMessage<K extends EventKind = EventKind> = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
     ? RelayToClientMessage<T, K>
     : never;
 }[RelayToClientMessageType];
 
-export type PublicationMessageType = PublicationMessage[0];
-
-export type PublicationMessageHandler<K extends EventKind = EventKind> = (
-  this: Relay,
+type PublicationMessageHandler<K extends EventKind = EventKind> = (
   context: PublicationMessageContext<K>,
 ) => void;
 
-export interface PublicationMessageContext<K extends EventKind> {
-  msg: PublicationMessage<K>;
+interface PublicationMessageContext<K extends EventKind>
+  extends RelayEventContext {
+  message: PublicationMessage<K>;
   event: NostrEvent<K>;
-  relay: Relay;
+}
+
+/**
+ * A handler to publish events to the relay
+ */
+type PublishHandler<K extends EventKind = EventKind> = (
+  context: PublishContext<K>,
+) => void;
+
+interface PublishContext<K extends EventKind> extends RelayEventContext {
+  event: NostrEvent<K>;
+}
+
+/**
+ * A handler to start a subscription
+ */
+type StartSubscriptionHandler<K extends EventKind = EventKind> = (
+  context: StartSubscriptionContext<K>,
+) => void;
+
+interface StartSubscriptionContext<K extends EventKind>
+  extends SubscriptionContext<K> {
+  controller: ReadableStreamDefaultController<NostrEvent<K>>;
+}
+
+/**
+ * A handler to close a subscription
+ */
+type CloseSubscriptionHandler<K extends EventKind = EventKind> = (
+  context: CloseSubscriptionContext<K>,
+) => void;
+
+interface CloseSubscriptionContext<K extends EventKind>
+  extends SubscriptionContext<K> {
+  reason: unknown;
 }
