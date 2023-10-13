@@ -1,59 +1,63 @@
 import {
   EventRejected,
   PublicationEvent,
-  RelayHandlers,
+  RelayExtensionModule,
   SubscriptionEvent,
 } from "../../core/relays.ts";
 
 export default {
-  handleRelayToClientMessage({ msg, relay }) {
-    const type = msg[0];
-    relay.config.logger?.debug?.(relay.config.name, msg);
+  handleRelayToClientMessage({ message, relay }) {
+    const type = message[0];
+    relay.config.logger?.debug?.(relay.config.name, message);
     switch (type) {
       case "EVENT":
       case "EOSE": {
-        const sid = msg[1];
+        const sid = message[1];
         return relay.dispatchEvent(
-          new SubscriptionEvent(`${sid}:receive`, { data: msg }),
+          new SubscriptionEvent(`${sid}:receive`, { data: message }),
         );
       }
       case "OK": {
-        const eid = msg[1];
+        const eid = message[1];
         return relay.dispatchEvent(
-          new PublicationEvent(`${eid}:response`, { data: msg }),
+          new PublicationEvent(`${eid}:response`, { data: message }),
         );
       }
       case "NOTICE": {
-        const notice = msg[1];
+        const notice = message[1];
         return relay.config?.logger?.info?.(notice);
       }
     }
   },
-  handleSubscriptionMessage({ msg, options, controller }) {
-    const type = msg[0];
+  handleSubscriptionMessage({ message, options, controller }) {
+    const type = message[0];
     switch (type) {
       case "EVENT": {
-        const [, , event] = msg;
+        const [, , event] = message;
         return controller.enqueue(event);
       }
       case "EOSE": {
         if (!options.realtime) {
-          controller.close();
+          return controller.close();
         }
       }
     }
   },
-  handlePublicationMessage({ msg, event }) {
-    const type = msg[0];
+  handlePublicationMessage({ message, event }) {
+    const type = message[0];
     if (type !== "OK") {
       // This NIP only supports OK messages.
       return;
     }
-    const accepted = msg[2];
+    const accepted = message[2];
     if (accepted) {
       return;
     }
-    const reason = msg[3];
+    const reason = message[3];
     throw new EventRejected(reason, { cause: event });
   },
-} satisfies RelayHandlers;
+  handlePublish({ event, relay }) {
+    const writer = relay.getWriter();
+    writer.ready.then(() => writer.write(["EVENT", event]));
+  },
+} satisfies RelayExtensionModule["default"];
