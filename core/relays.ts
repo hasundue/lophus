@@ -3,7 +3,6 @@ import type {
   ClientToRelayMessage,
   EventId,
   EventKind,
-  NIP,
   NostrEvent,
   RelayToClientMessage,
   RelayToClientMessageType,
@@ -12,8 +11,9 @@ import type {
   SubscriptionId,
 } from "./protocol.d.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
-import { NostrNode, NostrNodeConfig, NostrNodeExtension } from "./nodes.ts";
+import { NostrNodeEvent, NostrNode, NostrNodeConfig, NostrNodeExtension } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
+import nip1 from "../nips/1/relays.ts";
 
 // ----------------------
 // Errors
@@ -35,9 +35,9 @@ export interface RelayLike
 export interface RelayConfig extends NostrNodeConfig {
   url: RelayUrl;
   name: string;
-  nips: NIP[];
   read: boolean;
   write: boolean;
+  extensions: RelayExtension[];
 }
 
 export type RelayOptions = Partial<RelayConfig>;
@@ -57,7 +57,7 @@ export interface SubscriptionOptions {
  */
 export class Relay extends NostrNode<
   ClientToRelayMessage,
-  RelayEventType,
+  EventDataTypeRecord,
   FunctionParameterTypeRecord
 > {
   declare ws: LazyWebSocket;
@@ -71,8 +71,8 @@ export class Relay extends NostrNode<
     super(new LazyWebSocket(url), opts);
     // deno-fmt-ignore
     this.config = {
-      logger: {}, nbuffer: 10, url, name: new URL(url).hostname,
-      nips: [1], read: true, write: true, ...opts,
+      url, name: new URL(url).hostname, extensions: [nip1],
+      read: true, write: true, logger: {}, nbuffer: 10, ...opts,
     };
     this.ws.addEventListener(
       "message",
@@ -85,6 +85,7 @@ export class Relay extends NostrNode<
         });
       },
     );
+    this.config.extensions.forEach((extension) => this.addExtension(extension));
   }
 
   subscribe<K extends EventKind>(
@@ -103,7 +104,7 @@ export class Relay extends NostrNode<
       start: (controller) => {
         this.addEventListener(
           context.id,
-          (ev: SubscriptionEvent) =>
+          (ev) =>
             this.exec("handleSubscriptionMessage", {
               message: ev.data,
               controller,
@@ -135,7 +136,7 @@ export class Relay extends NostrNode<
     return new Promise<void>((resolve, reject) => {
       this.addEventListener(
         event.id,
-        (ev: PublicationEvent) =>
+        (ev) =>
           resolve(
             this.exec("handlePublicationMessage", {
               message: ev.data,
@@ -158,31 +159,21 @@ export class Relay extends NostrNode<
 // Events
 // ----------------------
 
-type RelayEventType = SubscriptionId | EventId;
-
-type RelayEvent<
-  T extends RelayEventType = RelayEventType,
-> = T extends SubscriptionEventType ? SubscriptionEvent
-  : T extends PublicationEventType ? PublicationEvent
-  : never;
-
-export class SubscriptionEvent extends MessageEvent<SubscriptionMessage> {
-  constructor(
-    type: SubscriptionEventType,
-    init?: MessageEventInit<SubscriptionMessage>,
-  ) {
-    super(type, init);
-  }
+type EventDataTypeRecord = {
+  [T in SubscriptionId]: SubscriptionMessage;
+} & {
+  [T in EventId]: PublicationMessage;
 }
 
-export class PublicationEvent extends MessageEvent<PublicationMessage> {
-  constructor(
-    type: PublicationEventType,
-    init?: MessageEventInit<PublicationMessage>,
-  ) {
-    super(type, init);
-  }
-}
+export class SubscriptionEvent extends NostrNodeEvent<
+  EventDataTypeRecord,
+  SubscriptionId
+> {}
+
+export class PublicationEvent extends NostrNodeEvent<
+  EventDataTypeRecord,
+  EventId
+> {}
 
 // ----------------------
 // Functions

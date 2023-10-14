@@ -15,27 +15,27 @@ export type NostrNodeOptions = Partial<NostrNodeConfig>;
  */
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
-  EventType extends string = string,
+  E extends EventDataTypeRecord = EventDataTypeRecord,
   F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
   protected readonly aborter = new AbortController();
   protected readonly functions: NostrNodeFunctionSet<F> = {};
 
-  declare addEventListener: <E extends EventType>(
-    type: E,
-    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
+  declare addEventListener: <T extends EventType<E>>(
+    type: T,
+    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
     options?: boolean | AddEventListenerOptions,
   ) => void;
 
-  declare removeEventListener: <E extends EventType>(
-    type: E,
-    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
+  declare removeEventListener: <T extends EventType<E>>(
+    type: T,
+    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
     options?: boolean | EventListenerOptions,
   ) => void;
 
-  declare dispatchEvent: <E extends EventType>(
-    event: NostrNodeEvent<E>,
+  declare dispatchEvent: <T extends EventType<E>>(
+    event: NostrNodeEvent<E, T>,
   ) => boolean;
 
   constructor(
@@ -109,9 +109,7 @@ type NostrNodeFunctionSet<R extends FunctionParameterTypeRecord> = Partial<
   }
 >;
 
-export type FunctionParameterTypeRecord = {
-  [F in string]: FunctionParameterType;
-};
+export type FunctionParameterTypeRecord = Record<string, FunctionParameterType>;
 
 // deno-lint-ignore no-empty-interface
 interface FunctionParameterType {}
@@ -132,28 +130,36 @@ type FunctionType<
 // Events
 // ------------------------------
 
-type NostrNodeEventListenerOrEventListenerObject<
-  EventType extends string = string,
-> = NostrNodeEventListener<EventType> | NostrNodeEventListenerObject<EventType>;
+type EventDataTypeRecord = Record<string, MessageEventInit["data"]>;
 
-type NostrNodeEvent<
-  EventType extends string = string,
-> = MessageEvent<NostrMessage & { __type__: EventType }>;
+type EventType<R extends EventDataTypeRecord> = keyof R & string;
+
+type NostrNodeEventListenerOrEventListenerObject<
+  R extends EventDataTypeRecord,
+  T extends EventType<R>,
+> = NostrNodeEventListener<R, T> | NostrNodeEventListenerObject<R, T>;
 
 type NostrNodeEventListener<
-  EventType extends string = string,
+  R extends EventDataTypeRecord,
+  T extends EventType<R>,
 > = (
   this: NostrNode,
-  ev: NostrNodeEvent<EventType>,
+  ev: NostrNodeEvent<R, T>,
   // deno-lint-ignore no-explicit-any
 ) => any;
 
 type NostrNodeEventListenerObject<
-  EventType extends string = string,
+  R extends EventDataTypeRecord,
+  T extends EventType<R>,
 > = {
   handleEvent(
     this: NostrNode,
-    ev: NostrNodeEvent<EventType>,
+    ev: NostrNodeEvent<R, T>,
     // deno-lint-ignore no-explicit-any
   ): any;
 };
+
+export class NostrNodeEvent<
+  R extends EventDataTypeRecord,
+  T extends EventType<R>,
+> extends MessageEvent<R[T]> {}
