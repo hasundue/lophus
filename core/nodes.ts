@@ -16,11 +16,11 @@ export type NostrNodeOptions = Partial<NostrNodeConfig>;
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
   EventType extends string = string,
-  FunctionType extends string = string,
+  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
   protected readonly aborter = new AbortController();
-  protected readonly functions: NostrNodeFunctionSet<FunctionType> = {};
+  protected readonly functions: NostrNodeFunctionSet<F> = {};
 
   declare addEventListener: <E extends EventType>(
     type: E,
@@ -58,29 +58,28 @@ export class NostrNode<
     return super.close();
   }
 
-  protected addExtension(extension: NostrNodeExtension<FunctionType>) {
+  addExtension(extension: NostrNodeExtension<F>) {
     for (const name in extension) {
-      this.addFunction(name, extension[name as keyof typeof extension]!);
+      this.addFunction(name, extension[name]!);
     }
   }
 
-  protected addFunction<F extends FunctionType>(
-    name: F,
-    fn: NonNullable<NostrNodeExtension[F]>,
+  addFunction<K extends FunctionKey<F>>(
+    fname: K,
+    fn: FunctionType<F, K>,
   ): void {
-    const set = this.functions[name] ?? (this.functions[name] = new Set());
+    const set = this.functions[fname] ?? (this.functions[fname] = new Set());
     set.add(fn);
   }
 
-  protected async exec<F extends FunctionType>(
-    fn: F,
-    context: Parameters<NostrNodeFunction<F>>[0],
+  protected async exec<K extends FunctionKey<F>>(
+    fname: K,
+    context: F[K],
   ): Promise<void> {
-    const handlers = this.functions[fn];
+    const handlers = this.functions[fname];
     if (handlers) {
       await Promise.all(
-        // @ts-ignore FIXME: TypeScript doesn't infer the type of `context` correctly
-        [...handlers].map((handler) => handler(context)),
+        [...handlers].map((handler) => handler({ __fn__: fname, ...context })),
       );
     }
   }
@@ -94,25 +93,40 @@ export interface NostrNodeExtensionModule {
   default: NostrNodeExtension;
 }
 
-export type NostrNodeExtension<EventType extends string = string> = Partial<
-  Record<EventType, NostrNodeFunction>
->;
+export type NostrNodeExtension<
+  R extends FunctionParameterTypeRecord = Record<string, never>,
+> = {
+  [K in FunctionKey<R>]: FunctionType<R, K>;
+};
 
 // ------------------------------
 // Functions
 // ------------------------------
 
-type NostrNodeFunctionSet<FunctionType extends string = string> = Partial<
-  Record<FunctionType, Set<NostrNodeFunction>>
+type NostrNodeFunctionSet<R extends FunctionParameterTypeRecord> = Partial<
+  {
+    [K in FunctionKey<R>]: Set<FunctionType<R, K>>;
+  }
 >;
 
-type NostrNodeFunction<FunctionType extends string = string> = (
-  context: FunctionContext<FunctionType>,
-) => void;
+export type FunctionParameterTypeRecord = {
+  [F in string]: FunctionParameterType;
+};
 
-interface FunctionContext<FunctionType extends string = string> {
-  __type__: FunctionType;
-}
+// deno-lint-ignore no-empty-interface
+interface FunctionParameterType {}
+
+type FunctionKey<R extends FunctionParameterTypeRecord> = keyof R & string;
+
+type FunctionContextType<
+  R extends FunctionParameterTypeRecord,
+  K extends FunctionKey<R>,
+> = R[K] & { __fn__: K };
+
+type FunctionType<
+  R extends FunctionParameterTypeRecord,
+  K extends FunctionKey<R>,
+> = (context: FunctionContextType<R, K>) => void;
 
 // ------------------------------
 // Events
@@ -124,7 +138,7 @@ type NostrNodeEventListenerOrEventListenerObject<
 
 type NostrNodeEvent<
   EventType extends string = string,
-> = MessageEvent<FunctionContext<EventType>>;
+> = MessageEvent<NostrMessage & { __type__: EventType }>;
 
 type NostrNodeEventListener<
   EventType extends string = string,
