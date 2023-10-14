@@ -12,7 +12,7 @@ import type {
   SubscriptionId,
 } from "./protocol.d.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
-import { NostrNode, NostrNodeConfig } from "./nodes.ts";
+import { NostrNode, NostrNodeConfig, NostrNodeExtension } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
 
 // ----------------------
@@ -58,11 +58,10 @@ export interface SubscriptionOptions {
 export class Relay extends NostrNode<
   ClientToRelayMessage,
   RelayEventType,
-  RelayFunctionType
+  FunctionParameterTypeRecord
 > {
   declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
-  protected readonly ready: Promise<void>;
 
   constructor(
     init: RelayUrl | RelayInit,
@@ -103,7 +102,7 @@ export class Relay extends NostrNode<
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
         this.addEventListener(
-          `${context.id}:receive`,
+          context.id,
           (ev: SubscriptionEvent) =>
             this.exec("handleSubscriptionMessage", {
               message: ev.data,
@@ -131,14 +130,14 @@ export class Relay extends NostrNode<
    */
   publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     // We await the response instead of awaiting this
-    this.exec("Publish", { event, relay: this });
+    this.exec("publishEvent", { event, relay: this });
 
     return new Promise<void>((resolve, reject) => {
       this.addEventListener(
-        `${event.id}:response`,
+        event.id,
         (ev: PublicationEvent) =>
           resolve(
-            this.exec("PublicationMessage", {
+            this.exec("handlePublicationMessage", {
               message: ev.data,
               event,
               relay: this,
@@ -159,24 +158,7 @@ export class Relay extends NostrNode<
 // Events
 // ----------------------
 
-type RelayEventType = SubscriptionEventType | PublicationEventType;
-
-type SubscriptionEventType = `${SubscriptionId}:${SubscriptionEventKind}`;
-type PublicationEventType = `${EventId}:${PublicationEventKind}`;
-
-type SubscriptionEventKind = "start" | "receive" | "pull" | "cancel";
-type PublicationEventKind = "publish" | "response";
-
-type RelayEventListener<
-  T extends RelayEventType = RelayEventType,
-> // deno-lint-ignore no-explicit-any
- = (this: Relay, ev: RelayEvent<T>) => any;
-
-type RelayEventListenerObject<
-  T extends RelayEventType = RelayEventType,
-> = { // deno-lint-ignore no-explicit-any
-  handleEvent(this: Relay, ev: RelayEvent<T>): any;
-};
+type RelayEventType = SubscriptionId | EventId;
 
 type RelayEvent<
   T extends RelayEventType = RelayEventType,
@@ -203,42 +185,48 @@ export class PublicationEvent extends MessageEvent<PublicationMessage> {
 }
 
 // ----------------------
-// Event handlers
+// Functions
 // ----------------------
 
-type RelayFunctionType =
-  | "handleRelayToClientMessage"
-  | "handleSubscriptionMessage"
-  | "handlePublicationMessage"
-  | "publishEvent"
-  | "startSubscription"
-  | "closeSubscription";
+export type RelayExtension = NostrNodeExtension<FunctionParameterTypeRecord>;
 
-type RelayHandlerSet = {
-  [K in keyof RelayHandlers]?: Set<RelayHandlers[K]>;
+type FunctionParameterTypeRecord = {
+  [K in keyof _FunctionParameterTypeRecord]:
+    & _FunctionParameterTypeRecord[K]
+    & RelayFunctionContext;
 };
 
-export interface RelayExtensionModule {
-  default: Partial<RelayHandlers>;
-}
+type _FunctionParameterTypeRecord = {
+  "handleRelayToClientMessage": {
+    message: RelayToClientMessage;
+  };
+  "handleSubscriptionMessage": {
+    message: SubscriptionMessage;
+    controller: ReadableStreamDefaultController<NostrEvent>;
+  } & SubscriptionContext;
+  "handlePublicationMessage": {
+    message: PublicationMessage;
+    event: NostrEvent;
+  };
+  "publishEvent": {
+    event: NostrEvent;
+  };
+  "startSubscription": {
+    controller: ReadableStreamDefaultController<NostrEvent>;
+  } & SubscriptionContext;
+  "closeSubscription": {
+    reason: unknown;
+  } & SubscriptionContext;
+};
 
-/**
- * A set of handlers for relay events
- */
-export interface RelayHandlers {
-  handleRelayToClientMessage: RelayToClientMessageHandler;
-  handleSubscriptionMessage: SubscriptionMessageHandler;
-  handlePublicationMessage: PublicationMessageHandler;
-  publishEvent: PublishHandler;
-  startSubscription: StartSubscriptionHandler;
-  closeSubscription: CloseSubscriptionHandler;
-}
-
-/**
- * Common context for all relay events
- */
-interface RelayEventContext {
+interface RelayFunctionContext {
   relay: Relay;
+}
+
+interface SubscriptionContext {
+  id: SubscriptionId;
+  filters: SubscriptionFilter[];
+  options: SubscriptionOptions;
 }
 
 /**
@@ -252,7 +240,7 @@ export type RelayToClientMessageHandler<
 
 export interface RelayToClientMessageContext<
   T extends RelayToClientMessageType = RelayToClientMessageType,
-> extends RelayEventContext {
+> extends RelayFunctionContext {
   message: RelayToClientMessage<T>;
 }
 
@@ -264,21 +252,6 @@ type SubscriptionMessage = {
     SubscriptionId ? RelayToClientMessage<T> : never;
 }[RelayToClientMessageType];
 
-type SubscriptionMessageHandler = (
-  context: SubscriptionMessageContext,
-) => void;
-
-interface SubscriptionContext extends RelayEventContext {
-  id: SubscriptionId;
-  filters: SubscriptionFilter[];
-  options: SubscriptionOptions;
-}
-
-interface SubscriptionMessageContext extends SubscriptionContext {
-  message: SubscriptionMessage;
-  controller: ReadableStreamDefaultController<NostrEvent>;
-}
-
 /**
  * A handler for responses to publications
  */
@@ -287,41 +260,3 @@ type PublicationMessage = {
     ? RelayToClientMessage<T>
     : never;
 }[RelayToClientMessageType];
-
-type PublicationMessageHandler = (
-  context: PublicationMessageContext,
-) => void;
-
-interface PublicationMessageContext extends RelayEventContext {
-  message: PublicationMessage;
-  event: NostrEvent;
-}
-
-/**
- * A handler to publish events to the relay
- */
-type PublishHandler = (context: PublishContext) => void;
-
-interface PublishContext extends RelayEventContext {
-  event: NostrEvent;
-}
-
-/**
- * A handler to start a subscription
- */
-type StartSubscriptionHandler = (context: StartSubscriptionContext) => void;
-
-interface StartSubscriptionContext extends SubscriptionContext {
-  controller: ReadableStreamDefaultController<NostrEvent>;
-}
-
-/**
- * A handler to close a subscription
- */
-type CloseSubscriptionHandler = (
-  context: CloseSubscriptionContext,
-) => void;
-
-interface CloseSubscriptionContext extends SubscriptionContext {
-  reason: unknown;
-}
