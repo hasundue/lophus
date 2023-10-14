@@ -55,38 +55,13 @@ export interface SubscriptionOptions {
 /**
  * A class that represents a remote Nostr Relay.
  */
-export class Relay extends NostrNode<ClientToRelayMessage, RelayEventType> {
+export class Relay extends NostrNode<
+  ClientToRelayMessage,
+  RelayEventType,
+  RelayFunctionType
+> {
   declare ws: LazyWebSocket;
-
-  declare addEventListener: <
-    T extends RelayEventType = RelayEventType,
-  >(
-    type: T,
-    listener:
-      | RelayEventListener<T>
-      | RelayEventListenerObject<T>
-      | null,
-    options?: boolean | AddEventListenerOptions,
-  ) => void;
-
-  declare removeEventListener: <
-    T extends RelayEventType,
-  >(
-    type: T,
-    listener:
-      | RelayEventListener<T>
-      | RelayEventListenerObject<T>
-      | null,
-    options?: EventListenerOptions | boolean,
-  ) => void;
-
-  declare dispatchEvent: <
-    T extends RelayEventType,
-  >(event: RelayEvent<T>) => boolean;
-
   readonly config: Readonly<RelayConfig>;
-
-  protected readonly handlers: RelayHandlerSet = {};
   protected readonly ready: Promise<void>;
 
   constructor(
@@ -105,49 +80,12 @@ export class Relay extends NostrNode<ClientToRelayMessage, RelayEventType> {
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
         // TODO: Validate message.
         const message = JSON.parse(ev.data) as RelayToClientMessage;
-        return this.handle("RelayToClientMessage", {
+        return this.exec("handleRelayToClientMessage", {
           message,
           relay: this,
         });
       },
     );
-    this.ready = this.addRelayHandlers();
-  }
-
-  protected async addRelayHandlers(): Promise<void> {
-    for await (const nip of this.config.nips) {
-      const { default: handlers } = await import(
-        new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
-      ) as RelayExtensionModule;
-      for (const name in handlers) {
-        const key = name as keyof RelayHandlerSet;
-        this.addRelayHandler(key, handlers[key]!);
-      }
-    }
-  }
-
-  protected addRelayHandler<K extends keyof RelayHandlerSet>(
-    key: K,
-    handler: RelayHandlers[K],
-  ): void {
-    if (!this.handlers[key]) {
-      this.handlers[key] = new Set([handler]) as RelayHandlerSet[K];
-    }
-    this.handlers[key]!.add(handler);
-  }
-
-  protected async handle<T extends RelayHandlerTarget>(
-    target: T,
-    context: Parameters<RelayHandlers[`handle${T}`]>[0],
-  ): Promise<void> {
-    await this.ready;
-    const handlers = this.handlers[`handle${target}`];
-    if (handlers) {
-      await Promise.all(
-        // @ts-ignore FIXME: TypeScript doesn't infer the type of `context` correctly
-        [...handlers].map((handler) => handler(context)),
-      );
-    }
   }
 
   subscribe<K extends EventKind>(
@@ -167,20 +105,20 @@ export class Relay extends NostrNode<ClientToRelayMessage, RelayEventType> {
         this.addEventListener(
           `${context.id}:receive`,
           (ev: SubscriptionEvent) =>
-            this.handle("SubscriptionMessage", {
+            this.exec("handleSubscriptionMessage", {
               message: ev.data,
               controller,
               ...context,
             }),
         );
-        this.handle("StartSubscription", { controller, ...context });
+        this.exec("startSubscription", { controller, ...context });
       },
       pull: async () => {
         await this.ws.ready();
         // TODO: backpressure
       },
       cancel: (reason) => {
-        return this.handle("CloseSubscription", { reason, ...context });
+        return this.exec("closeSubscription", { reason, ...context });
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -193,14 +131,14 @@ export class Relay extends NostrNode<ClientToRelayMessage, RelayEventType> {
    */
   publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     // We await the response instead of awaiting this
-    this.handle("Publish", { event, relay: this });
+    this.exec("Publish", { event, relay: this });
 
     return new Promise<void>((resolve, reject) => {
       this.addEventListener(
         `${event.id}:response`,
         (ev: PublicationEvent) =>
           resolve(
-            this.handle("PublicationMessage", {
+            this.exec("PublicationMessage", {
               message: ev.data,
               event,
               relay: this,
@@ -268,13 +206,13 @@ export class PublicationEvent extends MessageEvent<PublicationMessage> {
 // Event handlers
 // ----------------------
 
-type RelayHandlerTarget =
-  | "RelayToClientMessage"
-  | "SubscriptionMessage"
-  | "PublicationMessage"
-  | "Publish"
-  | "StartSubscription"
-  | "CloseSubscription";
+type RelayFunctionType =
+  | "handleRelayToClientMessage"
+  | "handleSubscriptionMessage"
+  | "handlePublicationMessage"
+  | "publishEvent"
+  | "startSubscription"
+  | "closeSubscription";
 
 type RelayHandlerSet = {
   [K in keyof RelayHandlers]?: Set<RelayHandlers[K]>;
@@ -291,9 +229,9 @@ export interface RelayHandlers {
   handleRelayToClientMessage: RelayToClientMessageHandler;
   handleSubscriptionMessage: SubscriptionMessageHandler;
   handlePublicationMessage: PublicationMessageHandler;
-  handlePublish: PublishHandler;
-  handleStartSubscription: StartSubscriptionHandler;
-  handleCloseSubscription: CloseSubscriptionHandler;
+  publishEvent: PublishHandler;
+  startSubscription: StartSubscriptionHandler;
+  closeSubscription: CloseSubscriptionHandler;
 }
 
 /**
