@@ -3,7 +3,7 @@
     "cache": "deno cache ./**/*.ts --lock",
     "lock": "deno task cache --lock-write",
     "check": "deno check ./**/*.ts",
-    "test": "deno test -A --no-check",
+    "test": "deno test -A --no-check --parallel",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
     "run": "deno run --allow-read --allow-env --allow-net=deno.land,registry.npmjs.org",
