@@ -11,7 +11,12 @@ import type {
   SubscriptionId,
 } from "./protocol.d.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
-import { NostrNodeEvent, NostrNode, NostrNodeConfig, NostrNodeExtension } from "./nodes.ts";
+import {
+  NostrNode,
+  NostrNodeConfig,
+  NostrNodeEvent,
+  NostrNodeExtension,
+} from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import nip1 from "../nips/1/relays.ts";
 
@@ -144,12 +149,11 @@ export class Relay extends NostrNode<
               relay: this,
             }),
           ),
-        { once: true, signal: this.aborter.signal },
       );
       this.ws.addEventListener(
         "close",
         () => reject(new ConnectionClosed()),
-        { once: true, signal: this.aborter.signal },
+        { once: true },
       );
     });
   }
@@ -159,21 +163,37 @@ export class Relay extends NostrNode<
 // Events
 // ----------------------
 
-type EventDataTypeRecord = {
-  [T in SubscriptionId]: SubscriptionMessage;
-} & {
-  [T in EventId]: PublicationMessage;
-}
+type EventDataTypeRecord =
+  & {
+    [T in SubscriptionId]: SubscriptionMessage;
+  }
+  & {
+    [T in EventId]: PublicationMessage;
+  };
 
 export class SubscriptionEvent extends NostrNodeEvent<
   EventDataTypeRecord,
   SubscriptionId
-> {}
+> {
+  constructor(
+    type: SubscriptionId,
+    init: MessageEventInit<SubscriptionMessage>,
+  ) {
+    super(type, init);
+  }
+}
 
 export class PublicationEvent extends NostrNodeEvent<
   EventDataTypeRecord,
   EventId
-> {}
+> {
+  constructor(
+    type: EventId,
+    init: MessageEventInit<PublicationMessage>,
+  ) {
+    super(type, init);
+  }
+}
 
 // ----------------------
 // Functions

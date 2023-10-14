@@ -19,14 +19,20 @@ export class NostrNode<
   F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > extends NonExclusiveWritableStream<W> {
   readonly config: Readonly<NostrNodeConfig>;
-  protected readonly aborter = new AbortController();
   protected readonly functions: NostrNodeFunctionSet<F> = {};
+  protected readonly aborter = new AbortController();
 
-  declare addEventListener: <T extends EventType<E>>(
+  override addEventListener = <T extends EventType<E>>(
     type: T,
     listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
-    options?: boolean | AddEventListenerOptions,
-  ) => void;
+    options?: AddEventListenerOptions,
+  ) => {
+    super.addEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      { signal: this.aborter.signal, ...options },
+    );
+  };
 
   declare removeEventListener: <T extends EventType<E>>(
     type: T,
@@ -96,7 +102,7 @@ export interface NostrNodeExtensionModule {
 export type NostrNodeExtension<
   R extends FunctionParameterTypeRecord = Record<string, never>,
 > = {
-  [K in FunctionKey<R>]: FunctionType<R, K>;
+  [K in FunctionKey<R>]?: FunctionType<R, K>;
 };
 
 // ------------------------------
