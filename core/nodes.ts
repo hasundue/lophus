@@ -148,21 +148,15 @@ type NostrNodeEventListenerOrEventListenerObject<
 type NostrNodeEventListener<
   R extends EventDataTypeRecord,
   T extends EventType<R>,
-> = (
-  this: NostrNode,
-  ev: NostrNodeEvent<R, T>,
-  // deno-lint-ignore no-explicit-any
-) => any;
+> // deno-lint-ignore no-explicit-any
+ = (this: NostrNode, ev: NostrNodeEvent<R, T>) => any;
 
 type NostrNodeEventListenerObject<
   R extends EventDataTypeRecord,
   T extends EventType<R>,
 > = {
-  handleEvent(
-    this: NostrNode,
-    ev: NostrNodeEvent<R, T>,
-    // deno-lint-ignore no-explicit-any
-  ): any;
+  // deno-lint-ignore no-explicit-any
+  handleEvent(this: NostrNode, ev: NostrNodeEvent<R, T>): any;
 };
 
 export class NostrNodeEvent<
