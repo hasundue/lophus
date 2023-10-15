@@ -81,4 +81,4 @@ export default {
     }
     return messenger.close();
   },
-} satisfies RelayModule;
+} satisfies RelayModule["default"];

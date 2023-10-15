@@ -28,7 +28,7 @@ const NIPs = await Promise.all(
     (nip) =>
       import(
         new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
-      ) as RelayModule,
+      ) as Promise<RelayModule>,
   ) ?? [],
 );
 
@@ -82,14 +82,22 @@ export class Relay extends NostrNode<
 
   constructor(
     init: RelayUrl | RelayInit,
-    opts?: RelayOptions,
+    options?: RelayOptions,
   ) {
     const url = typeof init === "string" ? init : init.url;
-    super(new LazyWebSocket(url), opts);
-    // deno-fmt-ignore
+    const config = {
+      ...options,
+      modules: NIPs.concat(options?.modules ?? []),
+      nbuffer: 10,
+      logger: {},
+    };
+    super(new LazyWebSocket(url), config);
     this.config = {
-      modules: NIPs, logger: {}, nbuffer: 10,
-      url, name: new URL(url).hostname, read: true, write: true, ...opts,
+      ...config,
+      url,
+      name: new URL(url).hostname,
+      read: true,
+      write: true,
     };
     this.ws.addEventListener(
       "message",
@@ -153,13 +161,11 @@ export class Relay extends NostrNode<
       this.addEventListener(
         event.id,
         (ev) =>
-          resolve(
-            this.callFunction("handlePublicationMessage", {
-              message: ev.data,
-              event,
-              relay: this,
-            }),
-          ),
+          resolve(this.callFunction("handlePublicationMessage", {
+            message: ev.data,
+            event,
+            relay: this,
+          })),
       );
       this.ws.addEventListener(
         "close",

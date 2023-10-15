@@ -22,7 +22,7 @@ const NIPs = await Promise.all(
     (nip) =>
       import(
         new URL(`../nips/${nip}/clients.ts`, import.meta.url).href
-      ) as ClientModule,
+      ) as Promise<ClientModule>,
   ) ?? [],
 );
 
@@ -45,16 +45,22 @@ export class Client extends NostrNode<
   >();
 
   constructor(ws: WebSocket, opts?: ClientOptions) {
-    super(ws, { modules: NIPs, ...opts });
+    super(ws, {
+      ...opts,
+      modules: NIPs.concat(opts?.modules ?? []),
+    });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
-      this.callFunction("handleClientToRelayMessage", { message, client: this });
+      this.callFunction("handleClientToRelayMessage", {
+        message,
+        client: this,
+      });
     });
   }
 }
 
-export type ClientConfig = NostrNodeConfig<ClientFunctionParameterTypeRecord>;
+type ClientConfig = NostrNodeConfig<ClientFunctionParameterTypeRecord>;
 export type ClientOptions = Partial<ClientConfig>;
 
 // ------------------------------

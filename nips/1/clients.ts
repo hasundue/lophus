@@ -39,4 +39,4 @@ export default {
       );
     }
   },
-} satisfies ClientModule;
+} satisfies ClientModule["default"];

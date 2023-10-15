@@ -48,9 +48,10 @@ export class NostrNode<
     return super.close();
   }
 
-  addModule(extension: NostrNodeModule<F>) {
-    for (const name in extension) {
-      this.addFunction(name, extension[name]!);
+  addModule(module: NostrNodeModule<F>) {
+    const functions = module.default;
+    for (const name in functions) {
+      this.addFunction(name, functions[name]!);
     }
   }
 
@@ -101,7 +102,11 @@ export class NostrNode<
 // Extensions
 // ------------------------------
 
-export type NostrNodeModule<
+export interface NostrNodeModule<R extends FunctionParameterTypeRecord> {
+  default: NostrNodeFunctions<R>;
+}
+
+type NostrNodeFunctions<
   R extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > = {
   [K in FunctionKey<R>]?: FunctionType<R, K>;
