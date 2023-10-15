@@ -62,7 +62,7 @@ export class NostrNode<
     set.add(fn);
   }
 
-  protected async exec<K extends FunctionKey<F>>(
+  async callFunction<K extends FunctionKey<F>>(
     fname: K,
     context: F[K],
   ): Promise<void> {

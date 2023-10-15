@@ -1,4 +1,5 @@
-import { ClientModule } from "../../core/clients.ts";
+import type { NostrEvent } from "../../core/protocol.d.ts";
+import { ClientModule, SubscriptionEvent } from "../../core/clients.ts";
 
 export default {
   async handleClientToRelayMessage({ message, client }) {
@@ -7,40 +8,35 @@ export default {
     if (kind === "EVENT") {
       const event = message[1];
 
-      // TODO: Validate the event and send OkMessage<false> if necessary.
+      // This should throw if the event is not acceptable.
+      await client.callFunction("acceptEvent", { event, client });
 
       await messenger.ready;
-      messenger.write(["OK", event.id, true, ""]);
+      return messenger.write(["OK", event.id, true, ""]);
     }
     if (kind === "CLOSE") {
       const sid = message[1];
       const sub = client.subscriptions.get(sid);
       if (!sub) {
-        this.config.logger?.warn?.("Unknown subscription:", sid);
-        return;
+        return messenger.write(["NOTICE", `Unknown subscription ID: ${sid}`]);
       }
-      this.subscriptions.delete(sid);
+      client.subscriptions.delete(sid);
       return sub.close();
     }
     if (kind === "REQ") {
       const sid = message[1];
-      const filter = message[2];
-      this.subscriptions.set(
+      client.subscriptions.set(
         sid,
         new WritableStream<NostrEvent>({
           write: async (event) => {
-            await writer.ready;
-            return writer.write(["EVENT", sid, event]);
+            await messenger.ready;
+            return messenger.write(["EVENT", sid, event]);
           },
         }),
       );
-      return enqueueRequest([sid, filter]);
+      return client.dispatchEvent(
+        new SubscriptionEvent(sid, { data: message }),
+      );
     }
-  },
-  async acceptEvent({ event, client }) {
-    const writer = client.getWriter();
-    await writer.ready;
-    await writer.write(["OK", event.id, true, ""]);
-    writer.releaseLock();
   },
 } satisfies ClientModule;

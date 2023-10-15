@@ -12,17 +12,27 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import nip1 from "../nips/1/clients.ts?nips=1";
 
-export type ClientConfig = NostrNodeConfig;
-export type ClientOptions = Partial<ClientConfig>;
+// ----------------------
+// NIPs
+// ----------------------
+
+const NIPs = await Promise.all(
+  new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
+    (nip) =>
+      import(
+        new URL(`../nips/${nip}/clients.ts`, import.meta.url).href
+      ) as ClientModule,
+  ) ?? [],
+);
 
 /**
  * A class that represents a remote Nostr client.
  */
 export class Client extends NostrNode<
   RelayToClientMessage,
-  EventDataTypeRecord
+  EventDataTypeRecord,
+  ClientFunctionParameterTypeRecord
 > {
   declare ws: WebSocket;
 
@@ -35,25 +45,25 @@ export class Client extends NostrNode<
   >();
 
   constructor(ws: WebSocket, opts?: ClientOptions) {
-    super( // new NostrNode(
-      ws,
-      { modules: [nip1], ...opts },
-    );
+    super(ws, { modules: NIPs, ...opts });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
-      this.exec("handleClientToRelayMessage", { message });
+      this.callFunction("handleClientToRelayMessage", { message, client: this });
     });
   }
 }
+
+export type ClientConfig = NostrNodeConfig<ClientFunctionParameterTypeRecord>;
+export type ClientOptions = Partial<ClientConfig>;
 
 // ------------------------------
 // Functions
 // ------------------------------
 
-export type ClientModule = NostrNodeModule<FunctionParameterTypeRecord>;
+export type ClientModule = NostrNodeModule<ClientFunctionParameterTypeRecord>;
 
-type FunctionParameterTypeRecord = {
+type ClientFunctionParameterTypeRecord = {
   [K in keyof _FunctionParameterTypeRecord]:
     & _FunctionParameterTypeRecord[K]
     & ClientFunctionContext;

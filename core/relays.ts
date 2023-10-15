@@ -11,19 +11,19 @@ import type {
   SubscriptionId,
 } from "./protocol.d.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
+import { LazyWebSocket } from "./websockets.ts";
 import {
   NostrNode,
   NostrNodeConfig,
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { LazyWebSocket } from "./websockets.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const nips = await Promise.all(
+const NIPs = await Promise.all(
   new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
     (nip) =>
       import(
@@ -88,7 +88,7 @@ export class Relay extends NostrNode<
     super(new LazyWebSocket(url), opts);
     // deno-fmt-ignore
     this.config = {
-      modules: nips, logger: {}, nbuffer: 10,
+      modules: NIPs, logger: {}, nbuffer: 10,
       url, name: new URL(url).hostname, read: true, write: true, ...opts,
     };
     this.ws.addEventListener(
@@ -96,7 +96,7 @@ export class Relay extends NostrNode<
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
         // TODO: Validate message.
         const message = JSON.parse(ev.data) as RelayToClientMessage;
-        return this.exec("handleRelayToClientMessage", {
+        return this.callFunction("handleRelayToClientMessage", {
           message,
           relay: this,
         });
@@ -121,20 +121,20 @@ export class Relay extends NostrNode<
         this.addEventListener(
           context.id,
           (ev) =>
-            this.exec("handleSubscriptionMessage", {
+            this.callFunction("handleSubscriptionMessage", {
               message: ev.data,
               controller,
               ...context,
             }),
         );
-        this.exec("startSubscription", { controller, ...context });
+        this.callFunction("startSubscription", { controller, ...context });
       },
       pull: async () => {
         await this.ws.ready();
         // TODO: backpressure
       },
       cancel: (reason) => {
-        return this.exec("closeSubscription", { reason, ...context });
+        return this.callFunction("closeSubscription", { reason, ...context });
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -147,14 +147,14 @@ export class Relay extends NostrNode<
    */
   publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     // We await the response instead of awaiting this
-    this.exec("publishEvent", { event, relay: this });
+    this.callFunction("publishEvent", { event, relay: this });
 
     return new Promise<void>((resolve, reject) => {
       this.addEventListener(
         event.id,
         (ev) =>
           resolve(
-            this.exec("handlePublicationMessage", {
+            this.callFunction("handlePublicationMessage", {
               message: ev.data,
               event,
               relay: this,
