@@ -1,8 +1,8 @@
 import {
   EventRejected,
   PublicationEvent,
-  RelayExtensionModule,
-  SubscriptionEvent,
+  RelayModule,
+  RelaySubscriptionEvent,
 } from "../../core/relays.ts";
 
 export default {
@@ -14,13 +14,13 @@ export default {
       case "EOSE": {
         const sid = message[1];
         return relay.dispatchEvent(
-          new SubscriptionEvent(`${sid}:receive`, { data: message }),
+          new RelaySubscriptionEvent(sid, { data: message }),
         );
       }
       case "OK": {
         const eid = message[1];
         return relay.dispatchEvent(
-          new PublicationEvent(`${eid}:response`, { data: message }),
+          new PublicationEvent(eid, { data: message }),
         );
       }
       case "NOTICE": {
@@ -59,12 +59,12 @@ export default {
     throw new EventRejected(reason, { cause: event });
   },
 
-  handlePublish({ event, relay }) {
+  publishEvent({ event, relay }) {
     const writer = relay.getWriter();
     writer.ready.then(() => writer.write(["EVENT", event]));
   },
 
-  handleStartSubscription({ filters, id, relay }) {
+  startSubscription({ filters, id, relay }) {
     const messenger = relay.getWriter();
     const request = () => messenger.write(["REQ", id, ...filters]);
     if (relay.ws.readyState === WebSocket.OPEN) {
@@ -74,11 +74,11 @@ export default {
     relay.ws.addEventListener("open", request);
   },
 
-  async handleCloseSubscription({ id, relay }) {
+  async closeSubscription({ id, relay }) {
     const messenger = relay.getWriter();
     if (relay.ws.readyState === WebSocket.OPEN) {
       await messenger.write(["CLOSE", id]);
     }
     return messenger.close();
   },
-} satisfies RelayExtensionModule["default"];
+} satisfies RelayModule["default"];

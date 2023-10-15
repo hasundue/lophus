@@ -25,7 +25,6 @@ describe("Relay", () => {
     });
     it("should have default options", () => {
       assertObjectMatch(relay.config, {
-        nbuffer: 10,
         read: true,
         write: true,
       });

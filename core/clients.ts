@@ -1,22 +1,40 @@
 import type {
   ClientToRelayMessage,
+  ClientToRelayMessageType,
   NostrEvent,
   RelayToClientMessage,
   SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.d.ts";
-import { NostrNode, NostrNodeConfig } from "./nodes.ts";
+import {
+  NostrNode,
+  NostrNodeConfig,
+  NostrNodeEvent,
+  NostrNodeModule,
+} from "./nodes.ts";
 
-export type ClientConfig = NostrNodeConfig;
-export type ClientOptions = Partial<ClientConfig>;
+// ----------------------
+// NIPs
+// ----------------------
+
+const NIPs = await Promise.all(
+  new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
+    (nip) =>
+      import(
+        new URL(`../nips/${nip}/clients.ts`, import.meta.url).href
+      ) as Promise<ClientModule>,
+  ) ?? [],
+);
 
 /**
  * A class that represents a remote Nostr client.
  */
-export class Client extends NostrNode<RelayToClientMessage> {
+export class Client extends NostrNode<
+  RelayToClientMessage,
+  EventDataTypeRecord,
+  ClientFunctionParameterTypeRecord
+> {
   declare ws: WebSocket;
-  #events: ReadableStream<NostrEvent>;
-  #requests: ReadableStream<[SubscriptionId, SubscriptionFilter]>;
 
   /**
    * Writable interface for the subscriptions.
@@ -26,76 +44,80 @@ export class Client extends NostrNode<RelayToClientMessage> {
     WritableStream<NostrEvent>
   >();
 
-  constructor(
-    ws: WebSocket,
-    opts?: ClientOptions,
-  ) {
-    super( // new NostrNode(
-      ws,
-      { nbuffer: 10, ...opts },
-    );
-    let enqueueEvent: (ev: NostrEvent) => void;
-    this.#events = new ReadableStream<NostrEvent>({
-      start: (controller) => {
-        enqueueEvent = controller.enqueue.bind(controller);
-      },
+  constructor(ws: WebSocket, opts?: ClientOptions) {
+    super(ws, {
+      ...opts,
+      modules: NIPs.concat(opts?.modules ?? []),
     });
-    let enqueueRequest: (req: [SubscriptionId, SubscriptionFilter]) => void;
-    this.#requests = new ReadableStream<[SubscriptionId, SubscriptionFilter]>({
-      start: (controller) => {
-        enqueueRequest = controller.enqueue.bind(controller);
-      },
-    });
-    const writer = this.getWriter();
-    this.ws.addEventListener("message", async (ev: MessageEvent<string>) => {
+    this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
-      const msg = JSON.parse(ev.data) as ClientToRelayMessage;
-
-      // TODO: Apply backpressure when a queue is full.
-
-      const kind = msg[0];
-      if (kind === "EVENT") {
-        const event = msg[1];
-
-        // TODO: Validate the event and send OkMessage<false> if necessary.
-
-        await writer.ready;
-        writer.write(["OK", event.id, true, ""]);
-        return enqueueEvent(event);
-      }
-      if (kind === "CLOSE") {
-        const sid = msg[1];
-        const sub = this.subscriptions.get(sid);
-        if (!sub) {
-          this.config.logger?.warn?.("Unknown subscription:", sid);
-          return;
-        }
-        this.subscriptions.delete(sid);
-        return sub.close();
-      }
-      if (kind === "REQ") {
-        const sid = msg[1];
-        const filter = msg[2];
-        this.subscriptions.set(
-          sid,
-          new WritableStream<NostrEvent>({
-            write: async (event) => {
-              await writer.ready;
-              return writer.write(["EVENT", sid, event]);
-            },
-          }),
-        );
-        return enqueueRequest([sid, filter]);
-      }
-      this.config.logger?.warn?.("Unknown message kind:", kind);
+      const message = JSON.parse(ev.data) as ClientToRelayMessage;
+      this.callFunction("handleClientToRelayMessage", {
+        message,
+        client: this,
+      });
     });
   }
+}
 
-  get events(): ReadableStream<NostrEvent> {
-    return this.#events;
-  }
+type ClientConfig = NostrNodeConfig<ClientFunctionParameterTypeRecord>;
+export type ClientOptions = Partial<ClientConfig>;
 
-  get requests(): ReadableStream<[SubscriptionId, SubscriptionFilter]> {
-    return this.#requests;
+// ------------------------------
+// Functions
+// ------------------------------
+
+export type ClientModule = NostrNodeModule<ClientFunctionParameterTypeRecord>;
+
+type ClientFunctionParameterTypeRecord = {
+  [K in keyof _FunctionParameterTypeRecord]:
+    & _FunctionParameterTypeRecord[K]
+    & ClientFunctionContext;
+};
+
+type _FunctionParameterTypeRecord = {
+  "handleClientToRelayMessage": {
+    message: ClientToRelayMessage;
+  };
+  "handleSubscriptionMessage": {
+    message: SubscriptionMessage;
+    controller: ReadableStreamDefaultController<NostrEvent>;
+  } & SubscriptionContext;
+  "acceptEvent": {
+    event: NostrEvent;
+  };
+};
+
+interface ClientFunctionContext {
+  client: Client;
+}
+
+interface SubscriptionContext {
+  id: SubscriptionId;
+  filters: SubscriptionFilter[];
+}
+
+// ------------------------------
+// Events
+// ------------------------------
+
+type EventDataTypeRecord = {
+  [T in SubscriptionId]: SubscriptionMessage;
+};
+
+type SubscriptionMessage = {
+  [T in ClientToRelayMessageType]: ClientToRelayMessage<T>[1] extends
+    SubscriptionId ? ClientToRelayMessage<T> : never;
+}[ClientToRelayMessageType];
+
+export class ClientSubscriptionEvent extends NostrNodeEvent<
+  EventDataTypeRecord,
+  SubscriptionId
+> {
+  constructor(
+    type: SubscriptionId,
+    init: MessageEventInit<SubscriptionMessage>,
+  ) {
+    super(type, init);
   }
 }

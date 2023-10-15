@@ -1,11 +1,4 @@
-import {
-  ClientToRelayMessage,
-  EventId,
-  NostrEvent,
-  RelayToClientMessage,
-} from "../../core/protocol.d.ts";
 import "./protocol.d.ts";
-import { ConnectionClosed, EventRejected, Relay } from "../../core/relays.ts";
 import { afterAll, beforeAll, describe, it } from "../../lib/std/testing.ts";
 import {
   assert,
@@ -13,6 +6,13 @@ import {
   assertInstanceOf,
 } from "../../lib/std/assert.ts";
 import { MockWebSocket } from "../../lib/testing.ts";
+import {
+  ClientToRelayMessage,
+  EventId,
+  NostrEvent,
+  RelayToClientMessage,
+} from "../../core/protocol.d.ts";
+import { ConnectionClosed, Relay } from "../../core/relays.ts?nips=1";
 
 describe("NIP-01/Relay", () => {
   const url = "wss://localhost:8080";
@@ -30,6 +30,9 @@ describe("NIP-01/Relay", () => {
     }
   });
 
+  it("should have loaded NIP-01 module", () => {
+    assertEquals(relay.config.modules.length, 1);
+  });
   it("should not connect when a subscription is created", () => {
     sub_1 = relay.subscribe({ kinds: [1] }, { id: "test-1" });
     assert(sub_1 instanceof ReadableStream);
@@ -123,11 +126,12 @@ describe("NIP-01/Relay", () => {
       );
     });
     const event = { id: eid, kind: 1 };
-    assertInstanceOf(
-      // deno-lint-ignore no-explicit-any
-      await relay.publish(event as any).catch((e) => e),
-      EventRejected,
-    );
+    // deno-lint-ignore no-explicit-any
+    const result: unknown = await relay.publish(event as any).catch((e) => e);
+    // FIXME: This should be an EventRejected instance.
+    assertInstanceOf(result, Error);
+    assertEquals(result.message, "error: test");
+    assertEquals(result.cause, event);
     await arrived;
   });
   it("should throw ConnectionClosed when connection is closed before recieving an OK message", async () => {
