@@ -2,7 +2,7 @@ import {
   EventRejected,
   PublicationEvent,
   RelayModule,
-  SubscriptionEvent,
+  RelaySubscriptionEvent,
 } from "../../core/relays.ts";
 
 export default {
@@ -14,7 +14,7 @@ export default {
       case "EOSE": {
         const sid = message[1];
         return relay.dispatchEvent(
-          new SubscriptionEvent(sid, { data: message }),
+          new RelaySubscriptionEvent(sid, { data: message }),
         );
       }
       case "OK": {

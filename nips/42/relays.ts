@@ -7,4 +7,4 @@ export default {
       console.log("AUTH", message);
     }
   },
-} satisfies RelayModule;
+} satisfies RelayModule["default"];

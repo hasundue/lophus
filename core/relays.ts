@@ -86,18 +86,18 @@ export class Relay extends NostrNode<
   ) {
     const url = typeof init === "string" ? init : init.url;
     const config = {
-      ...options,
-      modules: NIPs.concat(options?.modules ?? []),
       nbuffer: 10,
       logger: {},
+      ...options,
+      modules: NIPs.concat(options?.modules ?? []),
     };
     super(new LazyWebSocket(url), config);
     this.config = {
-      ...config,
       url,
       name: new URL(url).hostname,
       read: true,
       write: true,
+      ...config,
     };
     this.ws.addEventListener(
       "message",
@@ -188,7 +188,7 @@ type EventDataTypeRecord =
     [T in EventId]: PublicationMessage;
   };
 
-export class SubscriptionEvent extends NostrNodeEvent<
+export class RelaySubscriptionEvent extends NostrNodeEvent<
   EventDataTypeRecord,
   SubscriptionId
 > {

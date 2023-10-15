@@ -12,11 +12,7 @@ import {
   NostrEvent,
   RelayToClientMessage,
 } from "../../core/protocol.d.ts";
-import {
-  ConnectionClosed,
-  EventRejected,
-  Relay,
-} from "../../core/relays.ts?nips=1";
+import { ConnectionClosed, Relay } from "../../core/relays.ts?nips=1";
 
 describe("NIP-01/Relay", () => {
   const url = "wss://localhost:8080";

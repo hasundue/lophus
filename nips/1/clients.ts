@@ -1,5 +1,5 @@
 import type { NostrEvent } from "../../core/protocol.d.ts";
-import { ClientModule, SubscriptionEvent } from "../../core/clients.ts";
+import { ClientModule, ClientSubscriptionEvent } from "../../core/clients.ts";
 
 export default {
   async handleClientToRelayMessage({ message, client }) {
@@ -35,7 +35,7 @@ export default {
         }),
       );
       return client.dispatchEvent(
-        new SubscriptionEvent(sid, { data: message }),
+        new ClientSubscriptionEvent(sid, { data: message }),
       );
     }
   },

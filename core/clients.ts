@@ -110,7 +110,7 @@ type SubscriptionMessage = {
     SubscriptionId ? ClientToRelayMessage<T> : never;
 }[ClientToRelayMessageType];
 
-export class SubscriptionEvent extends NostrNodeEvent<
+export class ClientSubscriptionEvent extends NostrNodeEvent<
   EventDataTypeRecord,
   SubscriptionId
 > {
