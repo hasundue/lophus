@@ -1,7 +1,7 @@
 import {
   EventRejected,
   PublicationEvent,
-  RelayExtension,
+  RelayModule,
   SubscriptionEvent,
 } from "../../core/relays.ts";
 
@@ -81,4 +81,4 @@ export default {
     }
     return messenger.close();
   },
-} satisfies RelayExtension;
+} satisfies RelayModule;

@@ -1,4 +1,4 @@
-import type { RelayExtension } from "../../core/relays.ts";
+import type { RelayModule } from "../../core/relays.ts";
 
 export default {
   handleRelayToClientMessage({ message }) {
@@ -7,4 +7,4 @@ export default {
       console.log("AUTH", message);
     }
   },
-} satisfies RelayExtension;
+} satisfies RelayModule;

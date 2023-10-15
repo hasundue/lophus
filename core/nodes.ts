@@ -3,12 +3,17 @@ import type { Logger } from "./types.ts";
 import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
-export interface NostrNodeConfig {
+export interface NostrNodeConfig<
+  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
+> {
+  modules: NostrNodeModule<F>[];
   logger: Logger;
   nbuffer: number;
 }
 
-export type NostrNodeOptions = Partial<NostrNodeConfig>;
+export type NostrNodeOptions<
+  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
+> = Partial<NostrNodeConfig<F>>;
 
 /**
  * Common base class for relays and clients.
@@ -18,41 +23,20 @@ export class NostrNode<
   E extends EventDataTypeRecord = EventDataTypeRecord,
   F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > extends NonExclusiveWritableStream<W> {
-  readonly config: Readonly<NostrNodeConfig>;
+  readonly config: Readonly<NostrNodeConfig<F>>;
   protected readonly functions: NostrNodeFunctionSet<F> = {};
   protected readonly aborter = new AbortController();
 
-  override addEventListener = <T extends EventType<E>>(
-    type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
-    options?: AddEventListenerOptions,
-  ) => {
-    super.addEventListener(
-      type,
-      listener as EventListenerOrEventListenerObject,
-      { signal: this.aborter.signal, ...options },
-    );
-  };
-
-  declare removeEventListener: <T extends EventType<E>>(
-    type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
-    options?: boolean | EventListenerOptions,
-  ) => void;
-
-  declare dispatchEvent: <T extends EventType<E>>(
-    event: NostrNodeEvent<E, T>,
-  ) => boolean;
-
   constructor(
     readonly ws: WebSocketLike,
-    opts: NostrNodeOptions = {},
+    opts: NostrNodeOptions<F> = {},
   ) {
     super({
       write: (msg) => this.ws.send(JSON.stringify(msg)),
       close: () => this.ws.close(),
     });
-    this.config = { logger: {}, nbuffer: 10, ...opts };
+    this.config = { modules: [], logger: {}, nbuffer: 10, ...opts };
+    this.config.modules.forEach((m) => this.addModule(m));
   }
 
   get status(): WebSocketReadyState {
@@ -64,7 +48,7 @@ export class NostrNode<
     return super.close();
   }
 
-  addExtension(extension: NostrNodeExtension<F>) {
+  addModule(extension: NostrNodeModule<F>) {
     for (const name in extension) {
       this.addFunction(name, extension[name]!);
     }
@@ -89,18 +73,36 @@ export class NostrNode<
       );
     }
   }
+
+  override addEventListener = <T extends EventType<E>>(
+    type: T,
+    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+    options?: AddEventListenerOptions,
+  ) => {
+    super.addEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      { signal: this.aborter.signal, ...options },
+    );
+  };
+
+  declare removeEventListener: <T extends EventType<E>>(
+    type: T,
+    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+    options?: boolean | EventListenerOptions,
+  ) => void;
+
+  declare dispatchEvent: <T extends EventType<E>>(
+    event: NostrNodeEvent<E, T>,
+  ) => boolean;
 }
 
 // ------------------------------
 // Extensions
 // ------------------------------
 
-export interface NostrNodeExtensionModule {
-  default: NostrNodeExtension;
-}
-
-export type NostrNodeExtension<
-  R extends FunctionParameterTypeRecord = Record<string, never>,
+export type NostrNodeModule<
+  R extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > = {
   [K in FunctionKey<R>]?: FunctionType<R, K>;
 };
@@ -115,7 +117,9 @@ type NostrNodeFunctionSet<R extends FunctionParameterTypeRecord> = Partial<
   }
 >;
 
-export type FunctionParameterTypeRecord = Record<string, FunctionParameterType>;
+interface FunctionParameterTypeRecord {
+  [K: string]: FunctionParameterType;
+}
 
 // deno-lint-ignore no-empty-interface
 interface FunctionParameterType {}

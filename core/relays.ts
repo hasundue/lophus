@@ -15,10 +15,22 @@ import {
   NostrNode,
   NostrNodeConfig,
   NostrNodeEvent,
-  NostrNodeExtension,
+  NostrNodeModule,
 } from "./nodes.ts";
 import { LazyWebSocket } from "./websockets.ts";
-import nip1 from "../nips/1/relays.ts";
+
+// ----------------------
+// NIPs
+// ----------------------
+
+const nips = await Promise.all(
+  new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
+    (nip) =>
+      import(
+        new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
+      ) as RelayModule,
+  ) ?? [],
+);
 
 // ----------------------
 // Errors
@@ -37,12 +49,12 @@ export interface RelayLike
   publish: Relay["publish"];
 }
 
-export interface RelayConfig extends NostrNodeConfig {
+export interface RelayConfig
+  extends NostrNodeConfig<RelayFunctionParameterTypeRecord> {
   url: RelayUrl;
   name: string;
   read: boolean;
   write: boolean;
-  extensions: RelayExtension[];
 }
 
 export type RelayOptions = Partial<RelayConfig>;
@@ -63,7 +75,7 @@ export interface SubscriptionOptions {
 export class Relay extends NostrNode<
   ClientToRelayMessage,
   EventDataTypeRecord,
-  FunctionParameterTypeRecord
+  RelayFunctionParameterTypeRecord
 > {
   declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
@@ -76,8 +88,8 @@ export class Relay extends NostrNode<
     super(new LazyWebSocket(url), opts);
     // deno-fmt-ignore
     this.config = {
-      url, name: new URL(url).hostname, extensions: [nip1],
-      read: true, write: true, logger: {}, nbuffer: 10, ...opts,
+      modules: nips, logger: {}, nbuffer: 10,
+      url, name: new URL(url).hostname, read: true, write: true, ...opts,
     };
     this.ws.addEventListener(
       "message",
@@ -90,7 +102,6 @@ export class Relay extends NostrNode<
         });
       },
     );
-    this.config.extensions.forEach((extension) => this.addExtension(extension));
   }
 
   subscribe<K extends EventKind>(
@@ -199,15 +210,15 @@ export class PublicationEvent extends NostrNodeEvent<
 // Functions
 // ----------------------
 
-export type RelayExtension = NostrNodeExtension<FunctionParameterTypeRecord>;
+export type RelayModule = NostrNodeModule<RelayFunctionParameterTypeRecord>;
 
-type FunctionParameterTypeRecord = {
-  [K in keyof _FunctionParameterTypeRecord]:
-    & _FunctionParameterTypeRecord[K]
+type RelayFunctionParameterTypeRecord = {
+  [K in keyof FunctionParameterTypeRecord]:
+    & FunctionParameterTypeRecord[K]
     & RelayFunctionContext;
 };
 
-type _FunctionParameterTypeRecord = {
+type FunctionParameterTypeRecord = {
   "handleRelayToClientMessage": {
     message: RelayToClientMessage;
   };
@@ -240,32 +251,11 @@ interface SubscriptionContext {
   options: SubscriptionOptions;
 }
 
-/**
- * A handler for general messages from the relay
- */
-export type RelayToClientMessageHandler<
-  T extends RelayToClientMessageType = RelayToClientMessageType,
-> = (
-  context: RelayToClientMessageContext<T>,
-) => void;
-
-export interface RelayToClientMessageContext<
-  T extends RelayToClientMessageType = RelayToClientMessageType,
-> extends RelayFunctionContext {
-  message: RelayToClientMessage<T>;
-}
-
-/**
- * A handler for responses to subscription requests
- */
 type SubscriptionMessage = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends
     SubscriptionId ? RelayToClientMessage<T> : never;
 }[RelayToClientMessageType];
 
-/**
- * A handler for responses to publications
- */
 type PublicationMessage = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
     ? RelayToClientMessage<T>
