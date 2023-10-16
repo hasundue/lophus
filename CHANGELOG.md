@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.7](https://github.com/hasundue/lophus/compare/0.0.6...0.0.7) (2023-10-16)
+
+
+### Features
+
+* NIP-7 and NIP-42 (WIP) ([#16](https://github.com/hasundue/lophus/issues/16)) ([1399b04](https://github.com/hasundue/lophus/commit/1399b04b7887c904dc8c2adec7589300efc921a9))
+
 ## [0.0.6](https://github.com/hasundue/lophus/compare/0.0.5...0.0.6) (2023-10-04)
 
 
