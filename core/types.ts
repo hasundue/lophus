@@ -34,8 +34,9 @@ export type AlphabetLetter =
   | "V" | "W" | "X" | "Y" | "Z";
 
 // ----------------------
-// Logger
+// Loggers
 // ----------------------
+
 export interface Logger {
   debug?: (...args: unknown[]) => void;
   info?: (...args: unknown[]) => void;

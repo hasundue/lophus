@@ -9,16 +9,16 @@
 Lophus is a TypeScript library for development of [Nostr][nostr] clients and
 relays, oriented to web standards and edge environments.
 
-## Features
+## Concept
 
-- **Declarative** 🌊 - Lets you focus on the data flow rather than underlying
-  logic.
-- **Portable** 📦 - The core modules have no dependencies on runtime APIs.
-- **Lightweight** 🪶 - The minified version of client core (client.min.js) is
-  about 5 KB.
-- **Modular** 🔌 - High-level interfaces and NIPs are implemented as
-  [optional modules][modules], which enables you to keep an app as small as
-  possible.
+- **Modular** 🔌 - NIPs and high-level interfaces are implemented as optional
+  TypeScript modules, which enables you to keep an app as small as possible.
+- **Portable** 📦 - The core modules are build upon
+  [Web Standard APIs][web-standard-api], which makes it possible to run on
+  various environment.
+- **Productive** 🌊 - Declarative interfaces let you focus on the data flow
+  rather than underlying logic, and strict type checking helps you to avoid
+  runtime errors.
 - **Compatible** 🤝 - Shares the same data structure for events as
   [nostr-tools][nostr-tools].
 
@@ -31,6 +31,10 @@ relays, oriented to web standards and edge environments.
 
 - [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic
       protocol
+- [x] [NIP-02](https://github.com/nostr-protocol/nips/blob/master/02.md):
+      Contact list
+- [x] [NIP-42](https://github.com/nostr-protocol/nips/blob/master/42.md): Client
+      authentication
 
 ## References
 
@@ -44,9 +48,9 @@ Development of Lophus is inspired by the following projects:
 
 <!-- Links -->
 
+[web-standard-api]: https://developer.mozilla.org/docs/Web/API
 [nostr]: https://nostr.com
 [nostr-nips]: https://github.com/nostr-protocol/nips
-[streams-api]: https://developer.mozilla.org/docs/Web/API/Streams_API
 [modules]: https://github.com/hasundue/lophus/tree/main/lib
 [nostr-tools]: https://github.com/nbd-wtf/nostr-tools
 [nostring]: https://github.com/xbol0/nostring
