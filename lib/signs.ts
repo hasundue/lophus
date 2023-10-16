@@ -6,10 +6,11 @@ import type {
   EventSerializePrecursor,
   NostrEvent,
   Signature,
-} from "../mod.ts";
+} from "../core/protocol.d.ts";
+import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
-import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
+import { UnsignedEvent } from "../nips/7/protocol.d.ts";
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 
@@ -23,14 +24,6 @@ export const PublicKey = {
   from: (nsec: PrivateKey) =>
     bytesToHex(schnorr.getPublicKey(nsec)) as PublicKey,
 };
-
-/**
- * An event that has not been signed.
- */
-export type UnsignedEvent<K extends EventKind> = Omit<
-  NostrEvent<K>,
-  "id" | "sig"
->;
 
 /**
  * A transform stream that signs events.
@@ -48,19 +41,16 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
 
   sign<K extends EventKind>(event: EventInit<K>): NostrEvent<K> {
     if (isSigned(event)) return event;
-
     const unsigned = {
       created_at: Timestamp.now,
       tags: [],
       ...event,
-      pubkey: PublicKey.from(this.nsec),
       content: JSON.stringify(event.content) as Stringified<EventContentFor<K>>,
     } satisfies UnsignedEvent<K>;
-
-    const hash = sha256(this.#encoder.encode(serialize(unsigned)));
-
+    const precursor = { ...unsigned, pubkey: PublicKey.from(this.nsec) };
+    const hash = sha256(this.#encoder.encode(serialize(precursor)));
     return {
-      ...unsigned,
+      ...precursor,
       id: bytesToHex(hash) as EventId,
       sig: bytesToHex(schnorr.sign(hash, this.nsec)) as Signature,
     };
@@ -89,29 +79,29 @@ export class Verifier extends TransformStream<NostrEvent, NostrEvent> {
       },
     });
   }
-  verify(ev: NostrEvent): boolean {
-    const hash = sha256(serialize(ev));
-    return schnorr.verify(ev.sig, hash, ev.pubkey);
+  verify(event: NostrEvent): boolean {
+    const hash = sha256(serialize(event));
+    return schnorr.verify(event.sig, hash, event.pubkey);
   }
 }
 
 // A helper function that creates a precursor to a serialized event.
 function createPrecursor<K extends EventKind>(
-  ev: UnsignedEvent<K>,
+  event: UnsignedEvent<K> & { pubkey: PublicKey },
 ): EventSerializePrecursor<K> {
   return [
     0,
-    ev.pubkey,
-    ev.created_at,
-    ev.kind,
-    ev.tags ?? [],
-    ev.content,
+    event.pubkey,
+    event.created_at,
+    event.kind,
+    event.tags ?? [],
+    event.content,
   ];
 }
 
 // A helper function that serializes an event.
 function serialize<K extends EventKind>(
-  event: UnsignedEvent<K>,
+  event: UnsignedEvent<K> & { pubkey: PublicKey },
 ): SerializedEvent<K> {
   return JSON.stringify(createPrecursor(event)) as SerializedEvent<K>;
 }

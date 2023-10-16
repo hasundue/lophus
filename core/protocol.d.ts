@@ -156,6 +156,8 @@ export interface EventKindRecordEntry {
   ResponsePrefix?: string;
 }
 
+export type EventContent = EventContentFor<EventKind>;
+
 export type EventContentFor<K extends EventKind> =
   EventKindRecord[K]["Content"];
 
