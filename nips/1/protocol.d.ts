@@ -11,12 +11,13 @@ import "../../core/protocol.d.ts";
 import type { Url } from "../../core/types.ts";
 
 declare module "../../core/protocol.d.ts" {
-  enum NIP {
-    BasicProtocol = 1,
-  }
-  enum EventKind {
-    Metadata = 0,
-    TextNote = 1,
+  interface NipRecord {
+    1: {
+      ClientToRelayMessage: "EVENT" | "REQ" | "CLOSE";
+      RelayToClientMessage: "EVENT" | "OK" | "EOSE" | "NOTICE";
+      EventKind: 0 | 1;
+      Tag: "e" | "p" | "a" | "d";
+    };
   }
   interface TagRecord {
     /** Event ID */

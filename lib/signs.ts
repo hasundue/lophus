@@ -7,10 +7,12 @@ import type {
   NostrEvent,
   Signature,
 } from "../core/protocol.d.ts";
+import type { UnsignedEvent } from "../nips/7/protocol.d.ts";
 import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
-import { UnsignedEvent } from "../nips/7/protocol.d.ts";
+
+export type { UnsignedEvent } from "../nips/7/protocol.d.ts";
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 

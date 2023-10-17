@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-empty-enum no-empty-interface
+// deno-lint-ignore-file no-empty-interface
 
 /**
  * Implementation of unextendable part of NIP-01 (Nostr basic protocol):
@@ -15,11 +15,9 @@ import type { AlphabetLetter, Brand, Stringified } from "./types.ts";
 // Extendable interfaces
 // ----------------------
 
-export enum NIP {}
-export enum EventKind {}
+export interface NipRecord {}
 
-export interface EventKindRecord
-  extends Record<EventKind, EventKindRecordEntry> {}
+export interface EventKindRecord {}
 
 export interface TagRecord {}
 
@@ -65,7 +63,7 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
 // Tags
 // ----------------------
 
-export type TagType = keyof TagRecord;
+export type TagType = keyof TagRecord & string;
 export type TagParam = string | undefined;
 
 export type Tag<T extends TagType = TagType> = {
@@ -150,6 +148,8 @@ export type SubscriptionFilter<
 // Events
 // ----------------------
 
+export type EventKind = keyof EventKindRecord & number;
+
 export interface EventKindRecordEntry {
   Tag: Tag;
   Content: unknown;
@@ -158,8 +158,8 @@ export interface EventKindRecordEntry {
 
 export type EventContent = EventContentFor<EventKind>;
 
-export type EventContentFor<K extends EventKind> =
-  EventKindRecord[K]["Content"];
+export type EventContentFor<K extends EventKind> = EventKindRecord[K] extends
+  EventKindRecordEntry ? EventKindRecord[K]["Content"] : never;
 
 export type ResponsePrefixFor<K extends EventKind = EventKind> =
   EventKindRecord[K] extends { ResponsePrefix: infer P extends string } ? P
@@ -172,3 +172,16 @@ export type ParameterizedReplaceableEventKind = Brand<
   EventKind,
   "ParameterizedReplaceable"
 >;
+
+// ----------------------
+// NIPs
+// ----------------------
+
+export type Nip = keyof NipRecord & number;
+
+export interface NipRecordEntry {
+  ClientToRelayMessage: ClientToRelayMessageType;
+  RelayToClientMessage: RelayToClientMessageType;
+  EventKind: EventKind;
+  Tag: TagType;
+}

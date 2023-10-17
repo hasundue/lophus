@@ -1,7 +1,15 @@
+import { Stringified } from "../core/types.ts";
+import "../nips/1/protocol.d.ts";
 import { describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
 import { Timestamp } from "../lib/times.ts";
-import { PrivateKey, PublicKey, Signer, Verifier } from "./signs.ts";
+import {
+  PrivateKey,
+  PublicKey,
+  Signer,
+  UnsignedEvent,
+  Verifier,
+} from "./signs.ts";
 
 describe("PrivateKey", () => {
   it("generates a private key", () => {
@@ -21,12 +29,12 @@ describe("PublicKey", () => {
 describe("Signer/Verifier", () => {
   const nsec = PrivateKey.generate();
   const signer = new Signer(nsec);
-  const event = {
+  const event: UnsignedEvent = {
     pubkey: PublicKey.from(nsec),
     created_at: Timestamp.now,
     kind: 1,
     tags: [],
-    content: "lophus",
+    content: "lophus" as Stringified<string>,
   };
   const verifier = new Verifier();
 
