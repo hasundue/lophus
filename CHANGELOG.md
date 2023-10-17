@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.9](https://github.com/hasundue/lophus/compare/0.0.8...0.0.9) (2023-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* abandon NonExclusiveWritableStream ([#22](https://github.com/hasundue/lophus/issues/22))
+
+### Code Refactoring
+
+* abandon NonExclusiveWritableStream ([#22](https://github.com/hasundue/lophus/issues/22)) ([abf06ef](https://github.com/hasundue/lophus/commit/abf06ef5e0d0e3e616abd88a2158bbab1532cc0c))
+
 ## [0.0.8](https://github.com/hasundue/lophus/compare/0.0.7...0.0.8) (2023-10-17)
 
 
