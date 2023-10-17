@@ -8,7 +8,7 @@ declare module "../../core/protocol.d.ts" {
   }
   interface EventKindRecord {
     3: {
-      OptionalTag: ContactTag;
+      Tags: ContactTag[];
       Content: "";
     };
   }

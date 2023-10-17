@@ -21,6 +21,7 @@ declare module "../../core/protocol.d.ts" {
   }
   interface EventKindRecord {
     0: {
+      OptionalTag: Tag;
       Content: {
         name: string;
         about: string;
@@ -28,6 +29,7 @@ declare module "../../core/protocol.d.ts" {
       };
     };
     1: {
+      OptionalTag: Tag;
       Content: string;
     };
   }

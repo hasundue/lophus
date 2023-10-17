@@ -84,7 +84,7 @@ export type Tags<K extends EventKind> = EventKindRecord[K] extends
   { Tags: infer T extends Tag[] } ? T : [];
 
 export type OptionalTag<K extends EventKind> = EventKindRecord[K] extends
-  { OptionalTag: infer T extends Tag } ? T | undefined : Tag | undefined;
+  { OptionalTag: infer T extends Tag } ? T : never;
 
 // ----------------------
 // Communication

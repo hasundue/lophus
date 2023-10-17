@@ -33,4 +33,17 @@ describe("EventInit<22242>", () => {
     } satisfies EventInit<22242>;
     assertType<Has<typeof init, EventInit<22242>>>(false);
   });
+  it('tags should not have other tags than "relay" and "challenge"', () => {
+    const init = {
+      kind: 22242,
+      content: "",
+      tags: [
+        ["relay", "wss://nos.lol"],
+        ["challenge", "string"],
+        // @ts-expect-error tags should not have other tags than "relay" and "challenge"
+        ["other", "string"],
+      ],
+    } satisfies EventInit<22242>;
+    assertType<Has<typeof init, EventInit<22242>>>(false);
+  });
 });
