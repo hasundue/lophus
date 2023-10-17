@@ -18,13 +18,13 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { importNIPs } from "./nips.ts";
+import { NIPs } from "./nips.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const NIPs = await importNIPs<RelayModule>(import.meta.url, "../nips");
+const nips = await NIPs.import<RelayModule>(import.meta.url, "../nips");
 
 // ----------------------
 // Errors
@@ -83,7 +83,7 @@ export class Relay extends NostrNode<
       nbuffer: 10,
       logger: {},
       ...options,
-      modules: NIPs.concat(options?.modules ?? []),
+      modules: nips.concat(options?.modules ?? []),
     };
     super(new LazyWebSocket(url), config);
     this.config = {

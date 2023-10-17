@@ -12,13 +12,13 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { importNIPs } from "./nips.ts";
+import { NIPs } from "./nips.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const NIPs = await importNIPs<ClientModule>(import.meta.url, "../nips");
+const nips = await NIPs.import<ClientModule>(import.meta.url, "../nips");
 
 /**
  * A class that represents a remote Nostr client.
@@ -41,7 +41,7 @@ export class Client extends NostrNode<
   constructor(ws: WebSocket, opts?: ClientOptions) {
     super(ws, {
       ...opts,
-      modules: NIPs.concat(opts?.modules ?? []),
+      modules: nips.concat(opts?.modules ?? []),
     });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       // TODO: Validate the type of the message.
