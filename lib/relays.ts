@@ -10,24 +10,21 @@ import {
   RelayLikeOptions,
   SubscriptionOptions,
 } from "../core/relays.ts";
-import { NonExclusiveWritableStream } from "../core/streams.ts";
 import { Distinctor, merge } from "../lib/streams.ts";
 
 /**
  * A pool of relays that can be used as a single relay.
  */
-export class RelayGroup extends NonExclusiveWritableStream<ClientToRelayMessage>
+export class RelayGroup extends WritableStream<ClientToRelayMessage>
   implements RelayLike {
   readonly config: Readonly<RelayLikeConfig>;
   #relays_read: RelayLike[];
   #relays_write: RelayLike[];
 
   constructor(readonly relays: RelayLike[], options?: RelayLikeOptions) {
-    const writers = relays.filter((r) => r.config.write)
-      .map((r) => r.getWriter());
     super({
       async write(msg) {
-        await Promise.all(writers.map((r) => r.write(msg)));
+        await Promise.all(relays.map((r) => r.send(msg)));
       },
     });
     this.config = {
@@ -61,6 +58,10 @@ export class RelayGroup extends NonExclusiveWritableStream<ClientToRelayMessage>
   // ----------------------
   // NostrNode methods
   // ----------------------
+
+  async send(msg: ClientToRelayMessage) {
+    await Promise.all(this.relays.map((r) => r.send(msg)));
+  }
 
   async close() {
     await Promise.all(this.relays.map((r) => r.close()));

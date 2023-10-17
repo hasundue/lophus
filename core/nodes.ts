@@ -1,7 +1,6 @@
 import type { NostrMessage } from "./protocol.d.ts";
 import type { Logger } from "./types.ts";
 import { WebSocketLike } from "./websockets.ts";
-import { NonExclusiveWritableStream } from "./streams.ts";
 
 export interface NostrNodeConfig<
   F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
@@ -22,7 +21,8 @@ export class NostrNode<
   W extends NostrMessage = NostrMessage,
   E extends EventDataTypeRecord = EventDataTypeRecord,
   F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> extends NonExclusiveWritableStream<W> {
+> extends WritableStream<W> implements EventTarget {
+  readonly #eventTarget = new EventTarget();
   readonly config: Readonly<NostrNodeConfig<F>>;
   protected readonly functions: NostrNodeFunctionSet<F> = {};
   protected readonly aborter = new AbortController();
@@ -39,13 +39,23 @@ export class NostrNode<
     this.config.modules.forEach((m) => this.addModule(m));
   }
 
+  send(msg: W) {
+    return this.ws.send(JSON.stringify(msg));
+  }
+
   get status(): WebSocket["readyState"] {
     return this.ws.readyState;
   }
 
-  close() {
+  async close() {
     this.aborter.abort();
-    return super.close();
+    try {
+      await super.close();
+    } catch (err) {
+      if (super.locked) { // This should not happen.
+        throw err;
+      } // Otherwise the stream is already closed, which is fine.
+    }
   }
 
   addModule(module: NostrNodeModule<F>) {
@@ -75,27 +85,35 @@ export class NostrNode<
     }
   }
 
-  override addEventListener = <T extends EventType<E>>(
+  addEventListener = <T extends EventType<E>>(
     type: T,
     listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
     options?: AddEventListenerOptions,
   ) => {
-    super.addEventListener(
+    return this.#eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
       { signal: this.aborter.signal, ...options },
     );
   };
 
-  declare removeEventListener: <T extends EventType<E>>(
+  removeEventListener = <T extends EventType<E>>(
     type: T,
     listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
     options?: boolean | EventListenerOptions,
-  ) => void;
+  ) => {
+    return this.#eventTarget.removeEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options,
+    );
+  };
 
-  declare dispatchEvent: <T extends EventType<E>>(
+  dispatchEvent = <T extends EventType<E>>(
     event: NostrNodeEvent<E, T>,
-  ) => boolean;
+  ) => {
+    return this.#eventTarget.dispatchEvent(event);
+  };
 }
 
 // ------------------------------

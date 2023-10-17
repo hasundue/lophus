@@ -10,7 +10,6 @@ import type {
   SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.d.ts";
-import { NonExclusiveWritableStream } from "./streams.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import {
   NostrNode,
@@ -164,9 +163,9 @@ export class Relay extends NostrNode<
 // RelayLikes
 // ----------------------
 
-export interface RelayLike
-  extends NonExclusiveWritableStream<ClientToRelayMessage> {
+export interface RelayLike extends WritableStream<ClientToRelayMessage> {
   readonly config: RelayLikeConfig;
+  send: Relay["send"];
   subscribe: Relay["subscribe"];
   publish: Relay["publish"];
 }
