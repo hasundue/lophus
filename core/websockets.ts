@@ -1,10 +1,8 @@
-import { Notify } from "./x/async.ts";
-
 export type WebSocketEventType = keyof WebSocketEventMap;
 
 export interface WebSocketLike {
   readonly url: string;
-  readonly readyState: WebSocketReadyState;
+  readonly readyState: WebSocket["readyState"];
   send(
     data: string | ArrayBufferLike | Blob | ArrayBufferView,
   ): void | Promise<void>;
@@ -25,14 +23,11 @@ type EventListenerOptionsMap = Map<
  */
 export class LazyWebSocket implements WebSocketLike {
   #ws?: WebSocket;
-  #createWebSocket: () => WebSocket;
-
+  readonly #createWebSocket: () => WebSocket;
   readonly #eventListenerMap = new Map<
     WebSocketEventType,
     EventListenerOptionsMap
   >();
-  readonly #notifier = new Notify();
-
   readonly url: string;
 
   constructor(
@@ -41,11 +36,6 @@ export class LazyWebSocket implements WebSocketLike {
   ) {
     this.#createWebSocket = () => {
       const ws = new WebSocket(url, protocols);
-      for (const type of ["close", "open"] as const) {
-        ws.addEventListener(type, () => {
-          this.#notifier.notifyAll();
-        });
-      }
       this.#eventListenerMap.forEach((map, type) => {
         map.forEach((options, listener) => {
           ws.addEventListener(type, listener, options);
@@ -60,21 +50,26 @@ export class LazyWebSocket implements WebSocketLike {
     return this.#ws ??= this.#createWebSocket();
   }
 
+  #once(type: WebSocketEventType): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.#created().addEventListener(type, () => resolve(), { once: true });
+    });
+  }
+
   async #ready(): Promise<WebSocket> {
     this.#ws = this.#created();
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.#notifier.notified();
-        /* falls through */
-      case WebSocket.OPEN:
         break;
+      case WebSocket.OPEN:
+        return this.#ws;
       case WebSocket.CLOSING:
-        await this.#notifier.notified();
+        await this.#once("close");
         /* falls through */
       case WebSocket.CLOSED:
         this.#ws = this.#createWebSocket();
-        await this.#notifier.notified();
     }
+    await this.#once("open");
     return this.#ws;
   }
 
@@ -93,13 +88,13 @@ export class LazyWebSocket implements WebSocketLike {
     }
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
-        await this.#notifier.notified();
+        await this.#once("open");
         /* falls through */
       case WebSocket.OPEN:
         this.#ws.close(code, reason);
         /* falls through */
       case WebSocket.CLOSING:
-        await this.#notifier.notified();
+        await this.#once("close");
         /* falls through */
       case WebSocket.CLOSED:
         break;
@@ -107,7 +102,7 @@ export class LazyWebSocket implements WebSocketLike {
     this.#ws = undefined;
   }
 
-  get readyState(): WebSocketReadyState {
+  get readyState(): WebSocket["readyState"] {
     return this.#ws ? this.#ws.readyState : WebSocket.CLOSED;
   }
 
@@ -137,14 +132,4 @@ export class LazyWebSocket implements WebSocketLike {
   dispatchEvent: WebSocket["dispatchEvent"] = (event: Event) => {
     return this.#ws?.dispatchEvent(event) ?? false;
   };
-}
-
-/**
- * The ready state of a WebSocket.
- */
-export enum WebSocketReadyState {
-  CONNECTING = 0,
-  OPEN = 1,
-  CLOSING = 2,
-  CLOSED = 3,
 }

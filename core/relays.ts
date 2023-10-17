@@ -37,12 +37,6 @@ export class ConnectionClosed extends Error {}
 // Interfaces
 // ----------------------
 
-export interface RelayLike
-  extends NonExclusiveWritableStream<ClientToRelayMessage> {
-  subscribe: Relay["subscribe"];
-  publish: Relay["publish"];
-}
-
 export interface RelayConfig
   extends NostrNodeConfig<RelayFunctionParameterTypeRecord> {
   url: RelayUrl;
@@ -131,10 +125,6 @@ export class Relay extends NostrNode<
         );
         this.callFunction("startSubscription", { controller, ...context });
       },
-      pull: async () => {
-        await this.ws.ready();
-        // TODO: backpressure
-      },
       cancel: (reason) => {
         return this.callFunction("closeSubscription", { reason, ...context });
       },
@@ -169,6 +159,24 @@ export class Relay extends NostrNode<
     });
   }
 }
+
+// ----------------------
+// RelayLikes
+// ----------------------
+
+export interface RelayLike
+  extends NonExclusiveWritableStream<ClientToRelayMessage> {
+  readonly config: RelayLikeConfig;
+  subscribe: Relay["subscribe"];
+  publish: Relay["publish"];
+}
+
+export type RelayLikeConfig = Omit<
+  RelayConfig,
+  "url" | keyof NostrNodeConfig<RelayFunctionParameterTypeRecord>
+>;
+
+export type RelayLikeOptions = Partial<RelayLikeConfig>;
 
 // ----------------------
 // Events
