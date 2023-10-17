@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.8](https://github.com/hasundue/lophus/compare/0.0.7...0.0.8) (2023-10-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename RelayPool to RelayGroup and modify the API ([#19](https://github.com/hasundue/lophus/issues/19))
+
+### Code Refactoring
+
+* rename RelayPool to RelayGroup and modify the API ([#19](https://github.com/hasundue/lophus/issues/19)) ([f8dc248](https://github.com/hasundue/lophus/commit/f8dc24821dfad93631226a754c05ec81fcbb3f3f))
+
 ## [0.0.7](https://github.com/hasundue/lophus/compare/0.0.6...0.0.7) (2023-10-16)
 
 
