@@ -12,19 +12,13 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
+import { importNIPs } from "./nips.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const NIPs = await Promise.all(
-  new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
-    (nip) =>
-      import(
-        new URL(`../nips/${nip}/clients.ts`, import.meta.url).href
-      ) as Promise<ClientModule>,
-  ) ?? [],
-);
+const NIPs = await importNIPs<ClientModule>(import.meta.url, "../nips");
 
 /**
  * A class that represents a remote Nostr client.

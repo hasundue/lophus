@@ -177,7 +177,7 @@ export type ParameterizedReplaceableEventKind = Brand<
 // NIPs
 // ----------------------
 
-export type Nip = keyof NipRecord & number;
+export type NIP = keyof NipRecord & number;
 
 export interface NipRecordEntry {
   ClientToRelayMessage: ClientToRelayMessageType;

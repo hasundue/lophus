@@ -102,7 +102,9 @@ export class NostrNode<
 // Extensions
 // ------------------------------
 
-export interface NostrNodeModule<R extends FunctionParameterTypeRecord> {
+export interface NostrNodeModule<
+  R extends FunctionParameterTypeRecord,
+> {
   default: NostrNodeFunctions<R>;
 }
 

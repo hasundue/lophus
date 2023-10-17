@@ -18,19 +18,13 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
+import { importNIPs } from "./nips.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const NIPs = await Promise.all(
-  new URL(import.meta.url).searchParams.get("nips")?.split(",").map(Number).map(
-    (nip) =>
-      import(
-        new URL(`../nips/${nip}/relays.ts`, import.meta.url).href
-      ) as Promise<RelayModule>,
-  ) ?? [],
-);
+const NIPs = await importNIPs<RelayModule>(import.meta.url, "../nips");
 
 // ----------------------
 // Errors

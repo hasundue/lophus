@@ -1,5 +1,5 @@
 import { Stringified } from "../core/types.ts";
-import "../nips/1/protocol.d.ts";
+import "../nips/01/protocol.d.ts";
 import { describe, it } from "../lib/std/testing.ts";
 import { assert, assertEquals } from "../lib/std/assert.ts";
 import { Timestamp } from "../lib/times.ts";
