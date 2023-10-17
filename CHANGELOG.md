@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.10](https://github.com/hasundue/lophus/compare/0.0.9...0.0.10) (2023-10-17)
+
+
+### Features
+
+* stricter type checking on tag types of events ([#24](https://github.com/hasundue/lophus/issues/24)) ([d745d5b](https://github.com/hasundue/lophus/commit/d745d5b46b3c757b0a0300ac3c96843feaacef3a))
+
 ## [0.0.9](https://github.com/hasundue/lophus/compare/0.0.8...0.0.9) (2023-10-17)
 
 
