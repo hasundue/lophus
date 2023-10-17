@@ -1,7 +1,7 @@
 import { describe, it } from "../../lib/std/testing.ts";
 import { assertType, Has } from "../../lib/std/testing.ts";
 import { EventInit } from "../../lib/events.ts";
-import type { PublicKey } from "../../core/protocol.d.ts";
+import type { EventId, PublicKey } from "../../core/protocol.d.ts";
 import "./protocol.d.ts";
 
 describe("EventInit<3>", () => {
@@ -21,7 +21,7 @@ describe("EventInit<3>", () => {
       content: "",
       tags: [
         // @ts-expect-error: tag name should be "p"
-        ["e", "test" as PublicKey, "wss://nos.lol", "string"],
+        ["e", "test" as EventId, "wss://nos.lol", "string"],
       ],
     } satisfies EventInit<3>;
     assertType<Has<typeof init, EventInit<3>>>(false);

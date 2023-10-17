@@ -8,7 +8,7 @@ declare module "../../core/protocol.d.ts" {
       ClientToRelayMessage: "AUTH";
       RelayToClientMessage: "AUTH";
       EventKind: 22242;
-      Tag: Tag<"relay" | "challenge">;
+      Tag: "relay" | "challenge";
     };
   }
   interface RelayToClientMessageRecord {
@@ -19,7 +19,7 @@ declare module "../../core/protocol.d.ts" {
   }
   interface EventKindRecord {
     22242: {
-      Tag: Tag<"relay" | "challenge">;
+      Tags: [Tag<"relay">, Tag<"challenge">];
       Content: "";
       ResponsePrefix: "restricted";
     };

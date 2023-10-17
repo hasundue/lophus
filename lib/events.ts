@@ -1,15 +1,15 @@
 import type {
   ClientToRelayMessage,
-  EventContentFor,
+  EventContent,
   EventKind,
-  TagFor,
+  NostrEvent,
 } from "../mod.ts";
 import { Stringified } from "../core/types.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
-  kind: K;
-  tags?: TagFor<K>[];
-  content: EventContentFor<K> | Stringified<EventContentFor<K>>;
+  kind: NostrEvent<K>["kind"];
+  tags?: NostrEvent<K>["tags"];
+  content: EventContent<K> | Stringified<EventContent<K>>;
 }
 
 import type { Signer } from "./signs.ts";

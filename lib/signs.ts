@@ -1,6 +1,6 @@
 import type { Brand, Stringified } from "../core/types.ts";
 import type {
-  EventContentFor,
+  EventContent,
   EventId,
   EventKind,
   EventSerializePrecursor,
@@ -47,8 +47,9 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
       created_at: Timestamp.now,
       tags: [],
       ...event,
-      content: JSON.stringify(event.content) as Stringified<EventContentFor<K>>,
-    } satisfies UnsignedEvent<K>;
+      content: JSON.stringify(event.content) as Stringified<EventContent<K>>,
+      // TODO: Can we avoid this type assertion?
+    } as UnsignedEvent<K>;
     const precursor = { ...unsigned, pubkey: PublicKey.from(this.nsec) };
     const hash = sha256(this.#encoder.encode(serialize(precursor)));
     return {
