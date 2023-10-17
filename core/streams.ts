@@ -10,7 +10,6 @@ import { Lock } from "./x/async.ts";
 export class NonExclusiveWritableStream<W = unknown> extends EventTarget
   implements WritableStream<W> {
   readonly locked = false;
-
   readonly #writer: Lock<WritableStreamDefaultWriter<W>>;
 
   constructor(
