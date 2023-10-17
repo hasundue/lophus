@@ -1,5 +1,9 @@
 import type { Stringified } from "../../core/types.ts";
-import { EventContent, EventKind, NostrEvent } from "../../core/protocol.d.ts";
+import {
+  EventContentFor,
+  EventKind,
+  NostrEvent,
+} from "../../core/protocol.d.ts";
 import { EventInit } from "../../lib/events.ts";
 import { Timestamp } from "../../lib/times.ts";
 import { UnsignedEvent } from "./protocol.d.ts";
@@ -23,8 +27,8 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
       created_at: Timestamp.now,
       tags: [],
       ...init,
-      content: JSON.stringify(init.content) as Stringified<EventContent>,
-    } satisfies UnsignedEvent;
+      content: JSON.stringify(init.content) as Stringified<EventContentFor<K>>,
+    } satisfies UnsignedEvent<K>;
     return window.nostr!.signEvent(unsigned);
   }
 }
