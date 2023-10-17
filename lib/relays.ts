@@ -2,13 +2,12 @@ import type {
   ClientToRelayMessage,
   EventKind,
   NostrEvent,
-  RelayUrl,
   SubscriptionFilter,
 } from "../core/protocol.d.ts";
 import {
-  Relay,
-  RelayInit,
   RelayLike,
+  RelayLikeConfig,
+  RelayLikeOptions,
   SubscriptionOptions,
 } from "../core/relays.ts";
 import { NonExclusiveWritableStream } from "../core/streams.ts";
@@ -17,26 +16,28 @@ import { Distinctor, merge } from "../lib/streams.ts";
 /**
  * A pool of relays that can be used as a single relay.
  */
-export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
+export class RelayGroup extends NonExclusiveWritableStream<ClientToRelayMessage>
   implements RelayLike {
-  readonly relays: Relay[];
+  readonly config: Readonly<RelayLikeConfig>;
+  #relays_read: RelayLike[];
+  #relays_write: RelayLike[];
 
-  #relays_read: Relay[];
-
-  constructor(...init: (RelayUrl | RelayInit)[]) {
-    const relays = init.map((i) => new Relay(i));
-
+  constructor(readonly relays: RelayLike[], options?: RelayLikeOptions) {
     const writers = relays.filter((r) => r.config.write)
       .map((r) => r.getWriter());
-
     super({
       async write(msg) {
         await Promise.all(writers.map((r) => r.write(msg)));
       },
-    }, { highWaterMark: Math.max(...relays.map((r) => r.config.nbuffer)) });
-
-    this.relays = relays;
+    });
+    this.config = {
+      name: relays.map((r) => r.config.name).join(", "),
+      read: true,
+      write: true,
+      ...options,
+    };
     this.#relays_read = this.relays.filter((r) => r.config.read);
+    this.#relays_write = this.relays.filter((r) => r.config.write);
   }
 
   // ----------------------
@@ -54,7 +55,7 @@ export class RelayPool extends NonExclusiveWritableStream<ClientToRelayMessage>
   async publish<K extends EventKind>(
     msg: NostrEvent<K>,
   ) {
-    await Promise.all(this.relays.map((r) => r.publish(msg)));
+    await Promise.all(this.#relays_write.map((r) => r.publish(msg)));
   }
 
   // ----------------------

@@ -66,12 +66,7 @@ export default {
 
   startSubscription({ filters, id, relay }) {
     const messenger = relay.getWriter();
-    const request = () => messenger.write(["REQ", id, ...filters]);
-    if (relay.ws.readyState === WebSocket.OPEN) {
-      request();
-    }
-    // To start the subscription when the relay (re)connects.
-    relay.ws.addEventListener("open", request);
+    return messenger.write(["REQ", id, ...filters]);
   },
 
   async closeSubscription({ id, relay }) {

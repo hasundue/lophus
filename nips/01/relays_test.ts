@@ -33,10 +33,9 @@ describe("NIP-01/Relay", () => {
   it("should have loaded NIP-01 module", () => {
     assertEquals(relay.config.modules.length, 1);
   });
-  it("should not connect when a subscription is created", () => {
+  it("should create a subscription", () => {
     sub_1 = relay.subscribe({ kinds: [1] }, { id: "test-1" });
-    assert(sub_1 instanceof ReadableStream);
-    assertEquals(relay.status, WebSocket.CLOSED);
+    assertInstanceOf(sub_1, ReadableStream);
   });
   it("should receive text notes", async () => {
     const reader = sub_1.getReader();

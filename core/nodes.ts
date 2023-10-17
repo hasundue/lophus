@@ -1,6 +1,6 @@
 import type { NostrMessage } from "./protocol.d.ts";
 import type { Logger } from "./types.ts";
-import { WebSocketLike, WebSocketReadyState } from "./websockets.ts";
+import { WebSocketLike } from "./websockets.ts";
 import { NonExclusiveWritableStream } from "./streams.ts";
 
 export interface NostrNodeConfig<
@@ -39,7 +39,7 @@ export class NostrNode<
     this.config.modules.forEach((m) => this.addModule(m));
   }
 
-  get status(): WebSocketReadyState {
+  get status(): WebSocket["readyState"] {
     return this.ws.readyState;
   }
 
