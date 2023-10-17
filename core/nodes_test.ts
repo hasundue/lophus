@@ -5,6 +5,7 @@ import { MockWebSocket } from "../lib/testing.ts";
 
 describe("NostrNode", () => {
   let node: NostrNode;
+  let writer: WritableStreamDefaultWriter;
 
   beforeAll(() => {
     node = new NostrNode(new MockWebSocket());
@@ -23,12 +24,13 @@ describe("NostrNode", () => {
   });
 
   it("should be connected to the WebSocket after a message is sent", async () => {
-    await node.getWriter().write(["NOTICE", "test"]);
+    writer = node.getWriter();
+    await writer.write(["NOTICE", "test"]);
+    writer.releaseLock();
     assertEquals(node.status, WebSocket.OPEN);
   });
 
   it("should close the WebSocket when the node is closed", async () => {
-    await node.getWriter().write(["NOTICE", "test"]);
     await node.close();
     assertEquals(node.status, WebSocket.CLOSED);
   });

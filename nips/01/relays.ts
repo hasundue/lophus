@@ -60,20 +60,16 @@ export default {
   },
 
   publishEvent({ event, relay }) {
-    const writer = relay.getWriter();
-    writer.ready.then(() => writer.write(["EVENT", event]));
+    return relay.send(["EVENT", event]);
   },
 
   startSubscription({ filters, id, relay }) {
-    const messenger = relay.getWriter();
-    return messenger.write(["REQ", id, ...filters]);
+    return relay.send(["REQ", id, ...filters]);
   },
 
-  async closeSubscription({ id, relay }) {
-    const messenger = relay.getWriter();
+  closeSubscription({ id, relay }) {
     if (relay.ws.readyState === WebSocket.OPEN) {
-      await messenger.write(["CLOSE", id]);
+      return relay.send(["CLOSE", id]);
     }
-    return messenger.close();
   },
 } satisfies RelayModule["default"];

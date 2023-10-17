@@ -39,9 +39,10 @@ describe("EventPublisher", () => {
   });
 
   // FIXME: runtime error
-  it.ignore("should be connectable to a relay", () => {
+  it("should be connectable to a relay", async () => {
     relay = new Relay("wss://example.com");
     const writable = pipeThroughFrom(relay, publisher);
     assertInstanceOf(writable, WritableStream);
+    await writable.close();
   });
 });
