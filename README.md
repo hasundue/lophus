@@ -33,7 +33,7 @@ relays, oriented to web standards and edge environments.
       protocol
 - [x] [NIP-02](https://github.com/nostr-protocol/nips/blob/master/02.md):
       Contact list
-- [ ] [NIP-7](https://github.com/nostr-protocol/nips/blob/master/7.md):
+- [ ] [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md):
       `window.nostr` capability for web browsers
 - [ ] [NIP-42](https://github.com/nostr-protocol/nips/blob/master/42.md): Client
       authentication
