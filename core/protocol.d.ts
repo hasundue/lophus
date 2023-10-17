@@ -38,8 +38,8 @@ export interface NostrEvent<K extends EventKind = EventKind> {
   pubkey: PublicKey;
   created_at: Timestamp;
   kind: K;
-  tags: TagFor<K>[];
-  content: Stringified<EventContentFor<K>>;
+  tags: [...Tags<K>, ...OptionalTag<K>[]];
+  content: Stringified<EventContent<K>>;
   sig: Signature;
 }
 
@@ -52,11 +52,11 @@ export type Signature = Brand<string, "EventSignature">;
 
 export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   header: 0,
-  pubkey: PublicKey,
-  created_at: Timestamp,
-  kind: K,
-  tags: TagFor<K>[],
-  content: Stringified<EventContentFor<K>>,
+  pubkey: NostrEvent<K>["pubkey"],
+  created_at: NostrEvent<K>["created_at"],
+  kind: NostrEvent<K>["kind"],
+  tags: NostrEvent<K>["tags"],
+  content: NostrEvent<K>["content"],
 ];
 
 // ----------------------
@@ -79,7 +79,12 @@ export type TagParams<T extends TagType> = TagRecord[T] extends [
   ...infer P,
 ] ? P
   : never;
-export type TagFor<K extends EventKind> = EventKindRecord[K]["Tag"];
+
+export type Tags<K extends EventKind> = EventKindRecord[K] extends
+  { Tags: infer T extends Tag[] } ? T : [];
+
+export type OptionalTag<K extends EventKind> = EventKindRecord[K] extends
+  { OptionalTag: infer T extends Tag } ? T | undefined : Tag | undefined;
 
 // ----------------------
 // Communication
@@ -116,7 +121,7 @@ export type OkMessageContent<
 ];
 
 export type OkMessageBody<K extends EventKind, B extends boolean> = B extends
-  true ? string : `${ResponsePrefixFor<K>}: ${string}`;
+  true ? string : `${ResponsePrefix<K>}: ${string}`;
 
 export type DefaultResponsePrefix =
   | "duplicate"
@@ -151,17 +156,18 @@ export type SubscriptionFilter<
 export type EventKind = keyof EventKindRecord & number;
 
 export interface EventKindRecordEntry {
-  Tag: Tag;
   Content: unknown;
+  OptionalTag?: Tag;
+  Tags?: Tag[];
   ResponsePrefix?: string;
 }
 
-export type EventContent = EventContentFor<EventKind>;
+export type AnyEventContent = EventContent<EventKind>;
 
-export type EventContentFor<K extends EventKind> = EventKindRecord[K] extends
+export type EventContent<K extends EventKind> = EventKindRecord[K] extends
   EventKindRecordEntry ? EventKindRecord[K]["Content"] : never;
 
-export type ResponsePrefixFor<K extends EventKind = EventKind> =
+export type ResponsePrefix<K extends EventKind = EventKind> =
   EventKindRecord[K] extends { ResponsePrefix: infer P extends string } ? P
     : DefaultResponsePrefix;
 

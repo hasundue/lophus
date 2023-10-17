@@ -19,6 +19,18 @@ declare module "../../core/protocol.d.ts" {
       Tag: "e" | "p" | "a" | "d";
     };
   }
+  interface EventKindRecord {
+    0: {
+      Content: {
+        name: string;
+        about: string;
+        picture: Url;
+      };
+    };
+    1: {
+      Content: string;
+    };
+  }
   interface TagRecord {
     /** Event ID */
     "e": [EventId, RelayUrl?];
@@ -45,19 +57,5 @@ declare module "../../core/protocol.d.ts" {
     OK: OkMessageContent<K, true> | OkMessageContent<K, false>;
     EOSE: [SubscriptionId];
     NOTICE: [string];
-  }
-  interface EventKindRecord {
-    0: {
-      Tag: Tag;
-      Content: {
-        name: string;
-        about: string;
-        picture: Url;
-      };
-    };
-    1: {
-      Tag: Tag;
-      Content: string;
-    };
   }
 }
