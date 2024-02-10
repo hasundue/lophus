@@ -9,6 +9,7 @@ import { UnsignedEvent } from "./protocol.d.ts";
  */
 export class Signer extends TransformStream<EventInit, NostrEvent> {
   constructor() {
+    // deno-lint-ignore no-window
     if (!window.nostr) {
       throw new Error("NIP-07 extension not installed");
     }
@@ -26,6 +27,7 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
       content: JSON.stringify(init.content) as Stringified<EventContent<K>>,
       // TODO: Can we avoid this type assertion?
     } as UnsignedEvent<K>;
+    // deno-lint-ignore no-window
     return window.nostr!.signEvent(unsigned);
   }
 }
