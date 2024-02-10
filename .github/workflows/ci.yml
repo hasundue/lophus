@@ -13,38 +13,6 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.37.1
-
-      - name: Verify formatting
-        run: deno fmt --check
-
-      - name: Run linter
-        run: deno lint
-
-      - name: Cache dependencies
-        run: deno task cache
-
-      - name: Run static check
-        run: deno task check
-
-      - name: Run tests
-        run: deno task test --coverage=./coverage_profile
-
-      - name: Create coverage report
-        run: deno coverage ./coverage_profile --lcov --output=./coverage.lcov
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ${{ env.REPO_PATH }}/coverage.lcov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    name: Test
+    uses: hasundue/actions/.github/workflows/test-deno.yml@main
+    secrets: inherit
