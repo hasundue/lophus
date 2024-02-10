@@ -3,7 +3,7 @@
 > **Warning**\
 > Still under development and not ready for use.
 
-[![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
+[![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/hasundue/lophus/branch/main/graph/badge.svg?token=s01IMg4nI8)](https://codecov.io/github/hasundue/lophus)
 
 Lophus is a TypeScript library for development of [Nostr][nostr] clients and
