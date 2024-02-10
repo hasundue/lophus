@@ -6,7 +6,7 @@
     "test": "deno test -A --no-check --parallel",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
-    "update": "deno run --allow-read --allow-env --allow-write --allow-net=deno.land,registry.npmjs.org https://deno.land/x/molt@0.14.3/cli.ts ./**/*.ts",
+    "update": "deno run --allow-read --allow-env --allow-write --allow-net=deno.land,registry.npmjs.org --allow-run=deno,git https://deno.land/x/molt@0.14.3/cli.ts ./**/*.ts",
     "update:commit": "deno task -q update --commit --pre-commit=fmt,lock --prefix 'build(deps):'"
   },
   "exclude": [
