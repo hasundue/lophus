@@ -1,1 +1,1 @@
-export { mergeReadableStreams } from "https://deno.land/std@0.204.0/streams/mod.ts";
+export { mergeReadableStreams } from "https://deno.land/std@0.215.0/streams/mod.ts";

@@ -1,4 +1,4 @@
-import "https://deno.land/std@0.204.0/dotenv/load.ts";
+import "https://deno.land/std@0.215.0/dotenv/load.ts";
 import type { PrivateKey, PublicKey } from "../mod.ts";
 
 class Env {
