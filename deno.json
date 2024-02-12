@@ -1,7 +1,7 @@
 {
   "tasks": {
     "cache": "deno cache ./**/*.ts --lock",
-    "lock": "deno task cache --lock-write",
+    "lock": "deno task cache --lock-write && git add deno.lock",
     "check": "deno check ./**/*.ts",
     "test": "deno test -A --no-check --parallel",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
