@@ -17,8 +17,8 @@ export class NostrNode<
   E extends EventDataTypeRecord = EventDataTypeRecord,
 > extends WritableStream<W> implements EventTarget {
   readonly #eventTarget = new EventTarget();
+  readonly #aborter = new AbortController();
   readonly config: Readonly<NostrNodeConfig>;
-  protected readonly aborter = new AbortController();
 
   constructor(
     readonly ws: WebSocketLike,
@@ -40,7 +40,7 @@ export class NostrNode<
   }
 
   async close() {
-    this.aborter.abort();
+    this.#aborter.abort();
     try {
       await super.close();
     } catch (err) {
@@ -58,7 +58,7 @@ export class NostrNode<
     return this.#eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
-      { signal: this.aborter.signal, ...options },
+      { signal: this.#aborter.signal, ...options },
     );
   };
 
