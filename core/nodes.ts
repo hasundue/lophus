@@ -2,17 +2,12 @@ import type { NostrMessage } from "./protocol.d.ts";
 import type { Logger } from "./types.ts";
 import { WebSocketLike } from "./websockets.ts";
 
-export interface NostrNodeConfig<
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> {
-  modules: NostrNodeModule<F>[];
+export interface NostrNodeConfig {
   logger: Logger;
   nbuffer: number;
 }
 
-export type NostrNodeOptions<
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> = Partial<NostrNodeConfig<F>>;
+export type NostrNodeOptions = Partial<NostrNodeConfig>;
 
 /**
  * Common base class for relays and clients.
@@ -20,23 +15,20 @@ export type NostrNodeOptions<
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
   E extends EventDataTypeRecord = EventDataTypeRecord,
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
 > extends WritableStream<W> implements EventTarget {
   readonly #eventTarget = new EventTarget();
-  readonly config: Readonly<NostrNodeConfig<F>>;
-  protected readonly functions: NostrNodeFunctionSet<F> = {};
+  readonly config: Readonly<NostrNodeConfig>;
   protected readonly aborter = new AbortController();
 
   constructor(
     readonly ws: WebSocketLike,
-    opts: NostrNodeOptions<F> = {},
+    opts: NostrNodeOptions = {},
   ) {
     super({
       write: (msg) => this.ws.send(JSON.stringify(msg)),
       close: () => this.ws.close(),
     });
-    this.config = { modules: [], logger: {}, nbuffer: 10, ...opts };
-    this.config.modules.forEach((m) => this.addModule(m));
+    this.config = { logger: {}, nbuffer: 10, ...opts };
   }
 
   send(msg: W) {
@@ -55,33 +47,6 @@ export class NostrNode<
       if (super.locked) { // This should not happen.
         throw err;
       } // Otherwise the stream is already closed, which is fine.
-    }
-  }
-
-  addModule(module: NostrNodeModule<F>) {
-    const functions = module.default;
-    for (const name in functions) {
-      this.addFunction(name, functions[name]!);
-    }
-  }
-
-  addFunction<K extends FunctionKey<F>>(
-    fname: K,
-    fn: FunctionType<F, K>,
-  ): void {
-    const set = this.functions[fname] ?? (this.functions[fname] = new Set());
-    set.add(fn);
-  }
-
-  async callFunction<K extends FunctionKey<F>>(
-    fname: K,
-    context: F[K],
-  ): Promise<void> {
-    const handlers = this.functions[fname];
-    if (handlers) {
-      await Promise.all(
-        [...handlers].map((handler) => handler({ __fn__: fname, ...context })),
-      );
     }
   }
 
@@ -121,45 +86,16 @@ export class NostrNode<
 // ------------------------------
 
 export interface NostrNodeModule<
-  R extends FunctionParameterTypeRecord,
+  W extends NostrMessage = NostrMessage,
+  E extends EventDataTypeRecord = EventDataTypeRecord,
 > {
-  default: NostrNodeFunctions<R>;
+  default: NostrNodeModuleInstaller<W, E>;
 }
 
-type NostrNodeFunctions<
-  R extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> = {
-  [K in FunctionKey<R>]?: FunctionType<R, K>;
-};
-
-// ------------------------------
-// Functions
-// ------------------------------
-
-type NostrNodeFunctionSet<R extends FunctionParameterTypeRecord> = Partial<
-  {
-    [K in FunctionKey<R>]: Set<FunctionType<R, K>>;
-  }
->;
-
-interface FunctionParameterTypeRecord {
-  [K: string]: FunctionParameterType;
-}
-
-// deno-lint-ignore no-empty-interface
-interface FunctionParameterType {}
-
-type FunctionKey<R extends FunctionParameterTypeRecord> = keyof R & string;
-
-type FunctionContextType<
-  R extends FunctionParameterTypeRecord,
-  K extends FunctionKey<R>,
-> = R[K] & { __fn__: K };
-
-type FunctionType<
-  R extends FunctionParameterTypeRecord,
-  K extends FunctionKey<R>,
-> = (context: FunctionContextType<R, K>) => void;
+export type NostrNodeModuleInstaller<
+  W extends NostrMessage = NostrMessage,
+  E extends EventDataTypeRecord = EventDataTypeRecord,
+> = (node: NostrNode<W, E>) => void;
 
 // ------------------------------
 // Events
