@@ -118,7 +118,7 @@ export abstract class NostrNodeEvent<
 
 type EventType<E extends NostrNodeEvent> = E["type"];
 
-export type ExtractByType<
+type ExtractByType<
   E extends NostrNodeEvent,
   T extends E["type"],
 > = Extract<E, NostrNodeEvent<T>>;
