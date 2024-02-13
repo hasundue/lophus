@@ -14,7 +14,7 @@ export type NostrNodeOptions = Partial<NostrNodeConfig>;
  */
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
-  E extends EventDataTypeRecord = EventDataTypeRecord,
+  E extends NostrNodeEvent = NostrNodeEvent,
 > extends WritableStream<W> implements EventTarget {
   readonly #eventTarget = new EventTarget();
   readonly #aborter = new AbortController();
@@ -50,9 +50,9 @@ export class NostrNode<
     }
   }
 
-  addEventListener = <T extends EventType<E>>(
-    type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+  addEventListener = (
+    type: E["type"],
+    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
     options?: AddEventListenerOptions,
   ) => {
     return this.#eventTarget.addEventListener(
@@ -62,9 +62,9 @@ export class NostrNode<
     );
   };
 
-  removeEventListener = <T extends EventType<E>>(
-    type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+  removeEventListener = (
+    type: E["type"],
+    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
     options?: boolean | EventListenerOptions,
   ) => {
     return this.#eventTarget.removeEventListener(
@@ -74,8 +74,8 @@ export class NostrNode<
     );
   };
 
-  dispatchEvent = <T extends EventType<E>>(
-    event: NostrNodeEvent<E, T>,
+  dispatchEvent = (
+    event: E,
   ) => {
     return this.#eventTarget.dispatchEvent(event);
   };
@@ -87,44 +87,45 @@ export class NostrNode<
 
 export interface NostrNodeModule<
   W extends NostrMessage = NostrMessage,
-  E extends EventDataTypeRecord = EventDataTypeRecord,
+  E extends NostrNodeEvent = NostrNodeEvent,
 > {
   default: NostrNodeModuleInstaller<W, E>;
 }
 
 export type NostrNodeModuleInstaller<
   W extends NostrMessage = NostrMessage,
-  E extends EventDataTypeRecord = EventDataTypeRecord,
+  E extends NostrNodeEvent = NostrNodeEvent,
 > = (node: NostrNode<W, E>) => void;
 
 // ------------------------------
 // Events
 // ------------------------------
 
-type EventDataTypeRecord = Record<string, MessageEventInit["data"]>;
-
-type EventType<R extends EventDataTypeRecord> = keyof R & string;
+export abstract class NostrNodeEvent<
+  T extends string = string,
+  D = unknown,
+> extends MessageEvent<D> {
+  declare type: T;
+  constructor(
+    type: T,
+    init: MessageEventInit<D>,
+  ) {
+    super(type, init);
+  }
+}
 
 type NostrNodeEventListenerOrEventListenerObject<
-  R extends EventDataTypeRecord,
-  T extends EventType<R>,
-> = NostrNodeEventListener<R, T> | NostrNodeEventListenerObject<R, T>;
+  E extends NostrNodeEvent,
+> = NostrNodeEventListener<E> | NostrNodeEventListenerObject<E>;
 
 type NostrNodeEventListener<
-  R extends EventDataTypeRecord,
-  T extends EventType<R>,
+  E extends NostrNodeEvent,
 > // deno-lint-ignore no-explicit-any
- = (this: NostrNode, ev: NostrNodeEvent<R, T>) => any;
+ = (this: NostrNode, ev: E) => any;
 
 type NostrNodeEventListenerObject<
-  R extends EventDataTypeRecord,
-  T extends EventType<R>,
+  E extends NostrNodeEvent,
 > = {
   // deno-lint-ignore no-explicit-any
-  handleEvent(this: NostrNode, ev: NostrNodeEvent<R, T>): any;
+  handleEvent(this: NostrNode, ev: E): any;
 };
-
-export class NostrNodeEvent<
-  R extends EventDataTypeRecord,
-  T extends EventType<R>,
-> extends MessageEvent<R[T]> {}
