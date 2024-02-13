@@ -7,7 +7,7 @@ import { NostrNodeModule } from "./nodes.ts";
  * @param meta - The path to the module to which the NIPs are attached (mostly import.meta.url).
  * @param root - The path to the root of NIP module to import.
  */
-export function importNips(
+export function importNips<M extends NostrNodeModule = NostrNodeModule>(
   meta: string,
   root: string,
 ) {
@@ -21,7 +21,7 @@ export function importNips(
             `${root}/${nipToString(nip)}/${base}`,
             import.meta.url,
           ).href
-        ) as Promise<NostrNodeModule>,
+        ) as Promise<M>,
     ) ?? [],
   );
 }

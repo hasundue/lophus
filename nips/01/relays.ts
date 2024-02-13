@@ -4,23 +4,7 @@ import type {
   RelayToClientMessageType,
   SubscriptionId,
 } from "../../core/protocol.d.ts";
-import { NostrNodeEvent } from "../../core/nodes.ts";
-import { EventRejected, RelayModuleInstaller } from "../../core/relays.ts";
-
-type RelayModuleEvent = EventReceived | EventAccepted;
-
-class EventReceived
-  extends NostrNodeEvent<SubscriptionId, SubscriptionMessage> {
-  constructor(data: SubscriptionMessage) {
-    super(data[1], { data });
-  }
-}
-
-class EventAccepted extends NostrNodeEvent<EventId, PublicationMessage> {
-  constructor(data: PublicationMessage) {
-    super(data[1], { data });
-  }
-}
+import { EventRejected, RelayEvent, RelayModule } from "../../core/relays.ts";
 
 type SubscriptionMessage = {
   [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends
@@ -33,15 +17,26 @@ type PublicationMessage = {
     : never;
 }[RelayToClientMessageType];
 
-const install: RelayModuleInstaller<RelayModuleEvent> = (relay) => {
+type ExtentionalEventTypeRecord =
+  & {
+    [id in SubscriptionId]: SubscriptionMessage;
+  }
+  & {
+    [id in EventId]: PublicationMessage;
+  };
+
+declare module "../../core/relays.ts" {
+  // deno-lint-ignore no-empty-interface
+  interface RelayEventTypeRecord extends ExtentionalEventTypeRecord {}
+}
+
+const install: RelayModule["default"] = (relay) => {
   relay.addEventListener("message", ({ data: message }) => {
     switch (message[0]) {
       case "EVENT":
-      case "EOSE": {
-        return relay.dispatchEvent(new EventReceived(message));
-      }
+      case "EOSE":
       case "OK": {
-        return relay.dispatchEvent(new EventAccepted(message));
+        return relay.dispatchEvent(new RelayEvent(message[1], message));
       }
       case "NOTICE": {
         return relay.config?.logger?.info?.(message[1]);

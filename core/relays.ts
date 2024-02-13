@@ -192,4 +192,4 @@ export class RelayEvent<
 // Modules
 // ----------------------
 
-export type RelayModule = NostrNodeModule<ClientToRelayMessage, RelayEvent>;
+export type RelayModule = NostrNodeModule<ClientToRelayMessage, RelayEventTypeRecord>;
