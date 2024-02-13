@@ -50,9 +50,11 @@ export class NostrNode<
     }
   }
 
-  addEventListener = (
-    type: E["type"],
-    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
+  addEventListener = <T extends EventType<E>>(
+    type: T,
+    listener:
+      | NostrNodeEventListenerOrEventListenerObject<ExtractByType<E, T>>
+      | null,
     options?: AddEventListenerOptions,
   ) => {
     return this.#eventTarget.addEventListener(
@@ -62,9 +64,11 @@ export class NostrNode<
     );
   };
 
-  removeEventListener = (
-    type: E["type"],
-    listener: NostrNodeEventListenerOrEventListenerObject<E> | null,
+  removeEventListener = <T extends EventType<E>>(
+    type: T,
+    listener:
+      | NostrNodeEventListenerOrEventListenerObject<ExtractByType<E, T>>
+      | null,
     options?: boolean | EventListenerOptions,
   ) => {
     return this.#eventTarget.removeEventListener(
@@ -74,9 +78,7 @@ export class NostrNode<
     );
   };
 
-  dispatchEvent = (
-    event: E,
-  ) => {
+  dispatchEvent = (event: E) => {
     return this.#eventTarget.dispatchEvent(event);
   };
 }
@@ -113,6 +115,13 @@ export abstract class NostrNodeEvent<
     super(type, init);
   }
 }
+
+type EventType<E extends NostrNodeEvent> = E["type"];
+
+export type ExtractByType<
+  E extends NostrNodeEvent,
+  T extends E["type"],
+> = Extract<E, NostrNodeEvent<T>>;
 
 type NostrNodeEventListenerOrEventListenerObject<
   E extends NostrNodeEvent,

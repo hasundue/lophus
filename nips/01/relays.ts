@@ -1,9 +1,11 @@
-import {
-  EventRejected,
-  PublicationEvent,
-  RelayModule,
-  RelaySubscriptionEvent,
-} from "../../core/relays.ts";
+import { EventRejected, RelayModuleInstaller } from "../../core/relays.ts";
+
+const install: RelayModuleInstaller = (relay) => {
+  relay.addEventListener("subscribe", (ev) => {
+    const { controller } = ev.data;
+    controller.close();
+  });
+};
 
 export default {
   handleRelayToClientMessage({ message, relay }) {

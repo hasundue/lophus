@@ -16,6 +16,7 @@ import {
   NostrNodeConfig,
   NostrNodeEvent,
   NostrNodeModule,
+  NostrNodeModuleInstaller,
 } from "./nodes.ts";
 import { NIPs } from "./nips.ts";
 
@@ -36,8 +37,7 @@ export class ConnectionClosed extends Error {}
 // Interfaces
 // ----------------------
 
-export interface RelayConfig
-  extends NostrNodeConfig<RelayFunctionParameterTypeRecord> {
+export interface RelayConfig extends NostrNodeConfig {
   url: RelayUrl;
   name: string;
   read: boolean;
@@ -61,8 +61,7 @@ export interface SubscriptionOptions {
  */
 export class Relay extends NostrNode<
   ClientToRelayMessage,
-  EventDataTypeRecord,
-  RelayFunctionParameterTypeRecord
+  RelayEvent
 > {
   declare ws: LazyWebSocket;
   readonly config: Readonly<RelayConfig>;
@@ -89,12 +88,11 @@ export class Relay extends NostrNode<
     this.ws.addEventListener(
       "message",
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
-        // TODO: Validate message.
         const message = JSON.parse(ev.data) as RelayToClientMessage;
-        return this.callFunction("handleRelayToClientMessage", {
-          message,
-          relay: this,
-        });
+        // TODO: Validate the message.
+        return this.dispatchEvent(
+          new RelayToClientMessageEvent(message),
+        );
       },
     );
   }
@@ -109,23 +107,22 @@ export class Relay extends NostrNode<
       id: (options.id ?? crypto.randomUUID()) as SubscriptionId,
       filters: [filter].flat(),
       options,
-      relay: this,
     };
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
-        this.addEventListener(
-          context.id,
-          (ev) =>
-            this.callFunction("handleSubscriptionMessage", {
-              message: ev.data,
-              controller,
-              ...context,
-            }),
+        this.dispatchEvent(
+          new SubscriptionStart({ ...context, controller }),
         );
-        this.callFunction("startSubscription", { controller, ...context });
+      },
+      pull: (controller) => {
+        this.dispatchEvent(
+          new SubscriptionPull({ ...context, controller }),
+        );
       },
       cancel: (reason) => {
-        return this.callFunction("closeSubscription", { reason, ...context });
+        this.dispatchEvent(
+          new SubscriptionCancel({ ...context, reason }),
+        );
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -138,7 +135,7 @@ export class Relay extends NostrNode<
    */
   publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     // We await the response instead of awaiting this
-    this.callFunction("publishEvent", { event, relay: this });
+    this.dispatchEvent(new PublicationEvent(event));
 
     return new Promise<void>((resolve, reject) => {
       this.addEventListener(
@@ -160,6 +157,20 @@ export class Relay extends NostrNode<
 }
 
 // ----------------------
+// Modules
+// ----------------------
+
+export type RelayModule = NostrNodeModule<
+  ClientToRelayMessage,
+  RelayEvent
+>;
+
+export type RelayModuleInstaller = NostrNodeModuleInstaller<
+  ClientToRelayMessage,
+  RelayEvent
+>;
+
+// ----------------------
 // RelayLikes
 // ----------------------
 
@@ -170,10 +181,7 @@ export interface RelayLike extends WritableStream<ClientToRelayMessage> {
   publish: Relay["publish"];
 }
 
-export type RelayLikeConfig = Omit<
-  RelayConfig,
-  "url" | keyof NostrNodeConfig<RelayFunctionParameterTypeRecord>
->;
+export type RelayLikeConfig = Omit<RelayConfig, "url">;
 
 export type RelayLikeOptions = Partial<RelayLikeConfig>;
 
@@ -181,81 +189,61 @@ export type RelayLikeOptions = Partial<RelayLikeConfig>;
 // Events
 // ----------------------
 
-type EventDataTypeRecord =
-  & {
-    [T in SubscriptionId]: SubscriptionMessage;
-  }
-  & {
-    [T in EventId]: PublicationMessage;
-  };
+export type RelayEvent = RelayToClientMessageEvent | SubscriptionEvent;
 
-export class RelaySubscriptionEvent extends NostrNodeEvent<
-  EventDataTypeRecord,
-  SubscriptionId
+export class RelayToClientMessageEvent extends NostrNodeEvent<
+  "message",
+  RelayToClientMessage
 > {
-  constructor(
-    type: SubscriptionId,
-    init: MessageEventInit<SubscriptionMessage>,
-  ) {
-    super(type, init);
+  constructor(data: RelayToClientMessage) {
+    super("message", { data });
   }
 }
 
-export class PublicationEvent extends NostrNodeEvent<
-  EventDataTypeRecord,
-  EventId
+export type SubscriptionEvent =
+  | SubscriptionStart
+  | SubscriptionPull
+  | SubscriptionCancel;
+
+export class SubscriptionStart extends NostrNodeEvent<
+  "subscribe",
+  SubscriptionContextWithController
 > {
-  constructor(
-    type: EventId,
-    init: MessageEventInit<PublicationMessage>,
-  ) {
-    super(type, init);
+  constructor(data: SubscriptionContextWithController) {
+    super("subscribe", { data });
   }
 }
 
-// ----------------------
-// Functions
-// ----------------------
-
-export type RelayModule = NostrNodeModule<RelayFunctionParameterTypeRecord>;
-
-type RelayFunctionParameterTypeRecord = {
-  [K in keyof FunctionParameterTypeRecord]:
-    & FunctionParameterTypeRecord[K]
-    & RelayFunctionContext;
-};
-
-type FunctionParameterTypeRecord = {
-  "handleRelayToClientMessage": {
-    message: RelayToClientMessage;
-  };
-  "handleSubscriptionMessage": {
-    message: SubscriptionMessage;
-    controller: ReadableStreamDefaultController<NostrEvent>;
-  } & SubscriptionContext;
-  "handlePublicationMessage": {
-    message: PublicationMessage;
-    event: NostrEvent;
-  };
-  "publishEvent": {
-    event: NostrEvent;
-  };
-  "startSubscription": {
-    controller: ReadableStreamDefaultController<NostrEvent>;
-  } & SubscriptionContext;
-  "closeSubscription": {
-    reason: unknown;
-  } & SubscriptionContext;
-};
-
-interface RelayFunctionContext {
-  relay: Relay;
+export class SubscriptionPull extends NostrNodeEvent<
+  "pull",
+  SubscriptionContextWithController
+> {
+  constructor(data: SubscriptionContextWithController) {
+    super("pull", { data });
+  }
 }
 
-interface SubscriptionContext {
+export class SubscriptionCancel extends NostrNodeEvent<
+  "unsubscribe",
+  SubscriptionContextWithReason
+> {
+  constructor(data: SubscriptionContextWithReason) {
+    super("unsubscribe", { data });
+  }
+}
+
+export interface SubscriptionContext {
   id: SubscriptionId;
   filters: SubscriptionFilter[];
   options: SubscriptionOptions;
+}
+
+export interface SubscriptionContextWithController extends SubscriptionContext {
+  controller: ReadableStreamDefaultController;
+}
+
+export interface SubscriptionContextWithReason extends SubscriptionContext {
+  reason: unknown;
 }
 
 type SubscriptionMessage = {
