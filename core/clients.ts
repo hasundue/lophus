@@ -16,13 +16,20 @@ import { importNips } from "./nips.ts";
 // NIPs
 // ----------------------
 
-const NIPs = await importNips(import.meta.url, "../nips");
+const NIPs = await importNips<RelayToClientMessage, ClientEventTypeRecord>(
+  import.meta.url,
+  "../nips",
+);
 
 // ----------------------
 // Interfaces
 // ----------------------
 
-export type ClientConfig = NostrNodeConfig;
+export type ClientConfig = NostrNodeConfig<
+  RelayToClientMessage,
+  ClientEventTypeRecord
+>;
+
 export type ClientOptions = Partial<ClientConfig>;
 
 /**
@@ -73,4 +80,7 @@ export class ClientEvent<
 // Modules
 // ------------------------------
 
-export type ClientModule = NostrNodeModule<ClientToRelayMessage, ClientEventTypeRecord>;
+export type ClientModule = NostrNodeModule<
+  ClientToRelayMessage,
+  ClientEventTypeRecord
+>;

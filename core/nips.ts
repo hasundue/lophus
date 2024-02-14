@@ -1,5 +1,5 @@
-import type { NIP } from "./protocol.d.ts";
-import { NostrNodeModule } from "./nodes.ts";
+import type { NIP, NostrMessage } from "./protocol.d.ts";
+import { EventTypeRecord, NostrNodeModule } from "./nodes.ts";
 
 /**
  * Import a NostrNode module from a URL.
@@ -7,7 +7,10 @@ import { NostrNodeModule } from "./nodes.ts";
  * @param meta - The path to the module to which the NIPs are attached (mostly import.meta.url).
  * @param root - The path to the root of NIP module to import.
  */
-export function importNips<M extends NostrNodeModule = NostrNodeModule>(
+export function importNips<
+  W extends NostrMessage = NostrMessage,
+  R extends EventTypeRecord = EventTypeRecord,
+>(
   meta: string,
   root: string,
 ) {
@@ -21,7 +24,7 @@ export function importNips<M extends NostrNodeModule = NostrNodeModule>(
             `${root}/${nipToString(nip)}/${base}`,
             import.meta.url,
           ).href
-        ) as Promise<M>,
+        ) as Promise<NostrNodeModule<W, R>>,
     ) ?? [],
   );
 }

@@ -58,7 +58,9 @@ export class NostrNode<
     }
   }
 
-  addModule = (module: NostrNodeModule<W, R>) => module.default(this);
+  addModule(module: NostrNodeModule<W, R>) { 
+    return module.default(this);
+  }
 
   addEventListener = <T extends EventType<R>>(
     type: T,
@@ -109,7 +111,7 @@ export interface NostrNodeModule<
 // ------------------------------
 
 // deno-lint-ignore no-empty-interface
-interface EventTypeRecord {}
+export interface EventTypeRecord {}
 
 type EventType<R extends EventTypeRecord> = keyof R & string;
 

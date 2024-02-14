@@ -21,7 +21,10 @@ import { importNips } from "./nips.ts";
 // NIPs
 // ----------------------
 
-const NIPs = await importNips(import.meta.url, "../nips");
+const NIPs = await importNips<ClientToRelayMessage, RelayEventTypeRecord>(
+  import.meta.url,
+  "../nips",
+);
 
 // ----------------------
 // Errors
@@ -34,7 +37,8 @@ export class ConnectionClosed extends Error {}
 // Interfaces
 // ----------------------
 
-export interface RelayConfig extends NostrNodeConfig {
+export interface RelayConfig
+  extends NostrNodeConfig<ClientToRelayMessage, RelayEventTypeRecord> {
   url: RelayUrl;
   name: string;
   read: boolean;
@@ -105,13 +109,17 @@ export class Relay extends NostrNode<
     };
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
-        this.dispatchEvent(new RelayEvent("subscribe", { ...context, controller }));
+        this.dispatchEvent(
+          new RelayEvent("subscribe", { ...context, controller }),
+        );
       },
       pull: (controller) => {
         this.dispatchEvent(new RelayEvent("pull", { ...context, controller }));
       },
       cancel: (reason) => {
-        this.dispatchEvent(new RelayEvent("unsubscribe", { ...context, reason }));
+        this.dispatchEvent(
+          new RelayEvent("unsubscribe", { ...context, reason }),
+        );
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -192,4 +200,7 @@ export class RelayEvent<
 // Modules
 // ----------------------
 
-export type RelayModule = NostrNodeModule<ClientToRelayMessage, RelayEventTypeRecord>;
+export type RelayModule = NostrNodeModule<
+  ClientToRelayMessage,
+  RelayEventTypeRecord
+>;
