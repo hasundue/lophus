@@ -1,9 +1,7 @@
 import type {
   ClientToRelayMessage,
-  ClientToRelayMessageType,
   NostrEvent,
   RelayToClientMessage,
-  SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.d.ts";
 import {
@@ -12,21 +10,27 @@ import {
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { NIPs } from "./nips.ts";
+import { importNips } from "./nips.ts";
 
 // ----------------------
 // NIPs
 // ----------------------
 
-const nips = await NIPs.import<ClientModule>(import.meta.url, "../nips");
+const NIPs = await importNips(import.meta.url, "../nips");
+
+// ----------------------
+// Interfaces
+// ----------------------
+
+export type ClientConfig = NostrNodeConfig;
+export type ClientOptions = Partial<ClientConfig>;
 
 /**
  * A class that represents a remote Nostr client.
  */
 export class Client extends NostrNode<
   RelayToClientMessage,
-  EventDataTypeRecord,
-  ClientFunctionParameterTypeRecord
+  ClientEventTypeRecord
 > {
   declare ws: WebSocket;
 
@@ -41,77 +45,32 @@ export class Client extends NostrNode<
   constructor(ws: WebSocket, opts?: ClientOptions) {
     super(ws, {
       ...opts,
-      modules: nips.concat(opts?.modules ?? []),
+      modules: NIPs.concat(opts?.modules ?? []),
     });
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
-      // TODO: Validate the type of the message.
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
-      this.callFunction("handleClientToRelayMessage", {
-        message,
-        client: this,
-      });
+      // TODO: Validate the message.
+      this.dispatchEvent(new ClientEvent("recieved", message));
     });
   }
-}
-
-type ClientConfig = NostrNodeConfig<ClientFunctionParameterTypeRecord>;
-export type ClientOptions = Partial<ClientConfig>;
-
-// ------------------------------
-// Functions
-// ------------------------------
-
-export type ClientModule = NostrNodeModule<ClientFunctionParameterTypeRecord>;
-
-type ClientFunctionParameterTypeRecord = {
-  [K in keyof _FunctionParameterTypeRecord]:
-    & _FunctionParameterTypeRecord[K]
-    & ClientFunctionContext;
-};
-
-type _FunctionParameterTypeRecord = {
-  "handleClientToRelayMessage": {
-    message: ClientToRelayMessage;
-  };
-  "handleSubscriptionMessage": {
-    message: SubscriptionMessage;
-    controller: ReadableStreamDefaultController<NostrEvent>;
-  } & SubscriptionContext;
-  "acceptEvent": {
-    event: NostrEvent;
-  };
-};
-
-interface ClientFunctionContext {
-  client: Client;
-}
-
-interface SubscriptionContext {
-  id: SubscriptionId;
-  filters: SubscriptionFilter[];
 }
 
 // ------------------------------
 // Events
 // ------------------------------
 
-type EventDataTypeRecord = {
-  [T in SubscriptionId]: SubscriptionMessage;
-};
-
-type SubscriptionMessage = {
-  [T in ClientToRelayMessageType]: ClientToRelayMessage<T>[1] extends
-    SubscriptionId ? ClientToRelayMessage<T> : never;
-}[ClientToRelayMessageType];
-
-export class ClientSubscriptionEvent extends NostrNodeEvent<
-  EventDataTypeRecord,
-  SubscriptionId
-> {
-  constructor(
-    type: SubscriptionId,
-    init: MessageEventInit<SubscriptionMessage>,
-  ) {
-    super(type, init);
-  }
+export interface ClientEventTypeRecord {
+  "recieved": ClientToRelayMessage;
 }
+
+export type ClientEventType = keyof ClientEventTypeRecord;
+
+export class ClientEvent<
+  T extends ClientEventType = ClientEventType,
+> extends NostrNodeEvent<ClientEventTypeRecord, T> {}
+
+// ------------------------------
+// Modules
+// ------------------------------
+
+export type ClientModule = NostrNodeModule<ClientToRelayMessage, ClientEventTypeRecord>;
