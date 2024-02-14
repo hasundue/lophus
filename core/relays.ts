@@ -156,7 +156,7 @@ export interface RelayLike extends WritableStream<ClientToRelayMessage> {
   publish: Relay["publish"];
 }
 
-export type RelayLikeConfig = Omit<RelayConfig, "url">;
+export type RelayLikeConfig = Pick<RelayConfig, "name" | "read" | "write">;
 export type RelayLikeOptions = Partial<RelayLikeConfig>;
 
 // ----------------------
