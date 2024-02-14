@@ -1,38 +1,57 @@
 import type { NostrEvent } from "../../core/protocol.d.ts";
-import { ClientModule, ClientSubscriptionEvent } from "../../core/clients.ts";
+import { ClientModule } from "../../core/clients.ts";
 
-export default {
-  async handleClientToRelayMessage({ message, client }) {
-    const kind = message[0];
-    if (kind === "EVENT") {
-      const event = message[1];
+interface EventValidationContext {
+  data: NostrEvent;
+  resolve: (value: unknown) => void;
+  // deno-lint-ignore no-explicit-any
+  reject: (reason?: any) => void;
+}
 
-      // This should throw if the event is not acceptable.
-      await client.callFunction("acceptEvent", { event, client });
-      return client.send(["OK", event.id, true, ""]);
-    }
-    if (kind === "CLOSE") {
-      const sid = message[1];
-      const sub = client.subscriptions.get(sid);
-      if (!sub) {
-        return client.send(["NOTICE", `Unknown subscription ID: ${sid}`]);
+declare module "../../core/clients.ts" {
+  interface ClientEventTypeRecord {
+    validate: EventValidationContext;
+  }
+}
+
+const install: ClientModule["default"] = (client) => {
+  client.addEventListener("message", ({ data: message }) => {
+    switch (message[0]) {
+      case "EVENT": {
+        const event = message[1];
+        /** try {
+          await new Promise((resolve, reject) => {
+            client.dispatchEvent(
+              new ClientEvent("validate", { data: event, resolve, reject }),
+            );
+          });
+        } catch (err) {
+          return client.send(["OK", event.id, false, err.message]);
+        } */
+        return client.send(["OK", event.id, true, ""]);
       }
-      client.subscriptions.delete(sid);
-      return sub.close();
+      case "REQ": {
+        const id = message[1];
+        return client.subscriptions.set(
+          id,
+          new WritableStream<NostrEvent>({
+            write(event) {
+              return client.send(["EVENT", id, event]);
+            },
+          }),
+        );
+      }
+      case "CLOSE": {
+        const id = message[1];
+        const sub = client.subscriptions.get(id);
+        if (!sub) {
+          return client.send(["NOTICE", `Unknown subscription ID: ${id}`]);
+        }
+        client.subscriptions.delete(id);
+        return sub.close();
+      }
     }
-    if (kind === "REQ") {
-      const sid = message[1];
-      client.subscriptions.set(
-        sid,
-        new WritableStream<NostrEvent>({
-          write(event) {
-            return client.send(["EVENT", sid, event]);
-          },
-        }),
-      );
-      return client.dispatchEvent(
-        new ClientSubscriptionEvent(sid, { data: message }),
-      );
-    }
-  },
-} satisfies ClientModule["default"];
+  });
+};
+
+export default install;

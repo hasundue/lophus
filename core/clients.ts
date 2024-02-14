@@ -58,7 +58,7 @@ export class Client extends NostrNode<
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Validate the message.
-      this.dispatchEvent(new ClientEvent("recieved", message));
+      this.dispatchEvent(new ClientEvent("message", message));
     });
   }
 }
@@ -68,7 +68,7 @@ export class Client extends NostrNode<
 // ------------------------------
 
 export interface ClientEventTypeRecord {
-  "recieved": ClientToRelayMessage;
+  "message": ClientToRelayMessage;
 }
 
 export type ClientEventType = keyof ClientEventTypeRecord;
