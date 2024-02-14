@@ -74,7 +74,7 @@ export class NostrNode<
       listener as EventListenerOrEventListenerObject,
       { signal: this.#aborter.signal, ...options },
     );
-  };
+  }
 
   removeEventListener<T extends EventType<R>>(
     type: T,
@@ -88,11 +88,11 @@ export class NostrNode<
       listener as EventListenerOrEventListenerObject,
       options,
     );
-  };
+  }
 
   dispatchEvent<T extends EventType<R>>(event: NostrNodeEvent<R, T>) {
     return this.#eventTarget.dispatchEvent(event);
-  };
+  }
 }
 
 // ------------------------------
@@ -102,8 +102,9 @@ export class NostrNode<
 export interface NostrNodeModule<
   W extends NostrMessage = NostrMessage,
   R extends EventTypeRecord = EventTypeRecord,
+  N extends NostrNode<W, R> = NostrNode<W, R>,
 > {
-  default: (node: NostrNode<W, R>) => void;
+  default(node: N): void;
 }
 
 // ------------------------------

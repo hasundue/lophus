@@ -21,10 +21,11 @@ import { importNips } from "./nips.ts";
 // NIPs
 // ----------------------
 
-const NIPs = await importNips<ClientToRelayMessage, RelayEventTypeRecord>(
-  import.meta.url,
-  "../nips",
-);
+const NIPs = await importNips<
+  ClientToRelayMessage,
+  RelayEventTypeRecord,
+  Relay
+>(import.meta.url, "../nips");
 
 // ----------------------
 // Errors
@@ -202,5 +203,6 @@ export class RelayEvent<
 
 export type RelayModule = NostrNodeModule<
   ClientToRelayMessage,
-  RelayEventTypeRecord
+  RelayEventTypeRecord,
+  Relay
 >;

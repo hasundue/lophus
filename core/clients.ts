@@ -16,10 +16,11 @@ import { importNips } from "./nips.ts";
 // NIPs
 // ----------------------
 
-const NIPs = await importNips<RelayToClientMessage, ClientEventTypeRecord>(
-  import.meta.url,
-  "../nips",
-);
+const NIPs = await importNips<
+  RelayToClientMessage,
+  ClientEventTypeRecord,
+  Client
+>(import.meta.url, "../nips");
 
 // ----------------------
 // Interfaces
@@ -81,6 +82,7 @@ export class ClientEvent<
 // ------------------------------
 
 export type ClientModule = NostrNodeModule<
-  ClientToRelayMessage,
-  ClientEventTypeRecord
+  RelayToClientMessage,
+  ClientEventTypeRecord,
+  Client
 >;
