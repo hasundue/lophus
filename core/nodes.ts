@@ -36,7 +36,7 @@ export class NostrNode<
       close: () => this.ws.close(),
     });
     this.config = { modules: [], logger: {}, nbuffer: 10, ...opts };
-    this.config.modules.forEach(this.addModule);
+    this.config.modules.forEach((m) => this.addModule(m));
   }
 
   send(msg: W) {
@@ -58,17 +58,17 @@ export class NostrNode<
     }
   }
 
-  addModule(module: NostrNodeModule<W, R>) { 
+  addModule(module: NostrNodeModule<W, R>) {
     return module.default(this);
   }
 
-  addEventListener = <T extends EventType<R>>(
+  addEventListener<T extends EventType<R>>(
     type: T,
     listener:
       | NostrNodeEventListenerOrEventListenerObject<W, R, T>
       | null,
     options?: AddEventListenerOptions,
-  ) => {
+  ) {
     return this.#eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
@@ -76,13 +76,13 @@ export class NostrNode<
     );
   };
 
-  removeEventListener = <T extends EventType<R>>(
+  removeEventListener<T extends EventType<R>>(
     type: T,
     listener:
       | NostrNodeEventListenerOrEventListenerObject<W, R, T>
       | null,
     options?: boolean | EventListenerOptions,
-  ) => {
+  ) {
     return this.#eventTarget.removeEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
@@ -90,7 +90,7 @@ export class NostrNode<
     );
   };
 
-  dispatchEvent = <T extends EventType<R>>(event: NostrNodeEvent<R, T>) => {
+  dispatchEvent<T extends EventType<R>>(event: NostrNodeEvent<R, T>) {
     return this.#eventTarget.dispatchEvent(event);
   };
 }
