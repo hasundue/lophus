@@ -11,8 +11,10 @@ import {
   EventId,
   NostrEvent,
   RelayToClientMessage,
+  SubscriptionId,
 } from "../../core/protocol.d.ts";
 import { ConnectionClosed, Relay } from "../../core/relays.ts?nips=1";
+import { SubscriptionClosed } from "../../nips/01/relays.ts";
 
 describe("NIP-01/Relay", () => {
   const url = "wss://localhost:8080";
@@ -139,5 +141,20 @@ describe("NIP-01/Relay", () => {
     const published = relay.publish(event as any).catch((e) => e);
     MockWebSocket.instances[0].remote.close();
     assertInstanceOf(await published, ConnectionClosed);
+  });
+  it("should close a subscription with an error when receiving a CLOSED message", async () => {
+    MockWebSocket.instances[0].remote.send(JSON.stringify(
+      [
+        "CLOSED",
+        "test-1" as SubscriptionId,
+        "error: test",
+      ] satisfies RelayToClientMessage<"CLOSED">,
+    ));
+    try {
+      await sub_1.getReader().read();
+    } catch (e) {
+      assertInstanceOf(e, SubscriptionClosed);
+      assertEquals(e.message, "error: test");
+    }
   });
 });
