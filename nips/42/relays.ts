@@ -1,12 +1,18 @@
 import type { Stringified } from "../../core/types.ts";
 import type { RelayModule } from "../../core/relays.ts";
 import type { EventInit } from "../../lib/events.ts";
+import type { Signer } from "../../lib/signs.ts";
 import "./protocol.d.ts";
 
-export default {
-  handleRelayToClientMessage({ message, relay }) {
-    const type = message[0];
-    if (type !== "AUTH") {
+declare module "../../core/relays.ts" {
+  interface RelayConfig {
+    signer?: Signer;
+  }
+}
+
+const install: RelayModule["default"] = (relay) => {
+  relay.addEventListener("message", ({ data: message }) => {
+    if (message[0] !== "AUTH") {
       // This NIP only handles AUTH messages
       return;
     }
@@ -23,5 +29,7 @@ export default {
       content: "" as Stringified<"">,
     };
     return relay.publish(relay.config.signer.sign(event));
-  },
-} satisfies RelayModule["default"];
+  });
+};
+
+export default install;
