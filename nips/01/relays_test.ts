@@ -13,7 +13,11 @@ import {
   RelayToClientMessage,
   SubscriptionId,
 } from "../../core/protocol.d.ts";
-import { ConnectionClosed, Relay } from "../../core/relays.ts?nips=1";
+import {
+  ConnectionClosed,
+  EventRejected,
+  Relay,
+} from "../../core/relays.ts?nips=1";
 import { SubscriptionClosed } from "../../nips/01/relays.ts";
 
 describe("NIP-01/Relay", () => {
@@ -42,11 +46,8 @@ describe("NIP-01/Relay", () => {
   it("should receive text notes", async () => {
     const reader = sub_1.getReader();
     const read = reader.read();
-    const ws = MockWebSocket.instances[0];
-    ws.dispatchEvent(
-      new MessageEvent("message", {
-        data: JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
-      }),
+    MockWebSocket.instances[0].remote.send(
+      JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
     );
     const { value, done } = await read;
     assert(!done);
@@ -63,16 +64,8 @@ describe("NIP-01/Relay", () => {
     const reader_0 = sub_0.getReader();
     const reader_1 = sub_1.getReader();
     const ws = MockWebSocket.instances[0];
-    ws.dispatchEvent(
-      new MessageEvent("message", {
-        data: JSON.stringify(["EVENT", "test-0", { kind: 0 }]),
-      }),
-    );
-    ws.dispatchEvent(
-      new MessageEvent("message", {
-        data: JSON.stringify(["EVENT", "test-1", { kind: 1 }]),
-      }),
-    );
+    ws.remote.send(JSON.stringify(["EVENT", "test-0", { kind: 0 }]));
+    ws.remote.send(JSON.stringify(["EVENT", "test-1", { kind: 1 }]));
     const [{ value: value_0 }, { value: value_1 }] = await Promise.all([
       reader_0.read(),
       reader_1.read(),
@@ -86,7 +79,6 @@ describe("NIP-01/Relay", () => {
   });
   it("should publish an event and recieve an accepting OK message", async () => {
     const eid = "test-true" as EventId;
-    const ok = ["OK", eid, true, ""] satisfies RelayToClientMessage<"OK">;
     const ws = MockWebSocket.instances[0];
     const arrived = new Promise<true>((resolve) => {
       ws.remote.addEventListener(
@@ -96,15 +88,18 @@ describe("NIP-01/Relay", () => {
           const [, event] = JSON.parse(ev.data) as ClientToRelayMessage<"EVENT">;
           if (event.id === eid) {
             assertEquals(event.kind, 1);
+            ws.remote.send(
+              JSON.stringify(
+                ["OK", eid, true, ""] satisfies RelayToClientMessage<"OK">,
+              ),
+            );
             resolve(true);
-            ws.remote.send(JSON.stringify(ok));
           }
         },
       );
     });
-    const event = { id: eid, kind: 1 };
     // deno-lint-ignore no-explicit-any
-    await relay.publish(event as any);
+    await relay.publish({ id: eid, kind: 1 } as any);
     assert(await arrived);
   });
   it("should receieve a rejecting OK message and throw EventRejected", async () => {
@@ -127,12 +122,14 @@ describe("NIP-01/Relay", () => {
       );
     });
     const event = { id: eid, kind: 1 };
-    // deno-lint-ignore no-explicit-any
-    const result: unknown = await relay.publish(event as any).catch((e) => e);
-    // FIXME: This should be an EventRejected instance.
-    assertInstanceOf(result, Error);
-    assertEquals(result.message, "error: test");
-    assertEquals(result.cause, event);
+    try {
+      // deno-lint-ignore no-explicit-any
+      await relay.publish(event as any).catch((e) => e);
+    } catch (err) {
+      assertInstanceOf(err, EventRejected);
+      assertEquals(err.message, "error: test");
+      assertEquals(err.cause, event);
+    }
     await arrived;
   });
   it("should throw ConnectionClosed when connection is closed before recieving an OK message", async () => {
