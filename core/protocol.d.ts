@@ -111,17 +111,8 @@ export type RelayToClientMessage<
 }[T];
 export type RelayToClientMessageType = keyof RelayToClientMessageRecord;
 
-export type OkMessageContent<
-  K extends EventKind = EventKind,
-  B extends boolean = boolean,
-> = [
-  EventId,
-  B,
-  OkMessageBody<K, B>,
-];
-
-export type OkMessageBody<K extends EventKind, B extends boolean> = B extends
-  true ? string : `${ResponsePrefix<K>}: ${string}`;
+export type RelayToClientErrorMessage<K extends EventKind, B extends boolean> =
+  B extends true ? string : `${ResponsePrefix<K>}: ${string}`;
 
 export type DefaultResponsePrefix =
   | "duplicate"

@@ -14,7 +14,7 @@ declare module "../../core/protocol.d.ts" {
   interface NipRecord {
     1: {
       ClientToRelayMessage: "EVENT" | "REQ" | "CLOSE";
-      RelayToClientMessage: "EVENT" | "OK" | "EOSE" | "NOTICE";
+      RelayToClientMessage: "EVENT" | "OK" | "EOSE" | "CLOSED" | "NOTICE";
       EventKind: 0 | 1;
       Tag: "e" | "p" | "a" | "d";
     };
@@ -56,8 +56,11 @@ declare module "../../core/protocol.d.ts" {
     K extends EventKind = EventKind,
   > {
     EVENT: [SubscriptionId, NostrEvent<K>];
-    OK: OkMessageContent<K, true> | OkMessageContent<K, false>;
+    OK:
+      | [EventId, true, RelayToClientErrorMessage<K, true>]
+      | [EventId, false, RelayToClientErrorMessage<K, false>];
     EOSE: [SubscriptionId];
+    CLOSED: [SubscriptionId, RelayToClientErrorMessage<K, false>];
     NOTICE: [string];
   }
 }

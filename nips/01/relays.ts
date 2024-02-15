@@ -30,12 +30,15 @@ declare module "../../core/relays.ts" {
   interface RelayEventTypeRecord extends ExtentionalEventTypeRecord {}
 }
 
+export class SubscriptionClosed extends Error {}
+
 const install: RelayModule["default"] = (relay) => {
   relay.addEventListener("message", ({ data: message }) => {
     switch (message[0]) {
       case "EVENT":
+      case "OK":
       case "EOSE":
-      case "OK": {
+      case "CLOSED": {
         return relay.dispatchEvent(new RelayEvent(message[1], message));
       }
       case "NOTICE": {
@@ -53,8 +56,12 @@ const install: RelayModule["default"] = (relay) => {
         }
         case "EOSE": {
           if (!options.realtime) {
-            return controller.close();
+            controller.close();
           }
+          break;
+        }
+        case "CLOSED": {
+          return controller.error(new SubscriptionClosed(message[2]));
         }
       }
     });
