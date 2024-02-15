@@ -3,33 +3,33 @@ import type { Logger } from "./types.ts";
 import { WebSocketLike } from "./websockets.ts";
 
 export interface NostrNodeConfig<
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
+  W extends NostrMessage = NostrMessage,
+  R extends EventTypeRecord = EventTypeRecord,
 > {
-  modules: NostrNodeModule<F>[];
+  modules: NostrNodeModule<W, R>[];
   logger: Logger;
   nbuffer: number;
 }
 
 export type NostrNodeOptions<
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> = Partial<NostrNodeConfig<F>>;
+  W extends NostrMessage = NostrMessage,
+  R extends EventTypeRecord = EventTypeRecord,
+> = Partial<NostrNodeConfig<W, R>>;
 
 /**
  * Common base class for relays and clients.
  */
 export class NostrNode<
   W extends NostrMessage = NostrMessage,
-  E extends EventDataTypeRecord = EventDataTypeRecord,
-  F extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
+  R extends EventTypeRecord = EventTypeRecord,
 > extends WritableStream<W> implements EventTarget {
   readonly #eventTarget = new EventTarget();
-  readonly config: Readonly<NostrNodeConfig<F>>;
-  protected readonly functions: NostrNodeFunctionSet<F> = {};
-  protected readonly aborter = new AbortController();
+  readonly #aborter = new AbortController();
+  readonly config: Readonly<NostrNodeConfig<W, R>>;
 
   constructor(
     readonly ws: WebSocketLike,
-    opts: NostrNodeOptions<F> = {},
+    opts: NostrNodeOptions<W, R> = {},
   ) {
     super({
       write: (msg) => this.ws.send(JSON.stringify(msg)),
@@ -48,7 +48,7 @@ export class NostrNode<
   }
 
   async close() {
-    this.aborter.abort();
+    this.#aborter.abort();
     try {
       await super.close();
     } catch (err) {
@@ -58,62 +58,41 @@ export class NostrNode<
     }
   }
 
-  addModule(module: NostrNodeModule<F>) {
-    const functions = module.default;
-    for (const name in functions) {
-      this.addFunction(name, functions[name]!);
-    }
+  addModule(module: NostrNodeModule<W, R>) {
+    return module.default(this);
   }
 
-  addFunction<K extends FunctionKey<F>>(
-    fname: K,
-    fn: FunctionType<F, K>,
-  ): void {
-    const set = this.functions[fname] ?? (this.functions[fname] = new Set());
-    set.add(fn);
-  }
-
-  async callFunction<K extends FunctionKey<F>>(
-    fname: K,
-    context: F[K],
-  ): Promise<void> {
-    const handlers = this.functions[fname];
-    if (handlers) {
-      await Promise.all(
-        [...handlers].map((handler) => handler({ __fn__: fname, ...context })),
-      );
-    }
-  }
-
-  addEventListener = <T extends EventType<E>>(
+  addEventListener<T extends EventType<R>>(
     type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+    listener:
+      | NostrNodeEventListenerOrEventListenerObject<W, R, T>
+      | null,
     options?: AddEventListenerOptions,
-  ) => {
+  ) {
     return this.#eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
-      { signal: this.aborter.signal, ...options },
+      { signal: this.#aborter.signal, ...options },
     );
-  };
+  }
 
-  removeEventListener = <T extends EventType<E>>(
+  removeEventListener<T extends EventType<R>>(
     type: T,
-    listener: NostrNodeEventListenerOrEventListenerObject<E, T> | null,
+    listener:
+      | NostrNodeEventListenerOrEventListenerObject<W, R, T>
+      | null,
     options?: boolean | EventListenerOptions,
-  ) => {
+  ) {
     return this.#eventTarget.removeEventListener(
       type,
       listener as EventListenerOrEventListenerObject,
       options,
     );
-  };
+  }
 
-  dispatchEvent = <T extends EventType<E>>(
-    event: NostrNodeEvent<E, T>,
-  ) => {
+  dispatchEvent<T extends EventType<R>>(event: NostrNodeEvent<R, T>) {
     return this.#eventTarget.dispatchEvent(event);
-  };
+  }
 }
 
 // ------------------------------
@@ -121,74 +100,50 @@ export class NostrNode<
 // ------------------------------
 
 export interface NostrNodeModule<
-  R extends FunctionParameterTypeRecord,
+  W extends NostrMessage = NostrMessage,
+  R extends EventTypeRecord = EventTypeRecord,
+  N extends NostrNode<W, R> = NostrNode<W, R>,
 > {
-  default: NostrNodeFunctions<R>;
+  default(node: N): void;
 }
-
-type NostrNodeFunctions<
-  R extends FunctionParameterTypeRecord = FunctionParameterTypeRecord,
-> = {
-  [K in FunctionKey<R>]?: FunctionType<R, K>;
-};
-
-// ------------------------------
-// Functions
-// ------------------------------
-
-type NostrNodeFunctionSet<R extends FunctionParameterTypeRecord> = Partial<
-  {
-    [K in FunctionKey<R>]: Set<FunctionType<R, K>>;
-  }
->;
-
-interface FunctionParameterTypeRecord {
-  [K: string]: FunctionParameterType;
-}
-
-// deno-lint-ignore no-empty-interface
-interface FunctionParameterType {}
-
-type FunctionKey<R extends FunctionParameterTypeRecord> = keyof R & string;
-
-type FunctionContextType<
-  R extends FunctionParameterTypeRecord,
-  K extends FunctionKey<R>,
-> = R[K] & { __fn__: K };
-
-type FunctionType<
-  R extends FunctionParameterTypeRecord,
-  K extends FunctionKey<R>,
-> = (context: FunctionContextType<R, K>) => void;
 
 // ------------------------------
 // Events
 // ------------------------------
 
-type EventDataTypeRecord = Record<string, MessageEventInit["data"]>;
+// deno-lint-ignore no-empty-interface
+export interface EventTypeRecord {}
 
-type EventType<R extends EventDataTypeRecord> = keyof R & string;
+type EventType<R extends EventTypeRecord> = keyof R & string;
+
+export abstract class NostrNodeEvent<
+  R extends EventTypeRecord,
+  T extends EventType<R>,
+> extends MessageEvent<R[T]> {
+  declare type: T;
+  constructor(type: T, data: R[T]) {
+    super(type, { data });
+  }
+}
 
 type NostrNodeEventListenerOrEventListenerObject<
-  R extends EventDataTypeRecord,
+  W extends NostrMessage,
+  R extends EventTypeRecord,
   T extends EventType<R>,
-> = NostrNodeEventListener<R, T> | NostrNodeEventListenerObject<R, T>;
+> = NostrNodeEventListener<W, R, T> | NostrNodeEventListenerObject<W, R, T>;
 
 type NostrNodeEventListener<
-  R extends EventDataTypeRecord,
+  W extends NostrMessage,
+  R extends EventTypeRecord,
   T extends EventType<R>,
 > // deno-lint-ignore no-explicit-any
- = (this: NostrNode, ev: NostrNodeEvent<R, T>) => any;
+ = (this: NostrNode<W, R>, ev: MessageEvent<R[T]>) => any;
 
 type NostrNodeEventListenerObject<
-  R extends EventDataTypeRecord,
+  W extends NostrMessage,
+  R extends EventTypeRecord,
   T extends EventType<R>,
 > = {
   // deno-lint-ignore no-explicit-any
-  handleEvent(this: NostrNode, ev: NostrNodeEvent<R, T>): any;
+  handleEvent(this: NostrNode<W, R>, ev: MessageEvent<R[T]>): any;
 };
-
-export class NostrNodeEvent<
-  R extends EventDataTypeRecord,
-  T extends EventType<R>,
-> extends MessageEvent<R[T]> {}

@@ -1,75 +1,85 @@
-import {
-  EventRejected,
-  PublicationEvent,
-  RelayModule,
-  RelaySubscriptionEvent,
-} from "../../core/relays.ts";
+import type {
+  EventId,
+  RelayToClientMessage,
+  RelayToClientMessageType,
+  SubscriptionId,
+} from "../../core/protocol.d.ts";
+import { EventRejected, RelayEvent, RelayModule } from "../../core/relays.ts";
 
-export default {
-  handleRelayToClientMessage({ message, relay }) {
-    const type = message[0];
-    relay.config.logger?.debug?.(relay.config.name, message);
-    switch (type) {
+type SubscriptionMessage = {
+  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends
+    SubscriptionId ? RelayToClientMessage<T> : never;
+}[RelayToClientMessageType];
+
+type PublicationMessage = {
+  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
+    ? RelayToClientMessage<T>
+    : never;
+}[RelayToClientMessageType];
+
+type ExtentionalEventTypeRecord =
+  & {
+    [id in SubscriptionId]: SubscriptionMessage;
+  }
+  & {
+    [id in EventId]: PublicationMessage;
+  };
+
+declare module "../../core/relays.ts" {
+  // deno-lint-ignore no-empty-interface
+  interface RelayEventTypeRecord extends ExtentionalEventTypeRecord {}
+}
+
+const install: RelayModule["default"] = (relay) => {
+  relay.addEventListener("message", ({ data: message }) => {
+    switch (message[0]) {
       case "EVENT":
-      case "EOSE": {
-        const sid = message[1];
-        return relay.dispatchEvent(
-          new RelaySubscriptionEvent(sid, { data: message }),
-        );
-      }
+      case "EOSE":
       case "OK": {
-        const eid = message[1];
-        return relay.dispatchEvent(
-          new PublicationEvent(eid, { data: message }),
-        );
+        return relay.dispatchEvent(new RelayEvent(message[1], message));
       }
       case "NOTICE": {
-        const notice = message[1];
-        return relay.config?.logger?.info?.(notice);
+        return relay.config?.logger?.info?.(message[1]);
       }
     }
-  },
-
-  handleSubscriptionMessage({ message, options, controller }) {
-    const type = message[0];
-    switch (type) {
-      case "EVENT": {
-        const [, , event] = message;
-        return controller.enqueue(event);
-      }
-      case "EOSE": {
-        if (!options.realtime) {
-          return controller.close();
+  });
+  relay.addEventListener("subscribe", (ev) => {
+    const { id, filters, options, controller } = ev.data;
+    relay.addEventListener(id, ({ data: message }) => {
+      switch (message[0]) {
+        case "EVENT": {
+          const [, , event] = message;
+          return controller.enqueue(event);
+        }
+        case "EOSE": {
+          if (!options.realtime) {
+            return controller.close();
+          }
         }
       }
-    }
-  },
-
-  handlePublicationMessage({ message, event }) {
-    const type = message[0];
-    if (type !== "OK") {
-      // This NIP only supports OK messages.
-      return;
-    }
-    const accepted = message[2];
-    if (accepted) {
-      return;
-    }
-    const reason = message[3];
-    throw new EventRejected(reason, { cause: event });
-  },
-
-  publishEvent({ event, relay }) {
-    return relay.send(["EVENT", event]);
-  },
-
-  startSubscription({ filters, id, relay }) {
+    });
     return relay.send(["REQ", id, ...filters]);
-  },
-
-  closeSubscription({ id, relay }) {
-    if (relay.ws.readyState === WebSocket.OPEN) {
+  });
+  relay.addEventListener("unsubscribe", ({ data: { id } }) => {
+    if (relay.status === WebSocket.OPEN) {
       return relay.send(["CLOSE", id]);
     }
-  },
-} satisfies RelayModule["default"];
+  });
+  relay.addEventListener("publish", (ev) => {
+    const { event, resolve, reject } = ev.data;
+    relay.addEventListener(event.id, ({ data: message }) => {
+      if (message[0] !== "OK") {
+        // This NIP only supports OK messages.
+        return;
+      }
+      const [, , accepted, reason] = message;
+      if (accepted) {
+        return resolve();
+      }
+      reject(new EventRejected(reason, { cause: event }));
+    });
+    return relay.send(["EVENT", event]);
+  });
+};
+
+export default install;
