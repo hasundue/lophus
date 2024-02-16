@@ -67,6 +67,22 @@ const install: RelayModule["default"] = (relay) => {
     });
     return relay.send(["REQ", id, ...filters]);
   });
+  relay.addEventListener("pull", (ev) => {
+    // We don't have to await this, right?
+    relay.ws.ready();
+    // We need to name this function to remove it later.
+    const resubscribe = () => {
+      relay.dispatchEvent(new RelayEvent("subscribe", ev.data));
+    };
+    // When the connection is closed before receiving any events, reconnect and resubscribe.
+    relay.ws.addEventListener("close", resubscribe, { once: true });
+    // When any event is received, abort the reconnection logic.
+    relay.addEventListener(
+      ev.data.id,
+      () => relay.ws.removeEventListener("close", resubscribe),
+      { once: true },
+    );
+  });
   relay.addEventListener("unsubscribe", ({ data: { id } }) => {
     if (relay.status === WebSocket.OPEN) {
       return relay.send(["CLOSE", id]);

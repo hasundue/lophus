@@ -115,7 +115,9 @@ export class Relay extends NostrNode<
         );
       },
       pull: (controller) => {
-        this.dispatchEvent(new RelayEvent("pull", { ...context, controller }));
+        this.dispatchEvent(
+          new RelayEvent("pull", { ...context, controller }),
+        );
       },
       cancel: (reason) => {
         this.dispatchEvent(
