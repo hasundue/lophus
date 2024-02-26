@@ -1,34 +1,4 @@
-import type {
-  EventId,
-  RelayToClientMessage,
-  RelayToClientMessageType,
-  SubscriptionId,
-} from "../../core/protocol.d.ts";
 import { EventRejected, RelayEvent, RelayModule } from "../../core/relays.ts";
-
-type SubscriptionMessage = {
-  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends
-    SubscriptionId ? RelayToClientMessage<T> : never;
-}[RelayToClientMessageType];
-
-type PublicationMessage = {
-  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
-    ? RelayToClientMessage<T>
-    : never;
-}[RelayToClientMessageType];
-
-type ExtentionalEventTypeRecord =
-  & {
-    [id in SubscriptionId]: SubscriptionMessage;
-  }
-  & {
-    [id in EventId]: PublicationMessage;
-  };
-
-declare module "../../core/relays.ts" {
-  // deno-lint-ignore no-empty-interface
-  interface RelayEventTypeRecord extends ExtentionalEventTypeRecord {}
-}
 
 export class SubscriptionClosed extends Error {}
 
@@ -65,11 +35,14 @@ const install: RelayModule["default"] = (relay) => {
         }
       }
     });
-    return relay.send(["REQ", id, ...filters]);
+    relay.send(["REQ", id, ...filters]);
+  });
+  relay.addEventListener("resubscribe", ({ data: { id, filters } }) => {
+    relay.send(["REQ", id, ...filters]);
   });
   relay.addEventListener("unsubscribe", ({ data: { id } }) => {
     if (relay.status === WebSocket.OPEN) {
-      return relay.send(["CLOSE", id]);
+      relay.send(["CLOSE", id]);
     }
   });
   relay.addEventListener("publish", (ev) => {

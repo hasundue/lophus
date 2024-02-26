@@ -1,9 +1,11 @@
 import type { Stringified } from "./types.ts";
 import type {
   ClientToRelayMessage,
+  EventId,
   EventKind,
   NostrEvent,
   RelayToClientMessage,
+  RelayToClientMessageType,
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
@@ -97,6 +99,13 @@ export class Relay extends NostrNode<
     );
   }
 
+  dispatch<T extends RelayEventType>(
+    type: T,
+    data: RelayEventTypeRecord[T],
+  ): void {
+    this.dispatchEvent(new RelayEvent(type, data));
+  }
+
   subscribe<K extends EventKind>(
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     options: Partial<SubscriptionOptions> = {},
@@ -108,19 +117,21 @@ export class Relay extends NostrNode<
       filters: [filter].flat(),
       options,
     };
+    const resubscribe = () => this.dispatch("resubscribe", { ...context });
     return new ReadableStream<NostrEvent<K>>({
       start: (controller) => {
-        this.dispatchEvent(
-          new RelayEvent("subscribe", { ...context, controller }),
+        this.addEventListener(
+          context.id,
+          () => this.ws.removeEventListener("close", resubscribe),
         );
+        this.dispatch("subscribe", { ...context, controller });
       },
-      pull: (controller) => {
-        this.dispatchEvent(new RelayEvent("pull", { ...context, controller }));
+      pull: () => {
+        this.ws.addEventListener("close", resubscribe, { once: true });
+        this.ws.ready();
       },
       cancel: (reason) => {
-        this.dispatchEvent(
-          new RelayEvent("unsubscribe", { ...context, reason }),
-        );
+        this.dispatch("unsubscribe", { ...context, reason });
       },
     }, new CountQueuingStrategy({ highWaterMark: options.nbuffer }));
   }
@@ -133,9 +144,7 @@ export class Relay extends NostrNode<
    */
   publish<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.dispatchEvent(
-        new RelayEvent("publish", { event, resolve, reject }),
-      );
+      this.dispatch("publish", { event, resolve, reject });
       this.ws.addEventListener(
         "close",
         () => reject(new ConnectionClosed()),
@@ -183,12 +192,25 @@ export interface PublicationContext {
   reject: (reason: unknown) => void;
 }
 
+type SubscriptionMessage = {
+  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends
+    SubscriptionId ? RelayToClientMessage<T> : never;
+}[RelayToClientMessageType];
+
+type PublicationMessage = {
+  [T in RelayToClientMessageType]: RelayToClientMessage<T>[1] extends EventId
+    ? RelayToClientMessage<T>
+    : never;
+}[RelayToClientMessageType];
+
 export interface RelayEventTypeRecord {
   message: RelayToClientMessage;
   subscribe: SubscriptionContextWithController;
-  pull: SubscriptionContextWithController;
+  resubscribe: SubscriptionContext;
   unsubscribe: SubscriptionContextWithReason;
   publish: PublicationContext;
+  [id: SubscriptionId]: SubscriptionMessage;
+  [id: EventId]: PublicationMessage;
 }
 
 export type RelayEventType = keyof RelayEventTypeRecord;

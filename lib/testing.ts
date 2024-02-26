@@ -1,16 +1,24 @@
 type MessageEventData = string | ArrayBufferLike | Blob | ArrayBufferView;
 
 export class MockWebSocket extends EventTarget implements WebSocket {
+  /**
+   * A list of all instances of MockWebSocket.
+   * An instance is removed from this list when it is closed.
+   */
   static get instances(): MockWebSocket[] {
-    return this.#instances;
+    return Array.from(this.#instances);
   }
-  static #instances: MockWebSocket[] = [];
+  static #instances = new Set<MockWebSocket>();
+
+  static get first(): MockWebSocket | undefined {
+    return this.instances[0];
+  }
 
   constructor(url?: string | URL, protocols?: string | string[]) {
     super();
     this.url = url?.toString() ?? "";
     this.protocol = protocols ? [...protocols].flat()[0] : "";
-    MockWebSocket.#instances.push(this);
+    MockWebSocket.#instances.add(this);
     // Simulate async behavior of WebSocket as much as possible.
     queueMicrotask(() => {
       this.#readyState = 1;
@@ -50,9 +58,11 @@ export class MockWebSocket extends EventTarget implements WebSocket {
       if (this.#remote) {
         this.#remote.#readyState = 3;
         this.#remote.dispatchEvent(new CloseEvent("close", { code, reason }));
+        MockWebSocket.#instances.delete(this.#remote);
       }
       this.#readyState = 3;
       this.dispatchEvent(new CloseEvent("close", { code, reason }));
+      MockWebSocket.#instances.delete(this);
     });
   }
 
