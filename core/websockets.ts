@@ -23,6 +23,7 @@ type EventListenerOptionsMap = Map<
  */
 export class LazyWebSocket implements WebSocketLike {
   #ws?: WebSocket;
+  readonly #ac = new AbortController();
   readonly #createWebSocket: () => WebSocket;
   readonly #eventListenerMap = new Map<
     WebSocketEventType,
@@ -86,6 +87,7 @@ export class LazyWebSocket implements WebSocketLike {
     if (!this.#ws) {
       return;
     }
+    this.#ac.abort();
     switch (this.#ws.readyState) {
       case WebSocket.CONNECTING:
         await this.#once("open");
@@ -111,6 +113,8 @@ export class LazyWebSocket implements WebSocketLike {
     listener: EventListenerOrEventListenerObject,
     options: boolean | AddEventListenerOptions = {},
   ) => {
+    options = typeof options === "boolean" ? { capture: options } : options;
+    options = { signal: this.#ac.signal, ...options };
     this.#ws?.addEventListener(type, listener, options);
     const map = this.#eventListenerMap.get(type);
     if (map) {
