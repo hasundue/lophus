@@ -1,4 +1,4 @@
-import { bundle } from "https://deno.land/x/emit@0.36.0/mod.ts";
+import { bundle } from "https://deno.land/x/emit@0.38.2/mod.ts";
 import { transform } from "https://deno.land/x/esbuild@v0.20.0/mod.js";
 
 const result = await bundle(
