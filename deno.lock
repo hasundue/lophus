@@ -134,7 +134,7 @@
     "https://deno.land/x/emit@0.38.2/_utils.ts": "98412edc7aa29e77d592b54fbad00bdec1b05d0c25eb772a5f8edc9813e08d88",
     "https://deno.land/x/emit@0.38.2/emit.generated.js": "5e0846d5faa47952e546415a570563098b93225f35bd80b14eb1da7c5932f6ca",
     "https://deno.land/x/emit@0.38.2/mod.ts": "2fa64c4d220c13b9d752933803056ce7694722367c3e9cb1ee86fe9f81c587f3",
-    "https://deno.land/x/esbuild@v0.20.0/mod.js": "5c6fc2e98424ced3a4159c2f267c6bc62b49906e9dc86f724b3d88a482c55c70",
+    "https://deno.land/x/esbuild@v0.20.1/mod.js": "d50e500b53ce67e31116beba3916b0f9275c0e1cc20bc5cadc0fc1b7a3b06fd9",
     "https://deno.land/x/streamtools@v0.5.0/collect.ts": "d421e9dcca5ec7b30b731797305efc9b986aa4cf411bf95aec661dc7b1e1ec11",
     "https://deno.land/x/streamtools@v0.5.0/pipe_through_from.ts": "67b0c908e5dcb748ced483e2b31a1ec08d46fc839298b07bcd854ab4b39a4e2a",
     "https://deno.land/x/streamtools@v0.5.0/pop.ts": "9ee4bbce7409e902a39bfcc0e49eaaab0008492dfba5f6679db28df6b3867299",
