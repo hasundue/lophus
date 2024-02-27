@@ -3,7 +3,7 @@ import { EventRejected, RelayModule } from "../../core/relays.ts";
 export class SubscriptionClosed extends Error {}
 
 export const install: RelayModule["install"] = (relay) => {
-  relay.addEventListener("message", ({ data: message }) => {
+  relay.on("message", (message) => {
     switch (message[0]) {
       case "EVENT":
       case "OK":
@@ -14,9 +14,9 @@ export const install: RelayModule["install"] = (relay) => {
         return; // Ignore unknown messages.
     }
   });
-  relay.addEventListener("subscribe", (ev) => {
-    const { id, filters, options, controller } = ev.data;
-    relay.addEventListener(id, ({ data: message }) => {
+
+  relay.on("subscribe", ({ id, filters, options, controller }) => {
+    relay.on(id, (message) => {
       switch (message[0]) {
         case "EVENT": {
           const [, , event] = message;
@@ -35,17 +35,19 @@ export const install: RelayModule["install"] = (relay) => {
     });
     relay.send(["REQ", id, ...filters]);
   });
-  relay.addEventListener("resubscribe", ({ data: { id, filters } }) => {
+
+  relay.on("resubscribe", ({ id, filters }) => {
     relay.send(["REQ", id, ...filters]);
   });
-  relay.addEventListener("unsubscribe", ({ data: { id } }) => {
+
+  relay.on("unsubscribe", ({ id }) => {
     if (relay.status === WebSocket.OPEN) {
       relay.send(["CLOSE", id]);
     }
   });
-  relay.addEventListener("publish", (ev) => {
-    const { event, resolve, reject } = ev.data;
-    relay.addEventListener(event.id, ({ data: message }) => {
+
+  relay.on("publish", ({ event, resolve, reject }) => {
+    relay.on(event.id, (message) => {
       if (message[0] !== "OK") {
         // This NIP only supports OK messages.
         return;

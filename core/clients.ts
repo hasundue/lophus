@@ -8,7 +8,6 @@ import {
   NostrNode,
   NostrNodeBase,
   NostrNodeConfig,
-  NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
 
@@ -47,7 +46,7 @@ export class Client extends NostrNodeBase<
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Validate the message.
-      this.dispatchEvent(new ClientEvent("message", message));
+      this.dispatch("message", message);
     });
   }
 }
@@ -61,10 +60,6 @@ export interface ClientEventTypeRecord {
 }
 
 export type ClientEventType = keyof ClientEventTypeRecord;
-
-export class ClientEvent<
-  T extends ClientEventType = ClientEventType,
-> extends NostrNodeEvent<ClientEventTypeRecord, T> {}
 
 // ------------------------------
 // Modules

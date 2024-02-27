@@ -11,7 +11,7 @@ declare module "../../core/relays.ts" {
 }
 
 const install: RelayModule["install"] = (relay) => {
-  relay.addEventListener("message", ({ data: message }) => {
+  relay.on("message", (message) => {
     if (message[0] !== "AUTH") {
       // This NIP only handles AUTH messages
       return;

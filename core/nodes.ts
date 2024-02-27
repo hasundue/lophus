@@ -54,6 +54,16 @@ export interface NostrNode<
    * and `data`.
    */
   dispatch<T extends EventType<R>>(type: T, data: R[T]): void;
+
+  /**
+   * A convenience method to add an event listener for the given `type` that
+   * calls the given `listener` when the event is dispatched.
+   */
+  on<T extends EventType<R>>(
+    type: T,
+    // deno-lint-ignore no-explicit-any
+    listener: (data: R[T]) => any,
+  ): void;
 }
 
 /**
@@ -108,8 +118,16 @@ export class NostrNodeBase<
   dispatch<T extends EventType<R>>(
     type: T,
     data: R[T],
-  ): void {
-    this.dispatchEvent(new NostrNodeEvent(type, data));
+  ) {
+    this.dispatchEvent(new NostrNodeEvent<R, T>(type, data));
+  }
+
+  on<T extends EventType<R>>(
+    type: T,
+    // deno-lint-ignore no-explicit-any
+    listener: (data: R[T]) => any,
+  ) {
+    this.addEventListener(type, ({ data }) => listener(data));
   }
 }
 
