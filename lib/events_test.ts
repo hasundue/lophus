@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, it } from "./std/testing.ts";
 import { assertEquals, assertInstanceOf } from "./std/assert.ts";
 import { pipeThroughFrom } from "./x/streamtools.ts";
 import type {} from "../core/protocol.d.ts";
-import { Relay } from "../core/relays.ts?nips=1";
+import { Relay } from "../core/relays.ts";
 import { PrivateKey, Signer } from "./signs.ts";
 import { EventInit, EventPublisher } from "./events.ts";
 import { MockWebSocket } from "../lib/testing.ts";
@@ -41,7 +41,7 @@ describe("EventPublisher", () => {
   // FIXME: runtime error
   it("should be connectable to a relay", async () => {
     relay = new Relay("wss://example.com");
-    const writable = pipeThroughFrom(relay, publisher);
+    const writable = pipeThroughFrom(relay.writable, publisher);
     assertInstanceOf(writable, WritableStream);
     await writable.close();
   });

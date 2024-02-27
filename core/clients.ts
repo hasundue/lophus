@@ -6,21 +6,11 @@ import type {
 } from "./protocol.d.ts";
 import {
   NostrNode,
+  NostrNodeBase,
   NostrNodeConfig,
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { importNips } from "./nips.ts";
-
-// ----------------------
-// NIPs
-// ----------------------
-
-const NIPs = await importNips<
-  RelayToClientMessage,
-  ClientEventTypeRecord,
-  Client
->(import.meta.url, "../nips");
 
 // ----------------------
 // Interfaces
@@ -30,16 +20,18 @@ export type ClientConfig = NostrNodeConfig<
   RelayToClientMessage,
   ClientEventTypeRecord
 >;
-
 export type ClientOptions = Partial<ClientConfig>;
 
 /**
  * A class that represents a remote Nostr client.
  */
-export class Client extends NostrNode<
+export class Client extends NostrNodeBase<
   RelayToClientMessage,
   ClientEventTypeRecord
-> {
+> implements NostrNode<RelayToClientMessage, ClientEventTypeRecord> {
+  /**
+   * The WebSocket connection to the client.
+   */
   declare ws: WebSocket;
 
   /**
@@ -51,10 +43,7 @@ export class Client extends NostrNode<
   >();
 
   constructor(ws: WebSocket, opts?: ClientOptions) {
-    super(ws, {
-      ...opts,
-      modules: NIPs.concat(opts?.modules ?? []),
-    });
+    super(ws, opts);
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Validate the message.

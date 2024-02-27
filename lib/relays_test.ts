@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
 import { assertEquals, assertInstanceOf } from "../lib/std/assert.ts";
 import { NostrEvent } from "../core/protocol.d.ts";
-import { Relay } from "../core/relays.ts?nips=1";
+import { Relay } from "../core/relays.ts";
 import { RelayGroup } from "../lib/relays.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 
@@ -13,6 +13,7 @@ describe("RelayGroup", () => {
   // ----------------------
   // Setup
   // ----------------------
+
   beforeAll(() => {
     globalThis.WebSocket = MockWebSocket;
     relays = [
@@ -33,13 +34,13 @@ describe("RelayGroup", () => {
       }),
     ];
   });
-  afterAll(() => {
-    group.close();
-  });
+
+  afterAll(() => group.close());
 
   // ----------------------
   // Constructor
   // ----------------------
+
   it("should create a group of relays", () => {
     group = new RelayGroup(relays);
     assertInstanceOf(group, RelayGroup);
@@ -68,6 +69,7 @@ describe("RelayGroup", () => {
   // ----------------------
   // Subscription
   // ----------------------
+
   it("should create a subscription", () => {
     sub = group.subscribe({ kinds: [1] }, { id: "test-group" });
     assertInstanceOf(sub, ReadableStream);

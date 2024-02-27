@@ -32,14 +32,3 @@ export type AlphabetLetter =
   | "H" | "I" | "J" | "K" | "L" | "M" | "N"
   | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
   | "V" | "W" | "X" | "Y" | "Z";
-
-// ----------------------
-// Loggers
-// ----------------------
-
-export interface Logger {
-  debug?: (...args: unknown[]) => void;
-  info?: (...args: unknown[]) => void;
-  warn?: (...args: unknown[]) => void;
-  error?: (...args: unknown[]) => void;
-}

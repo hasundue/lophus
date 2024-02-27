@@ -14,7 +14,7 @@ declare module "../../core/clients.ts" {
   }
 }
 
-const install: ClientModule["default"] = (client) => {
+export const install: ClientModule["install"] = (client) => {
   client.addEventListener("message", ({ data: message }) => {
     switch (message[0]) {
       case "EVENT": {
@@ -54,4 +54,4 @@ const install: ClientModule["default"] = (client) => {
   });
 };
 
-export default install;
+export default { install };

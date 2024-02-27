@@ -7,7 +7,8 @@ import {
   RelayToClientMessage,
   SubscriptionId,
 } from "../../core/protocol.d.ts";
-import { Client } from "../../core/clients.ts?nips=1";
+import { Client } from "../../core/clients.ts";
+import nip_01 from "../01/clients.ts";
 
 describe("NIP-01/Client", () => {
   let ws: MockWebSocket;
@@ -17,7 +18,7 @@ describe("NIP-01/Client", () => {
 
   beforeAll(() => {
     ws = new MockWebSocket();
-    client = new Client(ws, { logger: console });
+    client = new Client(ws, { modules: [nip_01] });
   });
   afterAll(() => {
     client.close();
