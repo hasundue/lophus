@@ -31,11 +31,11 @@ describe("NIP-01/Client", () => {
 
   it("should receive an event and send a OK message", async () => {
     const event = { id: "test-ok", kind: 0 };
-    const received = new Promise<ClientToRelayMessage<"EVENT">>((resolve) => {
-      client.addEventListener("message", ({ data: message }) => {
-        if (message[0] === "EVENT") resolve(message);
-      });
-    });
+    const received = new Promise<ClientToRelayMessage<"EVENT">>((resolve) =>
+      client.on("message", (msg) => {
+        if (msg[0] === "EVENT") resolve(msg);
+      })
+    );
     const replied = new Promise<RelayToClientMessage<"OK">>((resolve) => {
       ws.remote.addEventListener("message", (ev: MessageEvent<string>) => {
         resolve(JSON.parse(ev.data));
@@ -50,8 +50,8 @@ describe("NIP-01/Client", () => {
     subid = "test-req" as SubscriptionId;
     const request: ClientToRelayMessage<"REQ"> = ["REQ", subid, { kinds: [1] }];
     const received = new Promise<ClientToRelayMessage<"REQ">>((resolve) => {
-      client.addEventListener("message", ({ data: message }) => {
-        if (message[0] === "REQ" && message[1] === subid) resolve(message);
+      client.on("message", (msg) => {
+        if (msg[0] === "REQ" && msg[1] === subid) resolve(msg);
       });
     });
     ws.remote.send(JSON.stringify(request));

@@ -15,7 +15,7 @@ declare module "../../core/clients.ts" {
 }
 
 export const install: ClientModule["install"] = (client) => {
-  client.addEventListener("message", ({ data: message }) => {
+  client.on("message", (message) => {
     switch (message[0]) {
       case "EVENT": {
         const event = message[1];
