@@ -11,12 +11,7 @@ import type {
   SubscriptionId,
 } from "./protocol.d.ts";
 import { LazyWebSocket } from "./websockets.ts";
-import {
-  NostrNodeBase,
-  NostrNodeConfig,
-  NostrNodeEvent,
-  NostrNodeModule,
-} from "./nodes.ts";
+import { NostrNodeBase, NostrNodeConfig, NostrNodeModule } from "./nodes.ts";
 
 // ----------------------
 // Errors
@@ -78,16 +73,9 @@ export class Relay extends NostrNodeBase<
       (ev: MessageEvent<Stringified<RelayToClientMessage>>) => {
         const message = JSON.parse(ev.data) as RelayToClientMessage;
         // TODO: Validate the message.
-        return this.dispatchEvent(new RelayEvent("message", message));
+        return this.dispatch("message", message);
       },
     );
-  }
-
-  dispatch<T extends RelayEventType>(
-    type: T,
-    data: RelayEventTypeRecord[T],
-  ): void {
-    this.dispatchEvent(new RelayEvent(type, data));
   }
 
   subscribe<K extends EventKind>(
@@ -196,10 +184,6 @@ export interface RelayEventTypeRecord {
 }
 
 export type RelayEventType = keyof RelayEventTypeRecord;
-
-export class RelayEvent<
-  T extends RelayEventType = RelayEventType,
-> extends NostrNodeEvent<RelayEventTypeRecord, T> {}
 
 // ----------------------
 // Modules

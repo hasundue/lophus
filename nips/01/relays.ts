@@ -1,4 +1,4 @@
-import { EventRejected, RelayEvent, RelayModule } from "../../core/relays.ts";
+import { EventRejected, RelayModule } from "../../core/relays.ts";
 
 export class SubscriptionClosed extends Error {}
 
@@ -9,7 +9,7 @@ export const install: RelayModule["install"] = (relay) => {
       case "OK":
       case "EOSE":
       case "CLOSED":
-        return relay.dispatchEvent(new RelayEvent(message[1], message));
+        return relay.dispatch(message[1], message);
       default:
         return; // Ignore unknown messages.
     }
