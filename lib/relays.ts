@@ -15,14 +15,14 @@ import { Distinctor, merge } from "../lib/streams.ts";
 /**
  * A pool of relays that can be used as a single relay.
  */
-export class RelayGroup extends WritableStream<ClientToRelayMessage>
-  implements RelayLike {
+export class RelayGroup implements RelayLike {
+  readonly writable: WritableStream<ClientToRelayMessage>;
   readonly config: Readonly<RelayLikeConfig>;
   #relays_read: RelayLike[];
   #relays_write: RelayLike[];
 
   constructor(readonly relays: RelayLike[], options?: RelayLikeOptions) {
-    super({
+    this.writable = new WritableStream({
       async write(msg) {
         await Promise.all(relays.map((r) => r.send(msg)));
       },

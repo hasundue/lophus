@@ -13,12 +13,9 @@ import {
   RelayToClientMessage,
   SubscriptionId,
 } from "../../core/protocol.d.ts";
-import {
-  ConnectionClosed,
-  EventRejected,
-  Relay,
-} from "../../core/relays.ts?nips=1";
+import { ConnectionClosed, EventRejected, Relay } from "../../core/relays.ts";
 import { SubscriptionClosed } from "../../nips/01/relays.ts";
+import nip_01 from "../../nips/01/relays.ts";
 
 function getRemoteSocket() {
   return MockWebSocket.instances[0].remote;
@@ -32,7 +29,7 @@ describe("Relay (NIP-01)", () => {
 
   beforeAll(() => {
     globalThis.WebSocket = MockWebSocket;
-    relay = new Relay(url);
+    relay = new Relay(url, { modules: [nip_01] });
   });
 
   afterAll(() => {

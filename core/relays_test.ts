@@ -35,14 +35,12 @@ describe("Relay", () => {
   });
 
   describe("constructed with url and options", () => {
-    const logger = { info: () => {} };
     beforeAll(() => {
       relay = new Relay(url, {
         name: "test",
         read: false,
         write: false,
         nbuffer: 20,
-        logger,
       });
     });
     afterAll(() => {
@@ -58,7 +56,6 @@ describe("Relay", () => {
         nbuffer: 20,
         read: false,
         write: false,
-        logger,
       });
     });
   });

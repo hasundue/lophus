@@ -12,22 +12,11 @@ import type {
 } from "./protocol.d.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import {
-  NostrNode,
+  NostrNodeBase,
   NostrNodeConfig,
   NostrNodeEvent,
   NostrNodeModule,
 } from "./nodes.ts";
-import { importNips } from "./nips.ts";
-
-// ----------------------
-// NIPs
-// ----------------------
-
-const NIPs = await importNips<
-  ClientToRelayMessage,
-  RelayEventTypeRecord,
-  Relay
->(import.meta.url, "../nips");
 
 // ----------------------
 // Errors
@@ -63,7 +52,7 @@ export interface SubscriptionOptions {
 /**
  * A class that represents a remote Nostr Relay.
  */
-export class Relay extends NostrNode<
+export class Relay extends NostrNodeBase<
   ClientToRelayMessage,
   RelayEventTypeRecord
 > {
@@ -75,12 +64,7 @@ export class Relay extends NostrNode<
     options?: RelayOptions,
   ) {
     const url = typeof init === "string" ? init : init.url;
-    const config = {
-      nbuffer: 10,
-      logger: {},
-      ...options,
-      modules: NIPs.concat(options?.modules ?? []),
-    };
+    const config = { nbuffer: 64, modules: [], ...options };
     super(new LazyWebSocket(url), config);
     this.config = {
       url,
@@ -158,11 +142,9 @@ export class Relay extends NostrNode<
 // RelayLikes
 // ----------------------
 
-export interface RelayLike extends WritableStream<ClientToRelayMessage> {
+export interface RelayLike
+  extends Pick<Relay, "writable" | "send" | "subscribe" | "publish" | "close"> {
   readonly config: RelayLikeConfig;
-  send: Relay["send"];
-  subscribe: Relay["subscribe"];
-  publish: Relay["publish"];
 }
 
 export type RelayLikeConfig = Pick<RelayConfig, "name" | "read" | "write">;

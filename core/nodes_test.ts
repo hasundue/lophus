@@ -1,14 +1,14 @@
-import { NostrNode } from "./nodes.ts";
+import { NostrNode, NostrNodeBase } from "./nodes.ts";
 import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
-import { assert, assertEquals } from "../lib/std/assert.ts";
+import { assertEquals } from "../lib/std/assert.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 
-describe("NostrNode", () => {
+describe("NostrNodeBase", () => {
   let node: NostrNode;
   let writer: WritableStreamDefaultWriter;
 
   beforeAll(() => {
-    node = new NostrNode(new MockWebSocket());
+    node = new NostrNodeBase(new MockWebSocket());
   });
 
   afterAll(async () => {
@@ -19,12 +19,8 @@ describe("NostrNode", () => {
     });
   });
 
-  it("should be able to create a NostrNode instance", () => {
-    assert(node instanceof NostrNode);
-  });
-
   it("should be connected to the WebSocket after a message is sent", async () => {
-    writer = node.getWriter();
+    writer = node.writable.getWriter();
     await writer.write(["NOTICE", "test"]);
     writer.releaseLock();
     assertEquals(node.status, WebSocket.OPEN);
