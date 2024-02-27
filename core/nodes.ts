@@ -15,12 +15,12 @@ export type NostrNodeOptions<
 > = Partial<NostrNodeConfig<W, R>>;
 
 /**
- * Common interface for relays and clients.
+ * Common interface for relays and clients, which extends `EventTarget`.
  */
 export interface NostrNode<
   W extends NostrMessage = NostrMessage,
   R extends EventTypeRecord = EventTypeRecord,
-> extends EventTarget {
+> {
   readonly config: Readonly<NostrNodeConfig<W, R>>;
   readonly ws: WebSocketLike;
   readonly writable: WritableStream<W>;
@@ -48,6 +48,12 @@ export interface NostrNode<
   ): void;
 
   dispatchEvent<T extends EventType<R>>(event: NostrNodeEvent<R, T>): boolean;
+
+  /**
+   * A convenience method to dispatch a `NostrNodeEvent` with the given `type`
+   * and `data`.
+   */
+  dispatch<T extends EventType<R>>(type: T, data: R[T]): void;
 }
 
 /**
@@ -98,6 +104,13 @@ export class NostrNodeBase<
   declare addEventListener: NostrNode<W, R>["addEventListener"];
   declare removeEventListener: NostrNode<W, R>["removeEventListener"];
   declare dispatchEvent: NostrNode<W, R>["dispatchEvent"];
+
+  dispatch<T extends EventType<R>>(
+    type: T,
+    data: R[T],
+  ): void {
+    this.dispatchEvent(new NostrNodeEvent(type, data));
+  }
 }
 
 // ------------------------------
@@ -122,7 +135,7 @@ export interface EventTypeRecord {}
 
 type EventType<R extends EventTypeRecord> = keyof R & string;
 
-export abstract class NostrNodeEvent<
+export class NostrNodeEvent<
   R extends EventTypeRecord,
   T extends EventType<R>,
 > extends MessageEvent<R[T]> {
