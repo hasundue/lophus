@@ -3,8 +3,8 @@ import type {
   EventContent,
   EventKind,
   NostrEvent,
-} from "../mod.ts";
-import { Stringified } from "../core/types.ts";
+} from "../core/protocol.ts";
+import { Stringified } from "../lib/types.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: NostrEvent<K>["kind"];

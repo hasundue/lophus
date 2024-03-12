@@ -1,7 +1,7 @@
-import { EventKind, NostrEvent, PublicKey } from "../../core/protocol.d.ts";
+import { EventKind, NostrEvent, PublicKey } from "../../core/protocol.ts";
 import type { Optional } from "../../lib/types.ts";
 
-declare module "../../core/protocol.d.ts" {
+declare module "../../core/protocol.ts" {
   interface NipRecord {
     7: Record<string, never>;
   }

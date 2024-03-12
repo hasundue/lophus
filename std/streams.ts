@@ -1,4 +1,4 @@
-export { mergeReadableStreams as merge } from "./std/streams.ts";
+export { mergeReadableStreams as merge } from "@std/streams";
 
 /**
  * TransformStream which filters out duplicate values from a stream.

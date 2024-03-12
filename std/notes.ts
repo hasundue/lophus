@@ -1,5 +1,5 @@
-import type { NostrEvent, RelayUrl } from "../mod.ts";
-import type { Optional } from "./types.ts";
+import type { Optional } from "../lib/types.ts";
+import type { NostrEvent, RelayUrl } from "../core/protocol.ts";
 import { EventInit } from "./events.ts";
 
 export type TextNote = EventInit<1>;

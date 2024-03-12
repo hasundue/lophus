@@ -1,5 +1,5 @@
-import "https://deno.land/std@0.217.0/dotenv/load.ts";
-import type { PrivateKey, PublicKey } from "../mod.ts";
+import "@std/dotenv";
+import type { PrivateKey, PublicKey } from "../core/protocol.ts";
 
 class Env {
   #nsec?: PrivateKey;

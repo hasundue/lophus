@@ -1,7 +1,3 @@
-/**
- * Constructor of branded types
- */
-
 // ----------------------
 // Branded types
 // ----------------------
@@ -18,7 +14,6 @@ export type PromiseCallbacks<T> = {
 // ----------------------
 // Strings
 // ----------------------
-
 export type Url = `https://${string}` | `http://${string}`;
 export type Stringified<T> = string & { __content: T };
 
@@ -32,3 +27,18 @@ export type AlphabetLetter =
   | "H" | "I" | "J" | "K" | "L" | "M" | "N"
   | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
   | "V" | "W" | "X" | "Y" | "Z";
+
+// ----------------------
+// Records and maps
+// ----------------------
+export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
+
+export type Require<T, K extends keyof T> = Expand<
+  & T
+  & Required<Pick<T, K>>
+>;
+
+export type Optional<T, K extends keyof T> = Expand<
+  & Omit<T, K>
+  & Partial<Pick<T, K>>
+>;

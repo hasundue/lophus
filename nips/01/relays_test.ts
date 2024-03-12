@@ -1,10 +1,5 @@
-import "./protocol.d.ts";
-import { afterAll, beforeAll, describe, it } from "../../lib/std/testing.ts";
-import {
-  assert,
-  assertEquals,
-  assertInstanceOf,
-} from "../../lib/std/assert.ts";
+import { assert, assertEquals, assertInstanceOf } from "@std/assert";
+import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { MockWebSocket } from "../../lib/testing.ts";
 import {
   ClientToRelayMessage,
@@ -12,10 +7,11 @@ import {
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "../../core/protocol.d.ts";
+} from "../../core/protocol.ts";
 import { ConnectionClosed, EventRejected, Relay } from "../../core/relays.ts";
-import { SubscriptionClosed } from "../../nips/01/relays.ts";
-import nip_01 from "../../nips/01/relays.ts";
+import { SubscriptionClosed } from "./relays.ts";
+import nip_01 from "./relays.ts";
+import "./protocol.ts";
 
 function getRemoteSocket() {
   return MockWebSocket.instances[0].remote;

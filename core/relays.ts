@@ -1,4 +1,4 @@
-import type { Stringified } from "./types.ts";
+import type { Stringified } from "../lib/types.ts";
 import type {
   ClientToRelayMessage,
   EventId,

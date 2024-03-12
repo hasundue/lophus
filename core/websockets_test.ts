@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
-import { LazyWebSocket } from "./websockets.ts";
 import { MockWebSocket } from "../lib/testing.ts";
+import { LazyWebSocket } from "./websockets.ts";
 
 describe("LazyWebSocket", () => {
   let lazy: LazyWebSocket;

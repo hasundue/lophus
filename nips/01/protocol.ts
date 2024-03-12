@@ -7,10 +7,10 @@
  * @module
  */
 
-import "../../core/protocol.d.ts";
-import type { Url } from "../../core/types.ts";
+import "../../core/protocol.ts";
+import type { Url } from "../../lib/types.ts";
 
-declare module "../../core/protocol.d.ts" {
+declare module "../../core/protocol.ts" {
   interface NipRecord {
     1: {
       ClientToRelayMessage: "EVENT" | "REQ" | "CLOSE";

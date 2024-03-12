@@ -1,6 +1,5 @@
-import { describe, it } from "../lib/std/testing.ts";
-import { assertArrayIncludes, assertEquals } from "../lib/std/assert.ts";
-import { collect } from "../lib/x/streamtools.ts";
+import { assertArrayIncludes, assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import { Distinctor } from "./streams.ts";
 
 describe("Distinctor", () => {
@@ -14,7 +13,9 @@ describe("Distinctor", () => {
         controller.close();
       },
     });
-    const values = await collect(stream.pipeThrough(new Distinctor((v) => v)));
+    const values = await Array.fromAsync(
+      stream.pipeThrough(new Distinctor((v) => v)),
+    );
     assertEquals(values.length, 3);
     assertArrayIncludes(values, [1, 2, 3]);
   });

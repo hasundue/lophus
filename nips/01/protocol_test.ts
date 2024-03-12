@@ -1,9 +1,13 @@
-import { describe, it } from "../../lib/std/testing.ts";
-import { assertType, Has } from "../../lib/std/testing.ts";
-import type { EventId, PublicKey } from "../../core/protocol.d.ts";
-import { Timestamp } from "../../lib/times.ts";
-import { SubscriptionFilter, Tag } from "../../core/protocol.d.ts";
-import "./protocol.d.ts";
+import { describe, it } from "@std/testing/bdd";
+import { assertType, Has } from "@std/testing/types";
+import type {
+  EventId,
+  PublicKey,
+  SubscriptionFilter,
+  Tag,
+} from "../../core/protocol.ts";
+import { Timestamp } from "../../std/times.ts";
+import "./protocol.ts";
 
 describe("Tag", () => {
   it("valid event tag", () => {
