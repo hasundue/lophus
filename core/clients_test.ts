@@ -1,7 +1,7 @@
 import { assert } from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { Client } from "./clients.ts";
-import { MockWebSocket } from "./testing.ts";
+import { MockWebSocket } from "../lib/testing.ts";
 
 describe("Client", () => {
   let ws: MockWebSocket;
