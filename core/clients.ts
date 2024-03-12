@@ -3,7 +3,7 @@ import type {
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "./protocol.d.ts";
+} from "./protocol.ts";
 import {
   NostrNode,
   NostrNodeBase,
@@ -36,10 +36,10 @@ export class Client extends NostrNodeBase<
   /**
    * Writable interface for the subscriptions.
    */
-  readonly subscriptions = new Map<
+  readonly subscriptions: Map<
     SubscriptionId,
     WritableStream<NostrEvent>
-  >();
+  > = new Map();
 
   constructor(ws: WebSocket, opts?: ClientOptions) {
     super(ws, opts);

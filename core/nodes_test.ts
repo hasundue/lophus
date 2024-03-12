@@ -1,7 +1,7 @@
+import { assertEquals } from "@std/assert";
+import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { NostrNode, NostrNodeBase } from "./nodes.ts";
-import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
-import { assertEquals } from "../lib/std/assert.ts";
-import { MockWebSocket } from "../lib/testing.ts";
+import { MockWebSocket } from "./testing.ts";
 
 describe("NostrNodeBase", () => {
   let node: NostrNode;

@@ -3,14 +3,17 @@
     "cache": "deno cache ./**/*.ts --lock",
     "lock": "deno task cache --lock-write && git add deno.lock",
     "check": "deno check ./**/*.ts",
-    "test": "deno test -A --no-check --parallel",
+    "test": "deno test -A --no-check",
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
     "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
-    "update": "deno run --allow-read --allow-env --allow-write --allow-net=deno.land,registry.npmjs.org --allow-run=deno,git https://deno.land/x/molt@0.14.3/cli.ts ./**/*.ts",
+    "update": "deno run --allow-read --allow-env --allow-write --allow-net=deno.land,registry.npmjs.org --allow-run=deno,git https://deno.land/x/molt@0.17.1/cli.ts ./**/*.ts",
     "update:commit": "deno task -q update --commit --pre-commit=dev --prefix 'build(deps):'"
   },
   "exclude": [
     "dist/",
     "CHANGELOG.md"
+  ],
+  "workspaces": [
+    "core"
   ]
 }
