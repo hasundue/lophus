@@ -1,8 +1,8 @@
-import { Stringified } from "../core/types.ts";
-import "../nips/01/protocol.d.ts";
-import { describe, it } from "../lib/std/testing.ts";
-import { assert, assertEquals } from "../lib/std/assert.ts";
-import { Timestamp } from "../lib/times.ts";
+import { describe, it } from "@std/testing/bdd";
+import { assert, assertEquals } from "@std/assert";
+import { Stringified } from "../lib/types.ts";
+import "../nips/01/protocol.ts";
+import { Timestamp } from "./times.ts";
 import {
   PrivateKey,
   PublicKey,

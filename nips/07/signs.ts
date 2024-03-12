@@ -1,8 +1,8 @@
-import type { Stringified } from "../../core/types.ts";
-import { EventContent, EventKind, NostrEvent } from "../../core/protocol.d.ts";
-import { EventInit } from "../../lib/events.ts";
-import { Timestamp } from "../../lib/times.ts";
-import { UnsignedEvent } from "./protocol.d.ts";
+import type { Stringified } from "../../lib/types.ts";
+import { EventContent, EventKind, NostrEvent } from "../../core/protocol.ts";
+import { EventInit } from "../../std/events.ts";
+import { Timestamp } from "../../std/times.ts";
+import { UnsignedEvent } from "./protocol.ts";
 
 /**
  * A transform stream that signs events.

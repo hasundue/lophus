@@ -1,0 +1,12 @@
+{
+  "name": "@lophus/core",
+  "version": "0.0.14",
+  "exports": "./mod.ts",
+
+  "publish": {
+    "exclude": [
+      "deno.json",
+      "*_test.ts"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
-import "../../core/protocol.d.ts";
+import "../../core/protocol.ts";
 import "../../core/relays.ts";
 
-declare module "../../core/protocol.d.ts" {
+declare module "../../core/protocol.ts" {
   interface NipRecord {
     42: {
       ClientToRelayMessage: "AUTH";

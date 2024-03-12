@@ -1,4 +1,7 @@
-import type { Brand, Stringified } from "../core/types.ts";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex } from "@noble/hashes/utils";
+import { schnorr } from "@noble/curves/secp256k1";
+import type { Brand, Stringified } from "../lib/types.ts";
 import type {
   EventContent,
   EventId,
@@ -6,13 +9,12 @@ import type {
   EventSerializePrecursor,
   NostrEvent,
   Signature,
-} from "../core/protocol.d.ts";
-import type { UnsignedEvent } from "../nips/07/protocol.d.ts";
-import { bytesToHex, schnorr, sha256 } from "./x/noble.ts";
+} from "../core/protocol.ts";
+import type { UnsignedEvent } from "../nips/07/protocol.ts";
 import type { EventInit } from "./events.ts";
 import { Timestamp } from "./times.ts";
 
-export type { UnsignedEvent } from "../nips/07/protocol.d.ts";
+export type { UnsignedEvent } from "../nips/07/protocol.ts";
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 

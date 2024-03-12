@@ -1,4 +1,4 @@
-import type { Stringified } from "./types.ts";
+import type { Stringified } from "../lib/types.ts";
 import type {
   ClientToRelayMessage,
   EventId,
@@ -9,7 +9,7 @@ import type {
   RelayUrl,
   SubscriptionFilter,
   SubscriptionId,
-} from "./protocol.d.ts";
+} from "./protocol.ts";
 import { LazyWebSocket } from "./websockets.ts";
 import { NostrNodeBase, NostrNodeConfig, NostrNodeModule } from "./nodes.ts";
 
@@ -52,7 +52,7 @@ export class Relay extends NostrNodeBase<
   RelayEventTypeRecord
 > {
   declare ws: LazyWebSocket;
-  readonly config: Readonly<RelayConfig>;
+  declare config: RelayConfig;
 
   constructor(
     init: RelayUrl | RelayInit,

@@ -1,8 +1,8 @@
-import { afterAll, beforeAll, describe, it } from "../lib/std/testing.ts";
-import { assertEquals, assertInstanceOf } from "../lib/std/assert.ts";
-import { NostrEvent } from "../core/protocol.d.ts";
+import { assertEquals, assertInstanceOf } from "@std/assert";
+import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
+import { NostrEvent } from "../core/protocol.ts";
 import { Relay } from "../core/relays.ts";
-import { RelayGroup } from "../lib/relays.ts";
+import { RelayGroup } from "../std/relays.ts";
 import { MockWebSocket } from "../lib/testing.ts";
 
 describe("RelayGroup", () => {

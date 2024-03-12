@@ -1,16 +1,26 @@
 {
-  "tasks": {
-    "cache": "deno cache ./**/*.ts --lock",
-    "lock": "deno task cache --lock-write && git add deno.lock",
-    "check": "deno check ./**/*.ts",
-    "test": "deno test -A --no-check --parallel",
-    "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
-    "dev": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
-    "update": "deno run --allow-read --allow-env --allow-write --allow-net=deno.land,registry.npmjs.org --allow-run=deno,git https://deno.land/x/molt@0.14.3/cli.ts ./**/*.ts",
-    "update:commit": "deno task -q update --commit --pre-commit=dev --prefix 'build(deps):'"
-  },
   "exclude": [
-    "dist/",
-    "CHANGELOG.md"
+    "dist/"
+  ],
+  "imports": {
+    "@noble/curves": "npm:@noble/curves@^1.3.0",
+    "@noble/hashes": "npm:@noble/hashes@^1.3.3",
+    "@std/assert": "jsr:@std/assert@^0.219.1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.219.1",
+    "@std/streams": "jsr:@std/streams@^0.219.1",
+    "@std/testing": "jsr:@std/testing@^0.219.1"
+  },
+  "tasks": {
+    "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
+    "cache": "deno cache ./**/*.ts --lock",
+    "check": "deno check ./**/*.ts",
+    "lock": "deno task cache --lock-write && git add deno.lock",
+    "pre-commit": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
+    "test": "deno test -A --no-check",
+    "update": "deno run --allow-read --allow-env --allow-write --allow-net=registry.npmjs.org,jsr.io --allow-run=deno,git https://deno.land/x/molt@0.17.1/cli.ts deno.json --unstable-lock",
+    "update:commit": "deno task -q update --commit --prefix 'build(deps):' --prefix-lock 'build(lock):'"
+  },
+  "workspaces": [
+    "./core"
   ]
 }

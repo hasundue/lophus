@@ -1,4 +1,4 @@
-import type { NostrMessage } from "./protocol.d.ts";
+import type { NostrMessage } from "./protocol.ts";
 import { WebSocketLike } from "./websockets.ts";
 
 export interface NostrNodeConfig<
@@ -89,15 +89,15 @@ export class NostrNodeBase<
     this.config.modules.forEach((m) => this.install(m));
   }
 
-  send(msg: W) {
+  send(msg: W): void | Promise<void> {
     return this.ws.send(JSON.stringify(msg));
   }
 
-  get status() {
+  get status(): WebSocket["readyState"] {
     return this.ws.readyState;
   }
 
-  async close() {
+  async close(): Promise<void> {
     try {
       await this.writable.close();
     } catch (err) {
@@ -107,8 +107,8 @@ export class NostrNodeBase<
     }
   }
 
-  install(mod: NostrNodeModule<W, R>) {
-    return mod.install(this);
+  install(mod: NostrNodeModule<W, R>): void {
+    mod.install(this);
   }
 
   declare addEventListener: NostrNode<W, R>["addEventListener"];

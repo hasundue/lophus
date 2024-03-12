@@ -1,12 +1,12 @@
-import { afterAll, beforeAll, describe, it } from "../../lib/std/testing.ts";
-import { assert, assertEquals } from "../../lib/std/assert.ts";
+import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
+import { assert, assertEquals } from "@std/assert";
 import { MockWebSocket } from "../../lib/testing.ts";
 import {
   ClientToRelayMessage,
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "../../core/protocol.d.ts";
+} from "../../core/protocol.ts";
 import { Client } from "../../core/clients.ts";
 import nip_01 from "../01/clients.ts";
 

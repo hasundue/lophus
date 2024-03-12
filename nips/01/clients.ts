@@ -1,4 +1,4 @@
-import type { NostrEvent } from "../../core/protocol.d.ts";
+import type { NostrEvent } from "../../core/protocol.ts";
 import { ClientModule } from "../../core/clients.ts";
 
 interface EventValidationContext {

@@ -3,14 +3,14 @@ import type {
   EventKind,
   NostrEvent,
   SubscriptionFilter,
-} from "../core/protocol.d.ts";
+} from "../core/protocol.ts";
 import {
   RelayLike,
   RelayLikeConfig,
   RelayLikeOptions,
   SubscriptionOptions,
 } from "../core/relays.ts";
-import { Distinctor, merge } from "../lib/streams.ts";
+import { Distinctor, merge } from "../std/streams.ts";
 
 /**
  * A pool of relays that can be used as a single relay.

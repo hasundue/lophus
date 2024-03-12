@@ -9,7 +9,7 @@
  * @module
  */
 
-import type { AlphabetLetter, Brand, Stringified } from "./types.ts";
+import type { AlphabetLetter, Brand, Stringified } from "../lib/types.ts";
 
 // ----------------------
 // Extendable interfaces

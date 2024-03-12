@@ -1,8 +1,8 @@
-import type { Stringified } from "../../core/types.ts";
+import type { Stringified } from "../../lib/types.ts";
 import type { RelayModule } from "../../core/relays.ts";
-import type { EventInit } from "../../lib/events.ts";
-import type { Signer } from "../../lib/signs.ts";
-import "./protocol.d.ts";
+import type { EventInit } from "../../std/events.ts";
+import type { Signer } from "../../std/signs.ts";
+import "./protocol.ts";
 
 declare module "../../core/relays.ts" {
   interface RelayConfig {

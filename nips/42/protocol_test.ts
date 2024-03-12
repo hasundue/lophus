@@ -1,7 +1,7 @@
-import { describe, it } from "../../lib/std/testing.ts";
-import { assertType, Has } from "../../lib/std/testing.ts";
-import { EventInit } from "../../lib/events.ts";
-import "./protocol.d.ts";
+import { describe, it } from "@std/testing/bdd";
+import { assertType, Has } from "@std/testing/types";
+import { EventInit } from "../../std/events.ts";
+import "./protocol.ts";
 
 describe("EventInit<22242>", () => {
   it("can be valid", () => {

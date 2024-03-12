@@ -1,7 +1,6 @@
-import { beforeEach, describe, it } from "../lib/std/testing.ts";
-import { assertEquals } from "../lib/std/assert.ts";
+import { assert, assertEquals } from "@std/assert";
+import { beforeEach, describe, it } from "@std/testing/bdd";
 import { ConsoleLogger } from "./logging.ts";
-import { assert } from "../lib/std/assert.ts";
 
 describe("ConsoleLogger", () => {
   let output = "";

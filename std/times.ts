@@ -1,4 +1,4 @@
-import { Brand } from "../core/types.ts";
+import { Brand } from "../lib/types.ts";
 
 export type Timestamp = Brand<number, "EventTimeStamp">;
 
