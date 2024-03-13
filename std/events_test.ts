@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { assertEquals, assertInstanceOf } from "@std/assert";
-import { Relay } from "../core/relays.ts";
-import { PrivateKey, Signer } from "./signs.ts";
+import { MockWebSocket } from "@lophus/lib/testing";
+import { Relay } from "@lophus/core/relays";
+import { PrivateKey, Signer } from "@lophus/std/signs";
 import { EventInit, EventPublisher } from "./events.ts";
-import { MockWebSocket } from "../lib/testing.ts";
 
 describe("EventPublisher", () => {
   let relay: Relay;

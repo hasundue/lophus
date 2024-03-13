@@ -1,6 +1,6 @@
 import { assert } from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
-import { MockWebSocket } from "../lib/testing.ts";
+import { MockWebSocket } from "@lophus/lib/testing";
 import { Client } from "./clients.ts";
 
 describe("Client", () => {

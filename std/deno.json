@@ -1,0 +1,13 @@
+{
+  "name": "@lophus/std",
+  "version": "0.0.14",
+  "exports": {
+    ".": "./mod.ts",
+    "./env": "./env.ts",
+    "./events": "./events.ts",
+    "./notes": "./notes.ts",
+    "./pools": "./pools.ts",
+    "./signs": "./signs.ts",
+    "./times": "./times.ts"
+  }
+}

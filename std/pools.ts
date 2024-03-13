@@ -1,22 +1,22 @@
 import { mergeReadableStreams as merge } from "@std/streams";
+import { Distinctor } from "@lophus/lib/streams";
 import type {
   ClientToRelayMessage,
   EventKind,
   NostrEvent,
   SubscriptionFilter,
-} from "../core/protocol.ts";
+} from "@lophus/core/protocol";
 import {
   RelayLike,
   RelayLikeConfig,
   RelayLikeOptions,
   SubscriptionOptions,
-} from "../core/relays.ts";
-import { Distinctor } from "../lib/streams.ts";
+} from "@lophus/core/relays";
 
 /**
  * A pool of relays that can be used as a single relay.
  */
-export class RelayGroup implements RelayLike {
+export class RelayPool implements RelayLike {
   readonly writable: WritableStream<ClientToRelayMessage>;
   readonly config: Readonly<RelayLikeConfig>;
   #relays_read: RelayLike[];
@@ -45,7 +45,7 @@ export class RelayGroup implements RelayLike {
   subscribe<K extends EventKind>(
     filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
-  ) {
+  ): ReadableStream<NostrEvent<K>> {
     const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));
     return merge(...subs).pipeThrough(new Distinctor((m) => m.id));
   }

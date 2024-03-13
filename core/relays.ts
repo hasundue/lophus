@@ -1,4 +1,4 @@
-import type { Stringified } from "../lib/types.ts";
+import type { Stringified } from "@lophus/lib/types";
 import type {
   ClientToRelayMessage,
   EventId,
