@@ -1,13 +1,13 @@
 import { assertEquals, assertInstanceOf } from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
-import { NostrEvent } from "../core/protocol.ts";
-import { Relay } from "../core/relays.ts";
-import { RelayGroup } from "../std/relays.ts";
-import { MockWebSocket } from "../lib/testing.ts";
+import { MockWebSocket } from "@lophus/lib/testing";
+import type { NostrEvent } from "@lophus/core/protocol";
+import { Relay } from "@lophus/core/relays";
+import { RelayPool } from "./pools.ts";
 
-describe("RelayGroup", () => {
+describe("RelayPool", () => {
   let relays: Relay[];
-  let group: RelayGroup;
+  let group: RelayPool;
   let sub: ReadableStream<NostrEvent>;
 
   // ----------------------
@@ -42,18 +42,18 @@ describe("RelayGroup", () => {
   // ----------------------
 
   it("should create a group of relays", () => {
-    group = new RelayGroup(relays);
-    assertInstanceOf(group, RelayGroup);
+    group = new RelayPool(relays);
+    assertInstanceOf(group, RelayPool);
   });
   it("should not have a url", () => {
-    // @ts-expect-error RelayGroup does not have a url
+    // @ts-expect-error RelayPool does not have a url
     assertEquals(group.url, undefined);
   });
   it("should have a default name", () => {
     assertEquals(group.config.name, "relay-1, relay-2, relay-3");
   });
   it("should have a custom name if provided", () => {
-    const group = new RelayGroup(relays, { name: "custom" });
+    const group = new RelayPool(relays, { name: "custom" });
     assertEquals(group.config.name, "custom");
   });
   it("should have default read and write config", () => {
@@ -61,7 +61,7 @@ describe("RelayGroup", () => {
     assertEquals(group.config.write, true);
   });
   it("should have custom read and write config if provided", () => {
-    const group = new RelayGroup(relays, { read: false, write: false });
+    const group = new RelayPool(relays, { read: false, write: false });
     assertEquals(group.config.read, false);
     assertEquals(group.config.write, false);
   });

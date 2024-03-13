@@ -1,7 +1,7 @@
+import { schnorr } from "@noble/curves/secp256k1";
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
-import { schnorr } from "@noble/curves/secp256k1";
-import type { Brand, Stringified } from "../lib/types.ts";
+import type { Brand, Stringified } from "@lophus/lib/types";
 import type {
   EventContent,
   EventId,
@@ -9,10 +9,10 @@ import type {
   EventSerializePrecursor,
   NostrEvent,
   Signature,
-} from "../core/protocol.ts";
+} from "@lophus/core/protocol";
 import type { UnsignedEvent } from "../nips/07/protocol.ts";
-import type { EventInit } from "./events.ts";
-import { Timestamp } from "./times.ts";
+import type { EventInit } from "@lophus/std/events";
+import { Timestamp } from "@lophus/std/times";
 
 export type { UnsignedEvent } from "../nips/07/protocol.ts";
 

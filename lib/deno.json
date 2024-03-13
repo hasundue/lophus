@@ -1,0 +1,9 @@
+{
+  "name": "@lophus/lib",
+  "version": "0.0.14",
+  "exports": {
+    "./streams": "./streams.ts",
+    "./testing": "./testing.ts",
+    "./types": "./types.ts"
+  }
+}

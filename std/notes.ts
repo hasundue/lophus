@@ -1,6 +1,6 @@
-import type { Optional } from "../lib/types.ts";
-import type { NostrEvent, RelayUrl } from "../core/protocol.ts";
-import { EventInit } from "./events.ts";
+import type { Optional } from "@lophus/lib/types";
+import type { NostrEvent, RelayUrl } from "@lophus/core/protocol";
+import { type EventInit } from "@lophus/std/events";
 
 export type TextNote = EventInit<1>;
 

@@ -1,11 +1,11 @@
 import "@std/dotenv";
-import type { PrivateKey, PublicKey } from "../core/protocol.ts";
+import type { PrivateKey, PublicKey } from "@lophus/core/protocol";
 
 class Env {
   #nsec?: PrivateKey;
   #pubkey?: PublicKey;
 
-  get PRIVATE_KEY() {
+  get PRIVATE_KEY(): PrivateKey {
     if (!this.#nsec) {
       const value = Deno.env.get("PRIVATE_KEY");
       if (!value) {
@@ -16,7 +16,7 @@ class Env {
     return this.#nsec;
   }
 
-  get PUBLIC_KEY() {
+  get PUBLIC_KEY(): PublicKey {
     if (!this.#pubkey) {
       const value = Deno.env.get("PUBLIC_KEY");
       if (!value) {
@@ -28,4 +28,4 @@ class Env {
   }
 }
 
-export const env = new Env();
+export const env: Env = new Env();

@@ -1,10 +1,11 @@
+import type { Stringified } from "@lophus/lib/types";
 import type {
   ClientToRelayMessage,
   EventContent,
   EventKind,
   NostrEvent,
-} from "../core/protocol.ts";
-import { Stringified } from "../lib/types.ts";
+} from "@lophus/core/protocol";
+import "../nips/01/protocol.ts";
 
 export interface EventInit<K extends EventKind = EventKind> {
   kind: NostrEvent<K>["kind"];
