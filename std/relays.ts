@@ -1,3 +1,4 @@
+import { mergeReadableStreams as merge } from "@std/streams";
 import type {
   ClientToRelayMessage,
   EventKind,
@@ -10,7 +11,7 @@ import {
   RelayLikeOptions,
   SubscriptionOptions,
 } from "../core/relays.ts";
-import { Distinctor, merge } from "../std/streams.ts";
+import { Distinctor } from "../lib/streams.ts";
 
 /**
  * A pool of relays that can be used as a single relay.

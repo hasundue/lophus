@@ -1,5 +1,3 @@
-export { mergeReadableStreams as merge } from "@std/streams";
-
 /**
  * TransformStream which filters out duplicate values from a stream.
  */
