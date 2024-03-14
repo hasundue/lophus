@@ -1,7 +1,6 @@
 import { describe, it } from "@std/testing/bdd";
 import { assertType, Has } from "@std/testing/types";
-import { EventInit } from "../../std/events.ts";
-import type { EventId, PublicKey } from "../../core/protocol.ts";
+import type { EventId, EventInit, PublicKey } from "@lophus/core/protocol";
 import "./protocol.ts";
 
 describe("EventInit<3>", () => {

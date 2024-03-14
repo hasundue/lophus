@@ -1,17 +1,19 @@
 import { assert, assertEquals, assertInstanceOf } from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
-import { MockWebSocket } from "../../lib/testing.ts";
-import {
+import { MockWebSocket } from "@lophus/lib/testing";
+import type {
   ClientToRelayMessage,
   EventId,
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "../../core/protocol.ts";
-import { ConnectionClosed, EventRejected, Relay } from "../../core/relays.ts";
-import { SubscriptionClosed } from "./relays.ts";
-import nip_01 from "./relays.ts";
-import "./protocol.ts";
+} from "@lophus/core/protocol";
+import {
+  ConnectionClosed,
+  EventRejected,
+  SubscriptionClosed,
+} from "@lophus/core/relays";
+import { Relay } from "../relays.ts";
 
 function getRemoteSocket() {
   return MockWebSocket.instances[0].remote;
@@ -25,7 +27,7 @@ describe("Relay (NIP-01)", () => {
 
   beforeAll(() => {
     globalThis.WebSocket = MockWebSocket;
-    relay = new Relay(url, { modules: [nip_01] });
+    relay = new Relay(url);
   });
 
   afterAll(() => {
@@ -34,8 +36,8 @@ describe("Relay (NIP-01)", () => {
     }
   });
 
-  it("should have loaded NIP-01 module", () => {
-    assertEquals(relay.config.modules.length, 1);
+  it("should not have any nips configured", () => {
+    assertEquals(relay.config.nips.length, 0);
   });
 
   it("should create a subscription", () => {

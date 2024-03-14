@@ -1,33 +1,14 @@
 // deno-lint-ignore-file no-empty-interface
 
 /**
- * Implementation of unextendable part of NIP-01 (Nostr basic protocol):
+ * Implementation of the fundamental part of NIP-01 (Nostr basic protocol):
  * https://github.com/nostr-protocol/nips/blob/master/01.md
  *
- * See also `../../nips/01/protocol.d.ts` for the extendable part.
- *
+ * See also `../../nips/01/protocol.ts` for the remaining "optional" part.
  * @module
  */
 
 import type { AlphabetLetter, Brand, Stringified } from "@lophus/lib/types";
-
-// ----------------------
-// Extendable interfaces
-// ----------------------
-
-export interface NipRecord {}
-
-export interface EventKindRecord {}
-
-export interface TagRecord {}
-
-export interface ClientToRelayMessageRecord<
-  K extends EventKind = EventKind,
-> {}
-
-export interface RelayToClientMessageRecord<
-  K extends EventKind = EventKind,
-> {}
 
 // ----------------------
 // Events and signatures
@@ -59,9 +40,24 @@ export type EventSerializePrecursor<K extends EventKind = EventKind> = [
   content: NostrEvent<K>["content"],
 ];
 
+/** An event that has not been signed. */
+export type UnsignedEvent<K extends EventKind = EventKind> = Omit<
+  NostrEvent<K>,
+  "id" | "pubkey" | "sig"
+>;
+
+/** A precursor to NostrEvent required for users to fill */
+export interface EventInit<K extends EventKind = EventKind> {
+  kind: NostrEvent<K>["kind"];
+  tags?: NostrEvent<K>["tags"];
+  content: EventContent<K> | Stringified<EventContent<K>>;
+}
+
 // ----------------------
 // Tags
 // ----------------------
+
+export interface TagRecord {}
 
 export type TagType = keyof TagRecord & string;
 export type TagParam = string | undefined;
@@ -93,7 +89,9 @@ export type OptionalTag<K extends EventKind> = EventKindRecord[K] extends
 export type RelayUrl = `wss://${string}` | `ws://${string}`;
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 
-export type NostrMessage = ClientToRelayMessage | RelayToClientMessage;
+export interface ClientToRelayMessageRecord<
+  K extends EventKind = EventKind,
+> {}
 
 export type ClientToRelayMessage<
   T extends ClientToRelayMessageType = ClientToRelayMessageType,
@@ -102,6 +100,10 @@ export type ClientToRelayMessage<
   [U in T]: [U, ...ClientToRelayMessageRecord<K>[U]];
 }[T];
 export type ClientToRelayMessageType = keyof ClientToRelayMessageRecord;
+
+export interface RelayToClientMessageRecord<
+  K extends EventKind = EventKind,
+> {}
 
 export type RelayToClientMessage<
   T extends RelayToClientMessageType = RelayToClientMessageType,
@@ -140,9 +142,13 @@ export type SubscriptionFilter<
     limit?: number;
   };
 
+export type InterNodeMessage = ClientToRelayMessage | RelayToClientMessage;
+
 // ----------------------
 // Events
 // ----------------------
+
+export interface EventKindRecord {}
 
 export type EventKind = keyof EventKindRecord & number;
 
@@ -161,24 +167,3 @@ export type EventContent<K extends EventKind> = EventKindRecord[K] extends
 export type ResponsePrefix<K extends EventKind = EventKind> =
   EventKindRecord[K] extends { ResponsePrefix: infer P extends string } ? P
     : DefaultResponsePrefix;
-
-export type RegularEventKind = Brand<EventKind, "Regular">;
-export type ReplaceableEventKind = Brand<EventKind, "Replaceable">;
-export type EphemeralEventKind = Brand<EventKind, "Ephemeral">;
-export type ParameterizedReplaceableEventKind = Brand<
-  EventKind,
-  "ParameterizedReplaceable"
->;
-
-// ----------------------
-// NIPs
-// ----------------------
-
-export type NIP = keyof NipRecord & number;
-
-export interface NipRecordEntry {
-  ClientToRelayMessage: ClientToRelayMessageType;
-  RelayToClientMessage: RelayToClientMessageType;
-  EventKind: EventKind;
-  Tag: TagType;
-}

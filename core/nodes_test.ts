@@ -1,33 +1,27 @@
 import { assertEquals } from "@std/assert";
-import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
+import { describe, it } from "@std/testing/bdd";
 import { MockWebSocket } from "@lophus/lib/testing";
-import { NostrNode, NostrNodeBase } from "./nodes.ts";
+import { Node } from "./nodes.ts";
 
-describe("NostrNodeBase", () => {
-  let node: NostrNode;
-  let writer: WritableStreamDefaultWriter;
+describe("NostrNode", () => {
+  describe("writable", () => {
+    const node = new Node(new MockWebSocket());
+    let writer: WritableStreamDefaultWriter;
 
-  beforeAll(() => {
-    node = new NostrNodeBase(new MockWebSocket());
-  });
-
-  afterAll(async () => {
-    await node.close().catch((err) => {
-      if (err.message !== "Writable stream is closed or errored.") {
-        throw err;
-      }
+    it("should open the WebSocket connection", async () => {
+      writer = node.writable.getWriter();
+      await writer.write(["NOTICE", "test"]);
+      writer.releaseLock();
+      assertEquals(node.status, WebSocket.OPEN);
     });
   });
 
-  it("should be connected to the WebSocket after a message is sent", async () => {
-    writer = node.writable.getWriter();
-    await writer.write(["NOTICE", "test"]);
-    writer.releaseLock();
-    assertEquals(node.status, WebSocket.OPEN);
-  });
+  describe("close", () => {
+    const node = new Node(new MockWebSocket());
 
-  it("should close the WebSocket when the node is closed", async () => {
-    await node.close();
-    assertEquals(node.status, WebSocket.CLOSED);
+    it("should close the WebSocket connection", async () => {
+      await node.close();
+      assertEquals(node.status, WebSocket.CLOSED);
+    });
   });
 });

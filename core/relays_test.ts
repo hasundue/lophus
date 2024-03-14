@@ -1,18 +1,12 @@
 import { assert, assertEquals, assertObjectMatch } from "@std/assert";
-import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
+import { describe, it } from "@std/testing/bdd";
 import { Relay } from "./relays.ts";
 
-const url = "wss://localhost:8080";
-
 describe("Relay", () => {
-  let relay: Relay;
+  const url = "wss://localhost:8080";
 
   describe("constructed with url only", () => {
-    beforeAll(() => {
-      relay = new Relay(url);
-    });
-
-    afterAll(() => relay.close());
+    const relay = new Relay(url);
 
     it("should be constructable", () => {
       assert(relay instanceof Relay);
@@ -39,17 +33,11 @@ describe("Relay", () => {
   });
 
   describe("constructed with url and options", () => {
-    beforeAll(() => {
-      relay = new Relay(url, {
-        name: "test",
-        read: false,
-        write: false,
-        nbuffer: 20,
-      });
-    });
-
-    afterAll(() => {
-      relay.close();
+    const relay = new Relay(url, {
+      name: "test",
+      read: false,
+      write: false,
+      nbuffer: 20,
     });
 
     it("should be constructable", () => {

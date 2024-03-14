@@ -1,19 +1,16 @@
-import { EventKind, NostrEvent, PublicKey } from "../../core/protocol.ts";
-import type { Optional } from "../../lib/types.ts";
+import {
+  EventKind,
+  NostrEvent,
+  PublicKey,
+  UnsignedEvent,
+} from "@lophus/core/protocol";
+import "../protocol.ts";
 
-declare module "../../core/protocol.ts" {
+declare module "../protocol.ts" {
   interface NipRecord {
     7: Record<string, never>;
   }
 }
-
-/**
- * An event that has not been signed.
- */
-export type UnsignedEvent<K extends EventKind = EventKind> = Optional<
-  NostrEvent<K>,
-  "id" | "pubkey" | "sig"
->;
 
 declare global {
   interface Window {

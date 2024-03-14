@@ -1,10 +1,8 @@
-import type { Optional } from "@lophus/lib/types";
-import type { NostrEvent, RelayUrl } from "@lophus/core/protocol";
-import { type EventInit } from "@lophus/std/events";
+import type { EventInit, NostrEvent, RelayUrl } from "@lophus/core/protocol";
 
 export type TextNote = EventInit<1>;
 
-export type TextNoteInit = Optional<TextNote, "kind">;
+export type TextNoteInit = Omit<TextNote, "kind">;
 
 export class TextNoteComposer extends TransformStream<TextNoteInit, TextNote> {
   constructor(readonly opts: { recommendedRelay?: RelayUrl } = {}) {

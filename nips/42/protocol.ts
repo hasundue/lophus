@@ -1,7 +1,7 @@
-import "../../core/protocol.ts";
-import "../../core/relays.ts";
+import "@lophus/core/protocol";
+import "../protocol.ts";
 
-declare module "../../core/protocol.ts" {
+declare module "../protocol.ts" {
   interface NipRecord {
     42: {
       ClientToRelayMessage: "AUTH";
@@ -10,6 +10,9 @@ declare module "../../core/protocol.ts" {
       Tag: "relay" | "challenge";
     };
   }
+}
+
+declare module "@lophus/core/protocol" {
   interface RelayToClientMessageRecord {
     AUTH: [challenge: string];
   }

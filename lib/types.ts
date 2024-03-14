@@ -1,19 +1,22 @@
 // ----------------------
 // Branded types
 // ----------------------
+
 export type Brand<T, B> = T & { __brand: B };
 
 // ----------------------
 // Promises
 // ----------------------
-export type PromiseCallbacks<T> = {
+
+export interface PromiseCallbackRecord<T> {
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: unknown) => void;
-};
+}
 
 // ----------------------
 // Strings
 // ----------------------
+
 export type Url = `https://${string}` | `http://${string}`;
 export type Stringified<T> = string & { __content: T };
 
@@ -31,6 +34,7 @@ export type AlphabetLetter =
 // ----------------------
 // Records and maps
 // ----------------------
+
 export type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
 export type Require<T, K extends keyof T> = Expand<

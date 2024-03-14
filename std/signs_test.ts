@@ -2,34 +2,33 @@ import { assert, assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import { Stringified } from "@lophus/lib/types";
 import { Timestamp } from "@lophus/std/times";
+import { UnsignedEvent } from "@lophus/core/protocol";
 import {
-  PrivateKey,
-  PublicKey,
+  fromPrivateKey,
+  generatePrivateKey,
   Signer,
-  UnsignedEvent,
   Verifier,
 } from "./signs.ts";
 
-describe("PrivateKey", () => {
+describe("generatePrivateKey", () => {
   it("generates a private key", () => {
-    const nsec = PrivateKey.generate();
+    const nsec = generatePrivateKey();
     assertEquals(nsec.length, 64);
   });
 });
 
-describe("PublicKey", () => {
+describe("fromPrivateKey", () => {
   it("generates a public key from a private key", () => {
-    const nsec = PrivateKey.generate();
-    const pubkey = PublicKey.from(nsec);
+    const nsec = generatePrivateKey();
+    const pubkey = fromPrivateKey(nsec);
     assertEquals(pubkey.length, 64);
   });
 });
 
 describe("Signer/Verifier", () => {
-  const nsec = PrivateKey.generate();
+  const nsec = generatePrivateKey();
   const signer = new Signer(nsec);
   const event: UnsignedEvent = {
-    pubkey: PublicKey.from(nsec),
     created_at: Timestamp.now,
     kind: 1,
     tags: [],

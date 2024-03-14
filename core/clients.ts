@@ -4,45 +4,37 @@ import type {
   RelayToClientMessage,
   SubscriptionId,
 } from "./protocol.ts";
-import {
-  NostrNode,
-  NostrNodeBase,
-  NostrNodeConfig,
-  NostrNodeModule,
-} from "./nodes.ts";
+import { Node, NodeConfig } from "./nodes.ts";
 
-// ----------------------
-// Interfaces
-// ----------------------
-
-export type ClientConfig = NostrNodeConfig<
-  RelayToClientMessage,
-  ClientEventTypeRecord
->;
+export type ClientConfig = NodeConfig;
 export type ClientOptions = Partial<ClientConfig>;
+
+export interface ClientEventTypeRecord {
+  message: ClientToRelayMessage;
+}
 
 /**
  * A class that represents a remote Nostr client.
  */
-export class Client extends NostrNodeBase<
+export class Client extends Node<
   RelayToClientMessage,
   ClientEventTypeRecord
-> implements NostrNode<RelayToClientMessage, ClientEventTypeRecord> {
-  /**
-   * The WebSocket connection to the client.
-   */
+> {
   declare ws: WebSocket;
+  declare config: ClientConfig;
 
-  /**
-   * Writable interface for the subscriptions.
-   */
+  /** Writable interface for the subscriptions. */
   readonly subscriptions: Map<
     SubscriptionId,
     WritableStream<NostrEvent>
   > = new Map();
 
-  constructor(ws: WebSocket, opts?: ClientOptions) {
-    super(ws, opts);
+  constructor(ws: WebSocket, options?: ClientOptions) {
+    super(ws, options);
+    this.config = {
+      ...this.config,
+      ...options,
+    };
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Validate the message.
@@ -50,23 +42,3 @@ export class Client extends NostrNodeBase<
     });
   }
 }
-
-// ------------------------------
-// Events
-// ------------------------------
-
-export interface ClientEventTypeRecord {
-  "message": ClientToRelayMessage;
-}
-
-export type ClientEventType = keyof ClientEventTypeRecord;
-
-// ------------------------------
-// Modules
-// ------------------------------
-
-export type ClientModule = NostrNodeModule<
-  RelayToClientMessage,
-  ClientEventTypeRecord,
-  Client
->;

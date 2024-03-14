@@ -4,6 +4,10 @@
   "exports": {
     "./streams": "./streams.ts",
     "./testing": "./testing.ts",
-    "./types": "./types.ts"
+    "./types": "./types.ts",
+    "./websockets": "./websockets.ts"
+  },
+  "publish": {
+    "exclude": ["*_test.ts"]
   }
 }

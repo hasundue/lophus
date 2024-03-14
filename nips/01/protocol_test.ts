@@ -5,8 +5,8 @@ import type {
   PublicKey,
   SubscriptionFilter,
   Tag,
-} from "../../core/protocol.ts";
-import { Timestamp } from "../../std/times.ts";
+} from "@lophus/core/protocol";
+import { Timestamp } from "@lophus/std/times";
 import "./protocol.ts";
 
 describe("Tag", () => {
