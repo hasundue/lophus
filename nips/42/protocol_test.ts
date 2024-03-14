@@ -1,6 +1,6 @@
 import { describe, it } from "@std/testing/bdd";
 import { assertType, Has } from "@std/testing/types";
-import { EventInit } from "../../std/events.ts";
+import { EventInit } from "@lophus/core/protocol";
 import "./protocol.ts";
 
 describe("EventInit<22242>", () => {

@@ -1,0 +1,24 @@
+{
+  "name": "@lophus/nips",
+  "version": "0.0.14",
+  "exports": {
+    ".": "./protocol.ts",
+    "./clients": "./clients.ts",
+    "./relays": "./relays.ts",
+    "./01": "./01/protocol.ts",
+    "./01/clients": "./01/clients.ts",
+    "./01/relays": "./01/relays.ts",
+    "./02": "./02/protocol.ts",
+    "./07": "./07/protocol.ts",
+    "./42": "./42/protocol.ts",
+    "./42/clients": "./42/clients.ts",
+    "./42/relays": "./42/relays.ts"
+  },
+  "imports": {
+    "@lophus/lib": "jsr:@lophus/lib@0.0.14",
+    "@lophus/core": "jsr:@lophus/core@0.0.14"
+  },
+  "publish": {
+    "exclude": ["*_test.ts"]
+  }
+}

@@ -1,4 +1,3 @@
-import "@std/dotenv";
 import type { PrivateKey, PublicKey } from "@lophus/core/protocol";
 
 class Env {

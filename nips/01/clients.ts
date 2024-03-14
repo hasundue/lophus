@@ -1,20 +1,20 @@
-import type { NostrEvent } from "../../core/protocol.ts";
-import { ClientModule } from "../../core/clients.ts";
+import type { NostrEvent } from "@lophus/core/protocol";
+import { Client } from "@lophus/core/clients";
+import { NIPModule } from "../nodes.ts";
 
 interface EventValidationContext {
   data: NostrEvent;
   resolve: (value: unknown) => void;
-  // deno-lint-ignore no-explicit-any
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 }
 
-declare module "../../core/clients.ts" {
+declare module "@lophus/core/clients" {
   interface ClientEventTypeRecord {
     validate: EventValidationContext;
   }
 }
 
-export const install: ClientModule["install"] = (client) => {
+const M: NIPModule<typeof Client> = (client) => {
   client.on("message", (message) => {
     switch (message[0]) {
       case "EVENT": {
@@ -54,4 +54,4 @@ export const install: ClientModule["install"] = (client) => {
   });
 };
 
-export default { install };
+export default M;

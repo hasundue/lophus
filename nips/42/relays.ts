@@ -1,16 +1,16 @@
-import type { Stringified } from "../../lib/types.ts";
-import type { RelayModule } from "../../core/relays.ts";
-import type { EventInit } from "../../std/events.ts";
-import type { Signer } from "../../std/signs.ts";
-import "./protocol.ts";
+import type { Stringified } from "@lophus/lib/types";
+import type { EventInit } from "@lophus/core/protocol";
+import type { Signer } from "@lophus/std/signs";
+import type { NIPModule } from "../nodes.ts";
+import { Relay } from "@lophus/core/relays";
 
-declare module "../../core/relays.ts" {
+declare module "@lophus/core/relays" {
   interface RelayConfig {
     signer?: Signer;
   }
 }
 
-const install: RelayModule["install"] = (relay) => {
+const M: NIPModule<typeof Relay> = (relay) => {
   relay.on("message", (message) => {
     if (message[0] !== "AUTH") {
       // This NIP only handles AUTH messages
@@ -32,4 +32,4 @@ const install: RelayModule["install"] = (relay) => {
   });
 };
 
-export default { install };
+export default M;

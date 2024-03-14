@@ -4,10 +4,16 @@
   "exports": {
     ".": "./mod.ts",
     "./env": "./env.ts",
-    "./events": "./events.ts",
-    "./notes": "./notes.ts",
     "./pools": "./pools.ts",
     "./signs": "./signs.ts",
     "./times": "./times.ts"
+  },
+  "imports": {
+    "@std/streams": "jsr:@std/streams@^0.219.1",
+    "@lophus/lib": "jsr:@lophus/lib@0.0.14",
+    "@lophus/core": "jsr:@lophus/core@0.0.14"
+  },
+  "publish": {
+    "exclude": ["*_test.ts"]
   }
 }

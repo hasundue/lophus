@@ -6,5 +6,11 @@
     "./clients": "./clients.ts",
     "./protocol": "./protocol.ts",
     "./relays": "./relays.ts"
+  },
+  "imports": {
+    "@lophus/lib": "jsr:@lophus/lib@0.0.14"
+  },
+  "publish": {
+    "exclude": ["*_test.ts"]
   }
 }

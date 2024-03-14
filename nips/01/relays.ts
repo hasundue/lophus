@@ -1,8 +1,7 @@
-import { EventRejected, RelayModule } from "../../core/relays.ts";
+import { EventRejected, Relay, SubscriptionClosed } from "@lophus/core/relays";
+import { NIPModule } from "../nodes.ts";
 
-export class SubscriptionClosed extends Error {}
-
-export const install: RelayModule["install"] = (relay) => {
+export const M: NIPModule<typeof Relay> = (relay) => {
   relay.on("message", (message) => {
     switch (message[0]) {
       case "EVENT":
@@ -15,7 +14,7 @@ export const install: RelayModule["install"] = (relay) => {
     }
   });
 
-  relay.on("subscribe", ({ id, filters, options, controller }) => {
+  relay.on("subscribe", ({ id, filters, realtime, controller }) => {
     relay.on(id, (message) => {
       switch (message[0]) {
         case "EVENT": {
@@ -23,10 +22,10 @@ export const install: RelayModule["install"] = (relay) => {
           return controller.enqueue(event);
         }
         case "EOSE": {
-          if (!options.realtime) {
-            controller.close();
+          if (realtime) {
+            return;
           }
-          break;
+          return controller.close();
         }
         case "CLOSED": {
           return controller.error(new SubscriptionClosed(message[2]));
@@ -62,4 +61,4 @@ export const install: RelayModule["install"] = (relay) => {
   });
 };
 
-export default { install };
+export default M;

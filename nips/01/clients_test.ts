@@ -1,16 +1,15 @@
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { assert, assertEquals } from "@std/assert";
-import { MockWebSocket } from "../../lib/testing.ts";
+import { MockWebSocket } from "@lophus/lib/testing";
 import {
   ClientToRelayMessage,
   NostrEvent,
   RelayToClientMessage,
   SubscriptionId,
-} from "../../core/protocol.ts";
-import { Client } from "../../core/clients.ts";
-import nip_01 from "../01/clients.ts";
+} from "@lophus/core/protocol";
+import { Client } from "../clients.ts";
 
-describe("NIP-01/Client", () => {
+describe("Client (NIP-01)", () => {
   let ws: MockWebSocket;
   let client: Client;
   let subid: SubscriptionId;
@@ -18,7 +17,7 @@ describe("NIP-01/Client", () => {
 
   beforeAll(() => {
     ws = new MockWebSocket();
-    client = new Client(ws, { modules: [nip_01] });
+    client = new Client(ws);
   });
   afterAll(() => {
     client.close();

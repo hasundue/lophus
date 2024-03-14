@@ -1,11 +1,15 @@
-import "../../core/protocol.ts";
+import "@lophus/core/protocol";
+import "../protocol.ts";
 
-declare module "../../core/protocol.ts" {
+declare module "../protocol.ts" {
   interface NipRecord {
     2: {
       Tag: "p";
     };
   }
+}
+
+declare module "@lophus/core/protocol" {
   interface EventKindRecord {
     3: {
       Tags: ContactTag[];
