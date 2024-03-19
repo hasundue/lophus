@@ -1,42 +1,58 @@
 # Lophus
 
-> **Warning**\
-> Still under development and not ready for use.
+> :construction: Still under development and not ready for use.
 
 [![CI](https://github.com/hasundue/lophus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hasundue/lophus/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/hasundue/lophus/branch/main/graph/badge.svg?token=s01IMg4nI8)](https://codecov.io/github/hasundue/lophus)
 
-Lophus is a TypeScript library for development of [Nostr][nostr] clients and
-relays, oriented to web standards and edge environments.
+Lophus is an experimental TypeScript library for development of [Nostr][nostr]
+clients and relays, oriented to web standards and edge environments.
 
-## Concept
+## Features
 
 - **Modular** 🔌 - NIPs and high-level interfaces are implemented as optional
-  TypeScript modules, which enables you to keep an app as small as possible.
-- **Portable** 📦 - The core modules are build upon
-  [Web Standard APIs][web-standard-api], which makes it possible to run on
-  various environment.
-- **Productive** 🌊 - Declarative interfaces let you focus on the data flow
-  rather than underlying logic, and strict type checking helps you to avoid
-  runtime errors.
+  TypeScript modules, which makes your apps as small as possible.
+- **Fast** ⚡ - Carefully designed to be performant. Fully asynchronous and
+  non-blocking. Use native code of a runtime via [Web APIs][web-apis].
+- **Portable** 📦 - No runtime-specific code or external dependencies in the
+  core modules so that it can work on various platforms.
+- **Type-safe** 🛡️ - Thoroughly typed with insanity.
 - **Compatible** 🤝 - Shares the same data structure for events as
   [nostr-tools][nostr-tools].
 
-## Documentation
+## Project Structure
 
-- [API Reference](https://deno.land/x/lophus/mod.ts) (WIP)
-- [Lophus by Example](https://github.com/hasundue/lophus-by-example)
+### [@lophus/nips](https://github.com/hasundue/lophus/tree/main/nips)
 
-## Supported NIPs
+Provides a set of modules that implement the Nostr protocol and its extensions.
+Supposed to be the entry point for most developers who want to use Lophus.
 
-- [x] [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md): Basic
-      protocol
-- [x] [NIP-02](https://github.com/nostr-protocol/nips/blob/master/02.md):
-      Contact list
-- [ ] [NIP-07](https://github.com/nostr-protocol/nips/blob/master/07.md):
-      `window.nostr` capability for web browsers
-- [ ] [NIP-42](https://github.com/nostr-protocol/nips/blob/master/42.md): Client
-      authentication
+### [@lophus/std](https://github.com/hasundue/lophus/tree/main/std)
+
+Provides high-level interfaces and utilities, and functionalities that depends
+on third-party libraries.
+
+### [@lophus/core](https://github.com/hasundue/lophus/tree/main/core)
+
+Contains the core modules that implement the basic architecture of Lophus. Used
+for implementation of NIPs, or possibly your own Nostr-like protocols.
+
+### [@lophus/lib](https://github.com/hasundue/lophus/tree/main/lib)
+
+General-purpose modules that are developed for Lophus, but not directly related
+to the Nostr protocol. You may use them in any TypeScript project.
+
+### [Benchmarks](https://github.com/hasundue/lophus/tree/main/bench)
+
+Performance tests for Lophus and other Nostr libraries. Highly experimental.
+
+## Sponsors
+
+### [Soapbox](https://soapbox.pub)
+
+Software for the next generation of social media.
+
+![Soapbox](https://avatars.githubusercontent.com/u/99939943?s=200&v=4)
 
 ## References
 
@@ -50,7 +66,7 @@ Development of Lophus is inspired by the following projects:
 
 <!-- Links -->
 
-[web-standard-api]: https://developer.mozilla.org/docs/Web/API
+[web-apis]: https://developer.mozilla.org/docs/Web/API
 [nostr]: https://nostr.com
 [nostr-nips]: https://github.com/nostr-protocol/nips
 [modules]: https://github.com/hasundue/lophus/tree/main/lib
