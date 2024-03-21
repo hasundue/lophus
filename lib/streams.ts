@@ -19,20 +19,6 @@ export class Distinctor<R = unknown, T = unknown>
   }
 }
 
-export class Transformer<R = unknown, W = unknown>
-  extends TransformStream<R, W> {
-  constructor(fn: (chunk: R) => W) {
-    super({
-      transform(event, controller) {
-        const result = fn(event);
-        if (result) {
-          controller.enqueue(result);
-        }
-      },
-    });
-  }
-}
-
 export type LogLevel = "error" | "warn" | "info" | "debug";
 
 export interface ConsoleLoggerOptions {
