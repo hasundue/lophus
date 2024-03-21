@@ -8,6 +8,9 @@
     "./websockets": "./websockets.ts"
   },
   "publish": {
-    "exclude": ["*_test.ts"]
+    "exclude": [
+      "*_bench.ts",
+      "*_test.ts"
+    ]
   }
 }
