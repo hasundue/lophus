@@ -12,11 +12,6 @@ export interface WebSocketLike {
   dispatchEvent: WebSocket["dispatchEvent"];
 }
 
-type EventListenerOptionsMap = Map<
-  EventListenerOrEventListenerObject,
-  boolean | AddEventListenerOptions | undefined
->;
-
 /**
  * A lazy WebSocket that creates a connection when it is needed.
  * It will also wait for the webSocket to be ready before sending any data.
@@ -25,10 +20,7 @@ export class LazyWebSocket implements WebSocketLike {
   #ws?: WebSocket;
   readonly #ac = new AbortController();
   readonly #createWebSocket: () => WebSocket;
-  readonly #eventListenerMap = new Map<
-    WebSocketEventType,
-    EventListenerOptionsMap
-  >();
+  readonly #listeners = new Set<Parameters<WebSocket["addEventListener"]>>();
   readonly url: string;
 
   constructor(
@@ -37,11 +29,7 @@ export class LazyWebSocket implements WebSocketLike {
   ) {
     this.#createWebSocket = () => {
       const ws = new WebSocket(url, protocols);
-      this.#eventListenerMap.forEach((map, type) => {
-        map.forEach((options, listener) => {
-          ws.addEventListener(type, listener, options);
-        });
-      });
+      this.#listeners.forEach((args) => ws.addEventListener(...args));
       return ws;
     };
     this.url = url.toString();
@@ -114,14 +102,9 @@ export class LazyWebSocket implements WebSocketLike {
     options: boolean | AddEventListenerOptions = {},
   ) => {
     options = typeof options === "boolean" ? { capture: options } : options;
-    options = { signal: this.#ac.signal, ...options };
+    options.signal = options.signal ?? this.#ac.signal;
     this.#ws?.addEventListener(type, listener, options);
-    const map = this.#eventListenerMap.get(type);
-    if (map) {
-      map.set(listener, options);
-    } else {
-      this.#eventListenerMap.set(type, new Map([[listener, options]]));
-    }
+    this.#listeners.add([type, listener, options]);
   };
 
   removeEventListener: WebSocket["removeEventListener"] = (
@@ -130,7 +113,7 @@ export class LazyWebSocket implements WebSocketLike {
     options: boolean | EventListenerOptions = {},
   ) => {
     this.#ws?.removeEventListener(type, listener, options);
-    this.#eventListenerMap.get(type)?.delete(listener);
+    this.#listeners.delete([type, listener, options]);
   };
 
   dispatchEvent: WebSocket["dispatchEvent"] = (event: Event) => {
