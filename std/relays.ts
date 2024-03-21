@@ -14,9 +14,9 @@ import {
 } from "@lophus/core/relays";
 
 /**
- * A pool of relays that can be used as a single relay.
+ * A group of relays that can be used as a single relay.
  */
-export class RelayPool implements RelayLike {
+export class RelayGroup implements RelayLike {
   readonly writable: WritableStream<ClientToRelayMessage>;
   readonly config: Readonly<RelayLikeConfig>;
   #relays_read: RelayLike[];
@@ -65,6 +65,6 @@ export class RelayPool implements RelayLike {
   }
 
   async close() {
-    await Promise.all(this.relays.map((r) => r.close()));
+    await Promise.resolve();
   }
 }

@@ -5,6 +5,7 @@
     ".": "./mod.ts",
     "./env": "./env.ts",
     "./pools": "./pools.ts",
+    "./relays": "./relays.ts",
     "./signs": "./signs.ts",
     "./times": "./times.ts"
   },
