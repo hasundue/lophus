@@ -1,5 +1,5 @@
 import { mergeReadableStreams as merge } from "@std/streams";
-import { Distinctor } from "@lophus/lib/streams";
+import { DistinctStream } from "@lophus/lib/streams";
 import type {
   ClientToRelayMessage,
   EventKind,
@@ -47,7 +47,7 @@ export class RelayPool implements RelayLike {
     opts: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
     const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));
-    return merge(...subs).pipeThrough(new Distinctor((m) => m.id));
+    return merge(...subs).pipeThrough(new DistinctStream((m) => m.id));
   }
 
   async publish<K extends EventKind>(

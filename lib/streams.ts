@@ -1,13 +1,13 @@
 /**
  * TransformStream which filters out duplicate values from a stream.
  */
-export class Distinctor<R = unknown, T = unknown>
+export class DistinctStream<R = unknown, T = unknown>
   extends TransformStream<R, R> {
   #seen: Set<T>;
-  constructor(protected readonly fn: (value: R) => T) {
+  constructor(protected readonly selector: (value: R) => T) {
     super({
       transform: (value, controller) => {
-        const key = fn(value);
+        const key = selector(value);
 
         if (!this.#seen.has(key)) {
           this.#seen.add(key);
@@ -19,15 +19,13 @@ export class Distinctor<R = unknown, T = unknown>
   }
 }
 
-export type LogLevel = "error" | "warn" | "info" | "debug";
-
-export interface ConsoleLoggerOptions {
-  level?: LogLevel;
+export interface ConsoleLogStreamOptions {
+  level?: "error" | "warn" | "info" | "debug";
 }
 
-export class ConsoleLogger<W = unknown> extends WritableStream<W> {
-  readonly level: LogLevel;
-  constructor(options?: ConsoleLoggerOptions) {
+export class ConsoleLogStream<W = unknown> extends WritableStream<W> {
+  readonly level: ConsoleLogStreamOptions["level"];
+  constructor(options?: ConsoleLogStreamOptions) {
     const level = options?.level ?? "info";
     super({
       write(chunk) {
