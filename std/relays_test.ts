@@ -1,13 +1,16 @@
-import { assertEquals, assertInstanceOf } from "@std/assert";
+import {
+  assertArrayIncludes,
+  assertEquals,
+  assertInstanceOf,
+} from "@std/assert";
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { MockWebSocket } from "@lophus/lib/testing";
-import type { NostrEvent } from "@lophus/core/protocol";
-import { Relay } from "@lophus/core/relays";
-import { RelayPool } from "./pools.ts";
+import { NostrEvent, Relay, SubscriptionId } from "@lophus/nips";
+import { RelayGroup } from "./relays.ts";
 
-describe("RelayPool", () => {
+describe("RelayGroup", () => {
   let relays: Relay[];
-  let group: RelayPool;
+  let group: RelayGroup;
   let sub: ReadableStream<NostrEvent>;
 
   // ----------------------
@@ -35,25 +38,29 @@ describe("RelayPool", () => {
     ];
   });
 
-  afterAll(() => group.close());
+  afterAll(async () => {
+    for await (const relay of relays) {
+      await relay.close();
+    }
+  });
 
   // ----------------------
   // Constructor
   // ----------------------
 
   it("should create a group of relays", () => {
-    group = new RelayPool(relays);
-    assertInstanceOf(group, RelayPool);
+    group = new RelayGroup(relays);
+    assertInstanceOf(group, RelayGroup);
   });
   it("should not have a url", () => {
-    // @ts-expect-error RelayPool does not have a url
+    // @ts-expect-error RelayGroup does not have a url
     assertEquals(group.url, undefined);
   });
   it("should have a default name", () => {
     assertEquals(group.config.name, "relay-1, relay-2, relay-3");
   });
   it("should have a custom name if provided", () => {
-    const group = new RelayPool(relays, { name: "custom" });
+    const group = new RelayGroup(relays, { name: "custom" });
     assertEquals(group.config.name, "custom");
   });
   it("should have default read and write config", () => {
@@ -61,7 +68,7 @@ describe("RelayPool", () => {
     assertEquals(group.config.write, true);
   });
   it("should have custom read and write config if provided", () => {
-    const group = new RelayPool(relays, { read: false, write: false });
+    const group = new RelayGroup(relays, { read: false, write: false });
     assertEquals(group.config.read, false);
     assertEquals(group.config.write, false);
   });
@@ -71,7 +78,38 @@ describe("RelayPool", () => {
   // ----------------------
 
   it("should create a subscription", () => {
-    sub = group.subscribe({ kinds: [1] }, { id: "test-group" });
+    sub = group.subscribe({ kinds: [1] }, {
+      id: "test-group",
+      realtime: false,
+    });
     assertInstanceOf(sub, ReadableStream);
+  });
+
+  it("should receive messages from all read relays", async () => {
+    const messages = Array.fromAsync(sub);
+    relays.filter((r) => r.config.read).forEach((relay, i) => {
+      relay.dispatch(
+        "message",
+        // deno-lint-ignore no-explicit-any
+        ["EVENT", "test-group", { kind: 1, id: i }] as any,
+      );
+      relay.dispatch(
+        "message",
+        ["EOSE", "test-group" as SubscriptionId],
+      );
+    });
+    assertArrayIncludes(await messages, [
+      // deno-lint-ignore no-explicit-any
+      { kind: 1, id: 0 } as any,
+      // deno-lint-ignore no-explicit-any
+      { kind: 1, id: 1 } as any,
+    ]);
+  });
+
+  it("should not close any internal relay when closed", async () => {
+    await group.close();
+    relays.filter((r) => r.config.read).forEach((relay) => {
+      assertEquals(relay.status, WebSocket.OPEN);
+    });
   });
 });
