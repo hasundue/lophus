@@ -2,8 +2,9 @@
   "name": "@lophus/nips",
   "version": "0.0.14",
   "exports": {
-    ".": "./protocol.ts",
+    ".": "./mod.ts",
     "./clients": "./clients.ts",
+    "./protocol": "./protocol.ts",
     "./relays": "./relays.ts",
     "./01": "./01/protocol.ts",
     "./01/clients": "./01/clients.ts",
