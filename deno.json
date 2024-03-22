@@ -28,6 +28,7 @@
     "@lophus/std/pools": "./std/pools.ts",
     "@lophus/std/signs": "./std/signs.ts",
     "@lophus/std/times": "./std/times.ts",
+    "@lophus/std/watch": "./std/watch.ts",
     "@std/assert": "jsr:@std/assert@^0.219.1",
     "@std/streams": "jsr:@std/streams@^0.219.1",
     "@std/testing": "jsr:@std/testing@^0.219.1"

@@ -7,7 +7,8 @@
     "./pools": "./pools.ts",
     "./relays": "./relays.ts",
     "./signs": "./signs.ts",
-    "./times": "./times.ts"
+    "./times": "./times.ts",
+    "./watch": "./watch.ts"
   },
   "imports": {
     "@std/streams": "jsr:@std/streams@^0.219.1",
