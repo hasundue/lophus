@@ -41,6 +41,15 @@ describe("watch - websockets", () => {
     assertEquals(value.type, "message");
     assertEquals(value.data, "test");
   });
+
+  it("should remove the event listener when the stream is canceled", async () => {
+    const stream = watch(ws)("message");
+    const reader = stream.getReader();
+    reader.cancel();
+    ws.dispatchEvent(new MessageEvent("message", { data: "test" }));
+    const { done } = await reader.read();
+    assertEquals(done, true);
+  });
 });
 
 describe("watch - relays", () => {
@@ -84,5 +93,14 @@ describe("watch - relays", () => {
     assertExists(value);
     assertEquals(value.type, "receive");
     assertEquals(value.data, ["NOTICE", "test"]);
+  });
+
+  it("should remove the event listener when the stream is canceled", async () => {
+    const stream = watch(relay)("receive");
+    const reader = stream.getReader();
+    reader.cancel();
+    relay.dispatch("receive", ["NOTICE", "test"]);
+    const { done } = await reader.read();
+    assertEquals(done, true);
   });
 });
