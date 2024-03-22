@@ -6,7 +6,7 @@ import {
 import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { MockWebSocket } from "@lophus/lib/testing";
 import { NostrEvent, Relay, SubscriptionId } from "@lophus/nips";
-import { RelayGroup } from "./relays.ts";
+import { RelayGroup, WithPool } from "./relays.ts";
 
 describe("RelayGroup", () => {
   let relays: Relay[];
@@ -111,5 +111,39 @@ describe("RelayGroup", () => {
     relays.filter((r) => r.config.read).forEach((relay) => {
       assertEquals(relay.status, WebSocket.OPEN);
     });
+  });
+});
+
+describe("WithPool", () => {
+  let Pooled: WithPool<typeof Relay>;
+
+  beforeAll(() => {
+    globalThis.WebSocket = MockWebSocket;
+  });
+
+  it("should accept a NIP-enabled relay as an argument", () => {
+    Pooled = WithPool(Relay);
+  });
+
+  it("should have no relays in the pool initially", () => {
+    assertEquals(Pooled.pool.size, 0);
+  });
+
+  it("should add a relay to the pool and return it", () => {
+    const relay = new Pooled("ws://localhost:80");
+    assertEquals(Pooled.pool.size, 1);
+    assertEquals(Pooled.pool.has(relay.config.url), true);
+  });
+
+  it("should return the pooled relay if it exists", () => {
+    const relay = new Pooled("ws://localhost:80");
+    assertEquals(Pooled.pool.size, 1);
+    assertEquals(Pooled.pool.has(relay.config.url), true);
+  });
+
+  it("should remove a relay from the pool when it is closed", async () => {
+    const relay = new Pooled("ws://localhost:80");
+    await relay.close();
+    assertEquals(Pooled.pool.size, 0);
   });
 });
