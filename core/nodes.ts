@@ -88,9 +88,9 @@ export class Node<
 // ------------------------------
 
 // deno-lint-ignore no-explicit-any
-type AnyEventTypeRecord = any;
+export type AnyEventTypeRecord = any;
 
-type EventType<R = AnyEventTypeRecord> = keyof R & string;
+export type EventType<R = AnyEventTypeRecord> = keyof R & string;
 
 export class NodeEvent<
   R = AnyEventTypeRecord,
@@ -115,7 +115,7 @@ type NodeEventListener<
   R = AnyEventTypeRecord,
   T extends EventType<R> = EventType<R>,
 > // deno-lint-ignore no-explicit-any
- = (this: Node<W, R>, ev: MessageEvent<R[T]>) => any;
+ = (this: Node<W, R>, ev: NodeEvent<R, T>) => any;
 
 type NodeEventListenerObject<
   W extends InterNodeMessage,
@@ -123,5 +123,5 @@ type NodeEventListenerObject<
   T extends EventType<R> = EventType<R>,
 > = {
   // deno-lint-ignore no-explicit-any
-  handleEvent(this: Node<W, R>, ev: MessageEvent<R[T]>): any;
+  handleEvent(this: Node<W, R>, ev: NodeEvent<R, T>): any;
 };
