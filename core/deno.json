@@ -4,6 +4,7 @@
   "exports": {
     ".": "./mod.ts",
     "./clients": "./clients.ts",
+    "./nodes": "./nodes.ts",
     "./protocol": "./protocol.ts",
     "./relays": "./relays.ts"
   },
