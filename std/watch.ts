@@ -1,9 +1,5 @@
-import {
-  AnyEventTypeRecord,
-  EventType,
-  Node,
-  NodeEvent,
-} from "@lophus/core/nodes";
+import { AnyEventTypeRecord } from "@lophus/core/nodes";
+import { EventType, Node, NodeEvent } from "@lophus/core/nodes";
 import type { InterNodeMessage } from "@lophus/core/protocol";
 
 interface WatchChainable<

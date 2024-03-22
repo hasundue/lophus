@@ -23,27 +23,27 @@ describe("watch - Relay", () => {
   });
 
   it("should create a stream of events from a relay", () => {
-    const stream = watch(relay)("message");
+    const stream = watch(relay)("receive");
     assertInstanceOf(stream, ReadableStream);
   });
 
   it("should create a stream of events of multiple types from a relay", () => {
-    const stream = watch(relay)("message", "subscribe");
+    const stream = watch(relay)("receive", "subscribe");
     assertInstanceOf(stream, ReadableStream);
   });
 
   it("should create a stream of events of multiple types from multiple relays", () => {
-    const stream = watch(relay, relay)("message", "subscribe");
+    const stream = watch(relay, relay)("receive", "subscribe");
     assertInstanceOf(stream, ReadableStream);
   });
 
   it("should receive an event from a relay", async () => {
-    const stream = watch(relay)("message");
+    const stream = watch(relay)("receive");
     const reader = stream.getReader();
-    relay.dispatch("message", ["NOTICE", "test"]);
+    relay.dispatch("receive", ["NOTICE", "test"]);
     const { value } = await reader.read();
     assertExists(value);
-    assertEquals(value.type, "message");
+    assertEquals(value.type, "receive");
     assertEquals(value.data, ["NOTICE", "test"]);
   });
 });
