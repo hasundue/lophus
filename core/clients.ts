@@ -10,7 +10,7 @@ export type ClientConfig = NodeConfig;
 export type ClientOptions = Partial<ClientConfig>;
 
 export interface ClientEventTypeRecord {
-  message: ClientToRelayMessage;
+  receive: ClientToRelayMessage;
 }
 
 /**
@@ -38,7 +38,7 @@ export class Client extends Node<
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as ClientToRelayMessage;
       // TODO: Validate the message.
-      this.dispatch("message", message);
+      this.dispatch("receive", message);
     });
   }
 }

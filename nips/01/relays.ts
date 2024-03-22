@@ -2,7 +2,7 @@ import { EventRejected, Relay, SubscriptionClosed } from "@lophus/core/relays";
 import { NIPModule } from "../nodes.ts";
 
 export const M: NIPModule<typeof Relay> = (relay) => {
-  relay.on("message", (message) => {
+  relay.on("receive", (message) => {
     switch (message[0]) {
       case "EVENT":
       case "OK":

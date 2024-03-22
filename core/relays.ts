@@ -70,8 +70,8 @@ type PublicationMessage = {
 // Events
 //---------
 
-export interface RelayEventTypeRecord {
-  message: RelayToClientMessage;
+export interface RelayEventMap {
+  receive: RelayToClientMessage;
   subscribe: SubscriptionContext & {
     controller: ReadableStreamDefaultController<NostrEvent>;
   };
@@ -87,7 +87,7 @@ export interface RelayEventTypeRecord {
  */
 export class Relay extends Node<
   ClientToRelayMessage,
-  RelayEventTypeRecord
+  RelayEventMap
 > {
   declare ws: LazyWebSocket;
   declare config: RelayConfig;
@@ -108,7 +108,7 @@ export class Relay extends Node<
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
       const message = JSON.parse(ev.data) as RelayToClientMessage;
       // TODO: Validate the message.
-      this.dispatch("message", message);
+      this.dispatch("receive", message);
     });
   }
 

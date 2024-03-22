@@ -89,12 +89,12 @@ describe("RelayGroup", () => {
     const messages = Array.fromAsync(sub);
     relays.filter((r) => r.config.read).forEach((relay, i) => {
       relay.dispatch(
-        "message",
+        "receive",
         // deno-lint-ignore no-explicit-any
         ["EVENT", "test-group", { kind: 1, id: i }] as any,
       );
       relay.dispatch(
-        "message",
+        "receive",
         ["EOSE", "test-group" as SubscriptionId],
       );
     });

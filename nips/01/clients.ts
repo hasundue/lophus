@@ -15,7 +15,7 @@ declare module "@lophus/core/clients" {
 }
 
 const M: NIPModule<typeof Client> = (client) => {
-  client.on("message", (message) => {
+  client.on("receive", (message) => {
     switch (message[0]) {
       case "EVENT": {
         const event = message[1];

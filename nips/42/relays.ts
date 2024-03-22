@@ -11,7 +11,7 @@ declare module "@lophus/core/relays" {
 }
 
 const M: NIPModule<typeof Relay> = (relay) => {
-  relay.on("message", (message) => {
+  relay.on("receive", (message) => {
     if (message[0] !== "AUTH") {
       // This NIP only handles AUTH messages
       return;

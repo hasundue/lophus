@@ -31,7 +31,7 @@ describe("Client (NIP-01)", () => {
   it("should receive an event and send a OK message", async () => {
     const event = { id: "test-ok", kind: 0 };
     const received = new Promise<ClientToRelayMessage<"EVENT">>((resolve) =>
-      client.on("message", (msg) => {
+      client.on("receive", (msg) => {
         if (msg[0] === "EVENT") resolve(msg);
       })
     );
@@ -49,7 +49,7 @@ describe("Client (NIP-01)", () => {
     subid = "test-req" as SubscriptionId;
     const request: ClientToRelayMessage<"REQ"> = ["REQ", subid, { kinds: [1] }];
     const received = new Promise<ClientToRelayMessage<"REQ">>((resolve) => {
-      client.on("message", (msg) => {
+      client.on("receive", (msg) => {
         if (msg[0] === "REQ" && msg[1] === subid) resolve(msg);
       });
     });
