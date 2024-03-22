@@ -4,12 +4,15 @@ import type {
   ClientToRelayMessage,
   EventKind,
   NostrEvent,
+  RelayUrl,
   SubscriptionFilter,
 } from "@lophus/core/protocol";
 import {
+  Relay,
   RelayLike,
   RelayLikeConfig,
   RelayLikeOptions,
+  RelayOptions,
   SubscriptionOptions,
 } from "@lophus/core/relays";
 
@@ -67,4 +70,40 @@ export class RelayGroup implements RelayLike {
   async close() {
     await Promise.resolve();
   }
+}
+
+export interface WithPool<
+  R extends typeof Relay,
+> {
+  pool: Map<RelayUrl, InstanceType<R>>;
+  new (url: RelayUrl, options?: RelayOptions): InstanceType<R>;
+}
+
+export function WithPool<
+  R extends typeof Relay,
+>(
+  BaseRelay: R,
+): WithPool<R> {
+  // @ts-ignore allow concrete arguments for constructor
+  return class Self extends BaseRelay {
+    static readonly pool = new Map<RelayUrl, InstanceType<R>>();
+
+    constructor(
+      url: RelayUrl,
+      options?: RelayOptions,
+    ) {
+      const pooled = Self.pool.get(url);
+      if (pooled) {
+        return pooled;
+      }
+      super(url, options);
+      Self.pool.set(url, this as InstanceType<R>);
+      return this;
+    }
+
+    override close() {
+      Self.pool.delete(this.config.url);
+      return super.close();
+    }
+  };
 }
