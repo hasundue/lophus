@@ -31,7 +31,8 @@
     "@lophus/std/watch": "./std/watch.ts",
     "@std/assert": "jsr:@std/assert@^0.219.1",
     "@std/streams": "jsr:@std/streams@^0.219.1",
-    "@std/testing": "jsr:@std/testing@^0.219.1"
+    "@std/testing": "jsr:@std/testing@^0.219.1",
+    "nostr-tools": "npm:nostr-tools@2.3.2"
   },
   "tasks": {
     "build": "mkdir -p ./dist && deno run -A ./bin/bundle.ts",
