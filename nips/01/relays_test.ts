@@ -15,13 +15,15 @@ import {
 } from "@lophus/core/relays";
 import { Relay } from "../relays.ts";
 
-function getRemoteSocket() {
-  return MockWebSocket.instances.values().next().value.remote;
+async function getRemoteSocket() {
+  const { value } = await MockWebSocket.instances().next();
+  return value!.remote;
 }
 
 describe("Relay (NIP-01)", () => {
   const url = "wss://localhost:8080";
   let relay: Relay;
+  let remote: MockWebSocket;
   let sub_0: ReadableStream<NostrEvent<0>>;
   let sub_1: ReadableStream<NostrEvent<1>>;
 
@@ -47,9 +49,9 @@ describe("Relay (NIP-01)", () => {
 
   it("should receive text notes", async () => {
     const reader = sub_1.getReader();
-    const read = reader.read();
-    getRemoteSocket().send(JSON.stringify(["EVENT", "test-1", { kind: 1 }]));
-    const { value, done } = await read;
+    remote = await getRemoteSocket();
+    remote.send(JSON.stringify(["EVENT", "test-1", { kind: 1 }]));
+    const { value, done } = await reader.read();
     assert(!done);
     assertEquals(value.kind, 1);
     reader.releaseLock();
@@ -63,7 +65,6 @@ describe("Relay (NIP-01)", () => {
   it("should recieve metas and notes simultaneously", async () => {
     const reader_0 = sub_0.getReader();
     const reader_1 = sub_1.getReader();
-    const remote = getRemoteSocket();
     remote.send(JSON.stringify(["EVENT", "test-0", { kind: 0 }]));
     remote.send(JSON.stringify(["EVENT", "test-1", { kind: 1 }]));
     const [{ value: value_0 }, { value: value_1 }] = await Promise.all([
@@ -79,7 +80,7 @@ describe("Relay (NIP-01)", () => {
   });
 
   it("should close a subscription with an error when receiving a CLOSED message", async () => {
-    getRemoteSocket().send(JSON.stringify(
+    remote.send(JSON.stringify(
       [
         "CLOSED",
         "test-1" as SubscriptionId,
@@ -99,14 +100,15 @@ describe("Relay (NIP-01)", () => {
 
   it("should reconnect if connection is closed while waiting for an event", async () => {
     const reader = sub_0.getReader();
-    const read = reader.read();
-    getRemoteSocket().close();
+    const read = reader.read(); // wait for an event
+    remote.close();
     const reconnected = new Promise<true>((resolve) => {
       relay.ws.addEventListener("open", () => resolve(true));
     });
     assert(await reconnected);
     // We must use a new instance of MockWebSocket.
-    getRemoteSocket().send(JSON.stringify(["EVENT", "test-0", { kind: 0 }]));
+    remote = await getRemoteSocket();
+    remote.send(JSON.stringify(["EVENT", "test-0", { kind: 0 }]));
     const { value, done } = await read;
     assert(!done);
     assertEquals(value.kind, 0);
@@ -115,7 +117,6 @@ describe("Relay (NIP-01)", () => {
 
   it("should publish an event and recieve an accepting OK message", async () => {
     const eid = "test-true" as EventId;
-    const remote = getRemoteSocket();
     const arrived = new Promise<true>((resolve) => {
       remote.addEventListener(
         "message",
@@ -143,7 +144,6 @@ describe("Relay (NIP-01)", () => {
     const eid = "test-false" as EventId;
     // deno-fmt-ignore
     const msg = ["OK", eid, false, "error: test"] satisfies RelayToClientMessage<"OK">
-    const remote = getRemoteSocket();
     const arrived = new Promise<true>((resolve) => {
       remote.addEventListener(
         "message",
@@ -174,7 +174,7 @@ describe("Relay (NIP-01)", () => {
     const event = { id: "test-close" as EventId, kind: 1 };
     // deno-lint-ignore no-explicit-any
     const published = relay.publish(event as any).catch((e) => e);
-    getRemoteSocket().close();
+    remote.close();
     try {
       await published;
     } catch (e) {
