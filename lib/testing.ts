@@ -22,7 +22,9 @@ export class MockWebSocket extends EventTarget implements WebSocket {
     // Simulate async behavior of WebSocket as much as possible.
     queueMicrotask(() => {
       this.#readyState = 1;
-      this.dispatchEvent(new Event("open"));
+      const ev = new Event("open");
+      this.dispatchEvent(ev);
+      this.onopen?.(ev);
     });
   }
 
@@ -57,26 +59,32 @@ export class MockWebSocket extends EventTarget implements WebSocket {
     queueMicrotask(() => {
       if (this.#remote) {
         this.#remote.#readyState = 3;
-        this.#remote.dispatchEvent(new CloseEvent("close", { code, reason }));
+        const ev = new CloseEvent("close", { code, reason });
+        this.#remote.dispatchEvent(ev);
+        this.#remote.onclose?.(ev);
         MockWebSocket.#instances.delete(this.#remote);
       }
       this.#readyState = 3;
-      this.dispatchEvent(new CloseEvent("close", { code, reason }));
+      const ev = new CloseEvent("close", { code, reason });
+      this.dispatchEvent(ev);
+      this.onclose?.(ev);
       MockWebSocket.#instances.delete(this);
     });
   }
 
   send(data: MessageEventData): void {
     // Simulate async behavior of WebSocket as much as possible.
-    queueMicrotask(() =>
-      this.#remote?.dispatchEvent(new MessageEvent("message", { data }))
-    );
+    queueMicrotask(() => {
+      const ev = new MessageEvent("message", { data });
+      this.#remote?.dispatchEvent(ev);
+      this.#remote?.onmessage?.(ev);
+    });
   }
 
-  onclose = null;
-  onerror = null;
-  onmessage = null;
-  onopen = null;
+  onclose: WebSocket["onclose"] = null;
+  onerror: WebSocket["onerror"] = null;
+  onmessage: WebSocket["onmessage"] = null;
+  onopen: WebSocket["onopen"] = null;
 
   addEventListener: WebSocket["addEventListener"] = super.addEventListener;
   removeEventListener: WebSocket["removeEventListener"] = super
