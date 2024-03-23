@@ -28,7 +28,7 @@ describe("LazyWebSocket", () => {
 
   it("should not open a WebSocket when an event listener is added", () => {
     opened = new Promise((resolve) => {
-      lazy.addEventListener("open", () => resolve(true));
+      lazy.addEventListener("open", () => resolve(true), { once: true });
     });
     assertEquals(lazy.readyState, WebSocket.CLOSED);
   });
@@ -46,14 +46,15 @@ describe("LazyWebSocket", () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    socket = MockWebSocket.instances.values().next().value;
+    const { value } = await MockWebSocket.instances().next();
+    socket = value!;
     socket.dispatchEvent(new Event("error"));
     await errored;
   });
 
   it("should trigger the onmessage event when receives a message", async () => {
     const messaged = new Promise((resolve) => {
-      lazy.addEventListener("message", resolve);
+      lazy.addEventListener("message", resolve, { once: true });
     });
     server = socket.remote;
     server.send("test");
@@ -63,8 +64,17 @@ describe("LazyWebSocket", () => {
   it("should trigger the onclose event when the WebSocket is closed", async () => {
     await lazy.ready();
     const closed = new Promise((resolve) => {
-      lazy.addEventListener("close", resolve);
+      lazy.addEventListener("close", resolve, { once: true });
     });
+    server.close();
+    await closed;
+  });
+
+  it("should reregister the event listeners when the WebSocket is recreated", async () => {
+    const closed = new Promise((resolve) => {
+      lazy.addEventListener("close", resolve, { once: true });
+    });
+    await lazy.ready();
     server.close();
     await closed;
   });
