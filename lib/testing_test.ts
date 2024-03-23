@@ -21,8 +21,8 @@ describe("MockWebSocket", () => {
   });
 
   describe("instances", () => {
-    it("should return an array of instances", () => {
-      assertEquals(MockWebSocket.instances.length, 2);
+    it("should return a set of instances", () => {
+      assertEquals(MockWebSocket.instances.size, 2);
     });
   });
 

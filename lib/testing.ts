@@ -5,20 +5,13 @@ export class MockWebSocket extends EventTarget implements WebSocket {
    * A list of all instances of MockWebSocket.
    * An instance is removed from this list when it is closed.
    */
-  static get instances(): MockWebSocket[] {
-    return Array.from(this.#instances);
-  }
-  static #instances = new Set<MockWebSocket>();
-
-  static get first(): MockWebSocket | undefined {
-    return this.instances[0];
-  }
+  static readonly instances = new Set<MockWebSocket>();
 
   constructor(url?: string | URL, protocols?: string | string[]) {
     super();
     this.url = url?.toString() ?? "";
     this.protocol = protocols ? [...protocols].flat()[0] : "";
-    MockWebSocket.#instances.add(this);
+    MockWebSocket.instances.add(this);
     // Simulate async behavior of WebSocket as much as possible.
     queueMicrotask(() => {
       this.#readyState = 1;
@@ -62,13 +55,13 @@ export class MockWebSocket extends EventTarget implements WebSocket {
         const ev = new CloseEvent("close", { code, reason });
         this.#remote.dispatchEvent(ev);
         this.#remote.onclose?.(ev);
-        MockWebSocket.#instances.delete(this.#remote);
+        MockWebSocket.instances.delete(this.#remote);
       }
       this.#readyState = 3;
       const ev = new CloseEvent("close", { code, reason });
       this.dispatchEvent(ev);
       this.onclose?.(ev);
-      MockWebSocket.#instances.delete(this);
+      MockWebSocket.instances.delete(this);
     });
   }
 

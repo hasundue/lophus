@@ -46,7 +46,7 @@ describe("LazyWebSocket", () => {
     const errored = new Promise((resolve) => {
       lazy.addEventListener("error", resolve);
     });
-    socket = MockWebSocket.instances[0];
+    socket = MockWebSocket.instances.values().next().value;
     socket.dispatchEvent(new Event("error"));
     await errored;
   });

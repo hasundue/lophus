@@ -16,7 +16,7 @@ import {
 import { Relay } from "../relays.ts";
 
 function getRemoteSocket() {
-  return MockWebSocket.instances[0].remote;
+  return MockWebSocket.instances.values().next().value.remote;
 }
 
 describe("Relay (NIP-01)", () => {
