@@ -22,18 +22,12 @@ describe("RelayGroup", () => {
     relays = [
       new Relay("ws://localhost:80", {
         name: "relay-1",
-        read: true,
-        write: true,
       }),
       new Relay("ws://localhost:81", {
         name: "relay-2",
-        read: true,
-        write: false,
       }),
       new Relay("ws://localhost:82", {
         name: "relay-3",
-        read: false,
-        write: true,
       }),
     ];
   });
@@ -63,31 +57,19 @@ describe("RelayGroup", () => {
     const group = new RelayGroup(relays, { name: "custom" });
     assertEquals(group.config.name, "custom");
   });
-  it("should have default read and write config", () => {
-    assertEquals(group.config.read, true);
-    assertEquals(group.config.write, true);
-  });
-  it("should have custom read and write config if provided", () => {
-    const group = new RelayGroup(relays, { read: false, write: false });
-    assertEquals(group.config.read, false);
-    assertEquals(group.config.write, false);
-  });
 
   // ----------------------
   // Subscription
   // ----------------------
 
   it("should create a subscription", () => {
-    sub = group.subscribe({ kinds: [1] }, {
-      id: "test-group",
-      realtime: false,
-    });
+    sub = group.subscribe({ kinds: [1], limit: 1 }, { id: "test-group" });
     assertInstanceOf(sub, ReadableStream);
   });
 
-  it("should receive messages from all read relays", async () => {
+  it("should receive messages from all relays", async () => {
     const messages = Array.fromAsync(sub);
-    relays.filter((r) => r.config.read).forEach((relay, i) => {
+    relays.forEach((relay, i) => {
       relay.dispatch(
         "receive",
         // deno-lint-ignore no-explicit-any
@@ -103,12 +85,14 @@ describe("RelayGroup", () => {
       { kind: 1, id: 0 } as any,
       // deno-lint-ignore no-explicit-any
       { kind: 1, id: 1 } as any,
+      // deno-lint-ignore no-explicit-any
+      { kind: 1, id: 2 } as any,
     ]);
   });
 
   it("should not close any internal relay when closed", async () => {
     await group.close();
-    relays.filter((r) => r.config.read).forEach((relay) => {
+    relays.forEach((relay) => {
       assertEquals(relay.status, WebSocket.OPEN);
     });
   });

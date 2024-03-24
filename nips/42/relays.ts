@@ -1,4 +1,4 @@
-import type { Stringified } from "@lophus/lib/types";
+import type { Stringified } from "@lophus/lib/strings";
 import type { EventInit } from "@lophus/core/protocol";
 import type { Signer } from "@lophus/std/signs";
 import type { NIPModule } from "../nodes.ts";

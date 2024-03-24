@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { Stringified } from "@lophus/lib/types";
-import { Timestamp } from "@lophus/std/times";
+import { Stringified } from "@lophus/lib/strings";
+import { Timestamp } from "@lophus/lib/times";
 import { UnsignedEvent } from "@lophus/core/protocol";
 import {
   fromPrivateKey,
@@ -9,6 +9,8 @@ import {
   Signer,
   Verifier,
 } from "./signs.ts";
+import { EventContent } from "@lophus/core/protocol";
+import { EventKind } from "@lophus/core/protocol";
 
 describe("generatePrivateKey", () => {
   it("generates a private key", () => {
@@ -24,6 +26,8 @@ describe("fromPrivateKey", () => {
     assertEquals(pubkey.length, 64);
   });
 });
+
+type hoge = EventContent<EventKind>;
 
 describe("Signer/Verifier", () => {
   const nsec = generatePrivateKey();

@@ -1,0 +1,462 @@
+/* Copyright:
+ *   - Kev Quirk (Simple.css)
+ *   - Shun Ueda
+ * All rights reserved. MIT license.
+ */
+
+/* ----------------------------------------------
+ *  Simple.css, modified
+ * -------------------------------------------- */
+
+/* Global variables. */
+:root,
+::backdrop {
+  /* Set sans-serif & mono fonts */
+  --sans-font: -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
+    "Nimbus Sans L", Roboto, "Noto Sans", "Segoe UI", Arial, Helvetica,
+    "Helvetica Neue", sans-serif;
+  --mono-font: Consolas, Menlo, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+  --standard-border-radius: 5px;
+
+  /* Default (light) theme */
+  --bg: #fff;
+  --accent-bg: #f5f7ff;
+  --text: #212121;
+  --text-light: #585858;
+  --border: #898EA4;
+  --accent: #0d47a1;
+  --accent-hover: #1266e2;
+  --accent-text: var(--bg);
+  --code: #d81b60;
+  --preformatted: #444;
+  --marked: #ffdd33;
+  --disabled: #efefef;
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root,
+  ::backdrop {
+    color-scheme: dark;
+    --bg: #212121;
+    --accent-bg: #2b2b2b;
+    --text: #dcdcdc;
+    --text-light: #ababab;
+    --accent: #ffb300;
+    --accent-hover: #ffe099;
+    --accent-text: var(--bg);
+    --code: #f06292;
+    --preformatted: #ccc;
+    --disabled: #111;
+  }
+  /* Add a bit of transparency so light media isn't so glaring in dark mode */
+  img,
+  video {
+    opacity: 0.8;
+  }
+}
+
+/* Reset box-sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Reset default appearance */
+textarea,
+select,
+input,
+progress {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+html {
+  /* Set the font globally */
+  font-family: var(--sans-font);
+  scroll-behavior: smooth;
+}
+
+/* Format links & buttons */
+a,
+a:visited {
+  color: var(--accent);
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+button,
+.button,
+a.button, /* extra specificity to override a */
+input[type="submit"],
+input[type="reset"],
+input[type="button"],
+label[type="button"] {
+  border: 1px solid var(--accent);
+  background-color: var(--accent);
+  color: var(--accent-text);
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  text-decoration: none;
+  line-height: normal;
+}
+
+.button[aria-disabled="true"], 
+input:disabled,
+textarea:disabled,
+select:disabled,
+button[disabled] {
+  cursor: not-allowed;
+  background-color: var(--disabled);
+  border-color: var(--disabled);
+  color: var(--text-light);
+}
+
+input[type="range"] {
+  padding: 0;
+}
+
+button:enabled:hover,
+.button:not([aria-disabled="true"]):hover,
+input[type="submit"]:enabled:hover,
+input[type="reset"]:enabled:hover,
+input[type="button"]:enabled:hover,
+label[type="button"]:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  cursor: pointer;
+}
+
+.button:focus-visible,
+button:focus-visible:where(:enabled),
+input:enabled:focus-visible:where(
+  [type="submit"],
+  [type="reset"],
+  [type="button"]
+) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Format forms */
+textarea,
+select,
+input,
+button,
+.button {
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--standard-border-radius);
+  box-shadow: none;
+  max-width: 100%;
+  display: inline-block;
+}
+textarea,
+select,
+input {
+  color: var(--text);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+}
+label {
+  display: block;
+}
+textarea:not([cols]) {
+  width: 100%;
+}
+
+/* Add arrow to drop-down */
+select:not([multiple]) {
+  background-image: linear-gradient(45deg, transparent 49%, var(--text) 51%),
+    linear-gradient(135deg, var(--text) 51%, transparent 49%);
+  background-position: calc(100% - 15px), calc(100% - 10px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-inline-end: 25px;
+}
+*[dir="rtl"] select:not([multiple]) {
+  background-position: 10px, 15px;
+}
+
+/* checkbox and radio button style */
+input[type="checkbox"],
+input[type="radio"] {
+  vertical-align: middle;
+  position: relative;
+  width: min-content;
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+  display: inline-block;
+}
+
+input[type="radio"] {
+  border-radius: 100%;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  background-color: var(--accent);
+}
+
+input[type="checkbox"]:checked::after {
+  /* Creates a rectangle with colored right and bottom borders which is rotated to look like a check mark */
+  content: " ";
+  width: 0.18em;
+  height: 0.32em;
+  border-radius: 0;
+  position: absolute;
+  top: 0.05em;
+  left: 0.17em;
+  background-color: transparent;
+  border-right: solid var(--bg) 0.08em;
+  border-bottom: solid var(--bg) 0.08em;
+  font-size: 1.8em;
+  transform: rotate(45deg);
+}
+input[type="radio"]:checked::after {
+  /* creates a colored circle for the checked radio button  */
+  content: " ";
+  width: 0.25em;
+  height: 0.25em;
+  border-radius: 100%;
+  position: absolute;
+  top: 0.125em;
+  background-color: var(--bg);
+  left: 0.125em;
+  font-size: 32px;
+}
+
+/* Makes input fields wider on smaller screens */
+@media only screen and (max-width: 720px) {
+  textarea,
+  select,
+  input {
+    width: 100%;
+  }
+}
+
+/* Set a height for color input */
+input[type="color"] {
+  height: 2.5rem;
+  padding:  0.2rem;
+}
+
+/* do not show border around file selector button */
+input[type="file"] {
+  border: 0;
+}
+
+/* ----------------------------------------------
+ *  @lophus/default
+ * -------------------------------------------- */
+
+a.symbol {
+  color: var(--text);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  line-height: 1.5;
+  margin: 0;
+}
+
+header {
+  display: grid;
+  grid-column: 1;
+  grid-template-rows: 1rem auto 1fr auto auto 1rem;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+header > * {
+  margin: 0.5rem 0;
+}
+
+header .material-symbols-outlined {
+  font-size: 2rem;
+}
+
+header > #new_note {
+  grid-row: 2;
+}
+
+header > #new_feed {
+  grid-row: 4;
+}
+
+header > #settings {
+  grid-row: 5;
+}
+
+main {
+  display: flex;
+  grid-column: 2;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+fieldset {
+  border: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+/* The feed */
+.feed {
+  align-items: start;
+  display: grid;
+  flex: 1; /* Take up remaining space */
+  padding: 1rem;
+  min-width: 20rem;
+  max-width: 45rem;
+  max-height: 100vh;
+  grid-template-rows: auto 1fr;
+  grid-auto-rows: minmax(auto, 1fr);
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "n s"
+    "c c";
+}
+
+.feed > .name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  grid-area: n;
+  margin: 0.5rem;
+  text-transform: capitalize;
+}
+
+.feed > .symbol {
+  font-size: 1.75rem;
+}
+
+.feed > #tune {
+  grid-area: s;
+  margin: 0 0.5rem;
+}
+
+.feed > .settings .radioset {
+  display: flex;
+  flex-direction: row;
+}
+
+.feed > .contents {
+  grid-area: c;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  max-height: 100%;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Hide scrollbar for Webkit (Chrome, Safari and Opera) */
+.feed > .contents::-webkit-scrollbar {
+  display: none;
+}
+
+.note {
+  background-color: var(--accent-bg);
+  border-radius: var(--standard-border-radius);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "n d"
+    "c c";
+  margin: 0.5rem 0 ;
+  padding: 1rem;
+}
+
+.note > .name {
+  grid-area: n;
+  font-weight: bold;
+}
+
+.note > .date {
+  grid-area: d;
+  font-size: 0.9rem;
+  text-align: right;
+  color: var(--text-light);
+}
+
+.note > .content {
+  grid-area: c;
+}
+
+/* The modal background */
+.modal {
+  display: none;
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+  align-items: center; /* This centers the modal vertically */
+  justify-content: center; /* This centers the modal horizontally */
+}
+
+/* Settings in a modal window */
+.settings {
+  background-color: var(--accent-bg);
+  border-radius: var(--standard-border-radius);
+  display: none;
+  position: fixed; /* Fixed positioning relative to the viewport */
+  left: 50%; /* Positioned halfway across the viewport */
+  top: 50%; /* Positioned halfway down the viewport */
+  z-index: 2; /* Ensures it appears above the modal background */
+  transform: translate(-50%, -50%); /* Offset by half its own size to center */
+  max-width: 80%;
+  padding: 1rem;
+}
+
+.settings > .title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  text-transform: capitalize;
+} 
+
+fieldset > legend {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0.5rem 0;
+  text-transform: capitalize;
+}
+
+.radio > label {
+  margin: 0 0.2rem;
+  text-transform: capitalize;
+}
+
+.relay {
+  align-items: center; /* Center the items vertically */
+  display: flex;
+  flex-direction: row;
+  margin: 0.5rem 0;
+}
+
+.relay > * {
+  line-height: 1;
+  margin: 0 0 0 0.5rem;
+}
+
+.settings .symbol,
+.relay .symbol {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.settings a {
+  margin: 0.5rem 0;
+}

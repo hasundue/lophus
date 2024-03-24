@@ -55,7 +55,7 @@ declare module "@lophus/core/protocol" {
     K extends EventKind = EventKind,
   > {
     EVENT: [NostrEvent<K>];
-    REQ: [SubscriptionId, ...SubscriptionFilter<K>[]];
+    REQ: [SubscriptionId, ...EventFilter<K>[]];
     CLOSE: [SubscriptionId];
   }
 

@@ -2,9 +2,13 @@
   "name": "@lophus/lib",
   "version": "0.0.14",
   "exports": {
+    ".": "./mod.ts",
+    "./idb": "./idb.ts",
     "./streams": "./streams.ts",
+    "./strings": "./strings.ts",
     "./testing": "./testing.ts",
     "./types": "./types.ts",
+    "./times": "./times.ts",
     "./websockets": "./websockets.ts"
   },
   "publish": {

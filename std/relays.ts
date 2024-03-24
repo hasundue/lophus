@@ -2,10 +2,10 @@ import { mergeReadableStreams as merge } from "@std/streams";
 import { DistinctStream } from "@lophus/lib/streams";
 import type {
   ClientToRelayMessage,
+  EventFilter,
   EventKind,
   NostrEvent,
   RelayUrl,
-  SubscriptionFilter,
 } from "@lophus/core/protocol";
 import {
   Relay,
@@ -22,8 +22,6 @@ import {
 export class RelayGroup implements RelayLike {
   readonly writable: WritableStream<ClientToRelayMessage>;
   readonly config: Readonly<RelayLikeConfig>;
-  #relays_read: RelayLike[];
-  #relays_write: RelayLike[];
 
   constructor(readonly relays: RelayLike[], options?: RelayLikeOptions) {
     this.writable = new WritableStream({
@@ -33,12 +31,8 @@ export class RelayGroup implements RelayLike {
     });
     this.config = {
       name: relays.map((r) => r.config.name).join(", "),
-      read: true,
-      write: true,
       ...options,
     };
-    this.#relays_read = this.relays.filter((r) => r.config.read);
-    this.#relays_write = this.relays.filter((r) => r.config.write);
   }
 
   // ----------------------
@@ -46,17 +40,17 @@ export class RelayGroup implements RelayLike {
   // ----------------------
 
   subscribe<K extends EventKind>(
-    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
+    filter: EventFilter<K> | EventFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
-    const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));
+    const subs = this.relays.map((r) => r.subscribe(filter, opts));
     return merge(...subs).pipeThrough(new DistinctStream((m) => m.id));
   }
 
   async publish<K extends EventKind>(
     msg: NostrEvent<K>,
   ) {
-    await Promise.all(this.#relays_write.map((r) => r.publish(msg)));
+    await Promise.all(this.relays.map((r) => r.publish(msg)));
   }
 
   // ----------------------
