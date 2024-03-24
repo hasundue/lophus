@@ -18,7 +18,6 @@ export interface PromiseCallbackRecord<T> {
 // ----------------------
 
 export type Url = `https://${string}` | `http://${string}`;
-export type Stringified<T> = string & { __content: T };
 
 // deno-fmt-ignore
 export type AlphabetLetter =

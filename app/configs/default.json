@@ -1,0 +1,13 @@
+{
+  "feeds": [
+    {
+      "name": "follows",
+      "source": "@lophus/follows"
+    }
+  ],
+  "relays": {
+    "wss://nostr.wine": { "read": true, "write": true },
+    "wss://relay.nostr.wirednet.jp": { "read": true, "write": false }
+  },
+  "style": "@lophus/default"
+}

@@ -8,7 +8,9 @@
  * @module
  */
 
-import type { AlphabetLetter, Brand, Stringified } from "@lophus/lib/types";
+import type { AlphabetLetter, Brand } from "@lophus/lib/types";
+import type { Timestamp } from "@lophus/lib/times";
+import type { Stringified } from "@lophus/lib/strings";
 
 // ----------------------
 // Events and signatures
@@ -26,7 +28,6 @@ export interface NostrEvent<K extends EventKind = EventKind> {
 
 export type EventId = Brand<string, "EventId">;
 export type PublicKey = Brand<string, "PublicKey">;
-export type Timestamp = Brand<number, "EventTimeStamp">;
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
@@ -124,7 +125,7 @@ export type DefaultResponsePrefix =
   | "invalid"
   | "error";
 
-export type SubscriptionFilter<
+export type EventFilter<
   K extends EventKind = EventKind,
   T extends IndexedTagType = IndexedTagType,
 > =

@@ -20,13 +20,6 @@ describe("Relay", () => {
       assertEquals(relay.config.name, "localhost");
     });
 
-    it("should have default options", () => {
-      assertObjectMatch(relay.config, {
-        read: true,
-        write: true,
-      });
-    });
-
     it("should not be connected initially", () => {
       assertEquals(relay.status, WebSocket.CLOSED);
     });
@@ -35,8 +28,6 @@ describe("Relay", () => {
   describe("constructed with url and options", () => {
     const relay = new Relay(url, {
       name: "test",
-      read: false,
-      write: false,
       nbuffer: 20,
     });
 
@@ -49,8 +40,6 @@ describe("Relay", () => {
         name: "test",
         url,
         nbuffer: 20,
-        read: false,
-        write: false,
       });
     });
   });

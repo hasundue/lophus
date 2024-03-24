@@ -78,8 +78,9 @@ export class Node<
     type: T,
     // deno-lint-ignore no-explicit-any
     listener: (data: R[T]) => any,
+    options?: AddEventListenerOptions,
   ) {
-    this.addEventListener(type, ({ data }) => listener(data));
+    this.addEventListener(type, ({ data }) => listener(data), options);
   }
 }
 

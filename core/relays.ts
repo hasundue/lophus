@@ -2,13 +2,13 @@ import type { PromiseCallbackRecord } from "@lophus/lib/types";
 import { LazyWebSocket } from "@lophus/lib/websockets";
 import type {
   ClientToRelayMessage,
+  EventFilter,
   EventId,
   EventKind,
   NostrEvent,
   RelayToClientMessage,
   RelayToClientMessageType,
   RelayUrl,
-  SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.ts";
 import { Node, NodeConfig } from "./nodes.ts";
@@ -27,9 +27,7 @@ export class SubscriptionClosed extends Error {}
 
 export interface RelayConfig extends NodeConfig {
   name: string;
-  read: boolean;
   url: RelayUrl;
-  write: boolean;
 }
 
 export type RelayOptions = Partial<RelayConfig>;
@@ -37,7 +35,6 @@ export type RelayOptions = Partial<RelayConfig>;
 export interface SubscriptionOptions {
   id?: string;
   nbuffer?: number;
-  realtime?: boolean;
 }
 
 //------------------------
@@ -46,8 +43,7 @@ export interface SubscriptionOptions {
 
 export interface SubscriptionContext {
   id: SubscriptionId;
-  filters: SubscriptionFilter[];
-  realtime: boolean;
+  filters: EventFilter[];
 }
 
 export interface PublicationContext extends PromiseCallbackRecord<void> {
@@ -100,9 +96,7 @@ export class Relay extends Node<
     this.config = {
       ...this.config,
       name: new URL(url).hostname,
-      read: true,
       url,
-      write: true,
       ...options,
     };
     this.ws.addEventListener("message", (ev: MessageEvent<string>) => {
@@ -113,13 +107,12 @@ export class Relay extends Node<
   }
 
   subscribe<K extends EventKind>(
-    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
+    filter: EventFilter<K> | EventFilter<K>[],
     options: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
     const context = {
       id: (options.id ?? crypto.randomUUID()) as SubscriptionId,
       filters: [filter].flat(),
-      realtime: options.realtime ?? true,
     };
     const resubscribe = () => this.dispatch("resubscribe", context);
     return new ReadableStream<NostrEvent<K>>(
@@ -166,9 +159,9 @@ export class Relay extends Node<
 //-------------
 
 export interface RelayLike
-  extends Pick<Relay, "writable" | "send" | "subscribe" | "publish" | "close"> {
+  extends Pick<Relay, "send" | "subscribe" | "publish" | "close"> {
   readonly config: RelayLikeConfig;
 }
 
-export type RelayLikeConfig = Pick<RelayConfig, "name" | "read" | "write">;
+export type RelayLikeConfig = Pick<RelayConfig, "name">;
 export type RelayLikeOptions = Partial<RelayLikeConfig>;

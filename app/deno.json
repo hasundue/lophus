@@ -1,0 +1,15 @@
+{
+  "name": "@lophus/app",
+  "version": "0.0.14",
+  "imports": {
+    "@std/cli": "jsr:@std/cli@^0.221.0",
+    "@std/collections": "jsr:@std/collections@^0.221.0",
+    "@std/path": "jsr:@std/path@^0.221.0",
+    "@std/streams": "jsr:@std/streams@^0.221.0",
+    "@lophus/nips": "jsr:@lophus/nips@0.0.14",
+    "@lophus/std": "jsr:@lophus/std@0.0.14",
+    "esbuild": "npm:esbuild@^0.20.2",
+    "mini-van-plate": "npm:mini-van-plate@^0.5.6",
+    "sharp": "npm:sharp@^0.33.3"
+  }
+}

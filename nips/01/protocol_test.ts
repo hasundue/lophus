@@ -1,12 +1,12 @@
 import { describe, it } from "@std/testing/bdd";
 import { assertType, Has } from "@std/testing/types";
 import type {
+  EventFilter,
   EventId,
   PublicKey,
-  SubscriptionFilter,
   Tag,
 } from "@lophus/core/protocol";
-import { Timestamp } from "@lophus/std/times";
+import { Timestamp } from "@lophus/lib/times";
 import "./protocol.ts";
 
 describe("Tag", () => {
@@ -65,63 +65,63 @@ describe("SubscriptionFilter", () => {
       since: Timestamp.now,
       until: Timestamp.now,
       limit: 10,
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(true);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(true);
   });
   it("ids should be an array of EventId", () => {
     const filter = {
       // @ts-expect-error: ids should be EventId[]
       ids: [""],
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("kinds should be an array of EventKind", () => {
     const filter = {
       // @ts-expect-error: kinds should be EventKind[]
       kinds: [""],
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("authors should be an array of PublicKey", () => {
     const filter = {
       // @ts-expect-error: authors should be PublicKey[]
       authors: [""],
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("tag #p should be an array of PublicKey", () => {
     const filter = {
       // @ts-expect-error: tag #p should be PublicKey[]
       "#p": [""],
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("tag #e should be an array of EventId", () => {
     const filter = {
       // @ts-expect-error: tag #e should be EventId[]
       "#e": [""],
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("since should be Timestamp", () => {
     const filter = {
       // @ts-expect-error: since should be Timestamp
       since: 0,
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("until should be Timestamp", () => {
     const filter = {
       // @ts-expect-error: until should be Timestamp
       until: 0,
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
   it("limit should be number", () => {
     const filter = {
       // @ts-expect-error: limit should be number
       limit: "10",
-    } satisfies SubscriptionFilter;
-    assertType<Has<typeof filter, SubscriptionFilter>>(false);
+    } satisfies EventFilter;
+    assertType<Has<typeof filter, EventFilter>>(false);
   });
 });

@@ -100,16 +100,16 @@ export class MockWebSocket extends EventTarget implements WebSocket {
     .removeEventListener;
   dispatchEvent: WebSocket["dispatchEvent"] = super.dispatchEvent;
 
-  static get CONNECTING(): number {
+  static get CONNECTING(): WebSocket["CONNECTING"] {
     return 0;
   }
-  static get OPEN(): number {
+  static get OPEN(): WebSocket["OPEN"] {
     return 1;
   }
-  static get CLOSING(): number {
+  static get CLOSING(): WebSocket["CLOSING"] {
     return 2;
   }
-  static get CLOSED(): number {
+  static get CLOSED(): WebSocket["CLOSED"] {
     return 3;
   }
 }

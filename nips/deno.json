@@ -9,7 +9,7 @@
     "./01": "./01/protocol.ts",
     "./01/clients": "./01/clients.ts",
     "./01/relays": "./01/relays.ts",
-    "./02": "./02/protocol.ts",
+    "./02": "./02/mod.ts",
     "./07": "./07/protocol.ts",
     "./42": "./42/protocol.ts",
     "./42/clients": "./42/clients.ts",

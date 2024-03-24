@@ -1,7 +1,8 @@
 import { schnorr } from "@noble/curves/secp256k1";
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
-import type { Stringified } from "@lophus/lib/types";
+import type { Stringified } from "@lophus/lib/strings";
+import { Timestamp } from "@lophus/lib/times";
 import type {
   EventContent,
   EventId,
@@ -14,9 +15,6 @@ import type {
   Signature,
   UnsignedEvent,
 } from "@lophus/core/protocol";
-import "@lophus/nips/01";
-import "@lophus/nips/07";
-import { Timestamp } from "@lophus/std/times";
 
 export function generatePrivateKey(): PrivateKey {
   return bytesToHex(schnorr.utils.randomPrivateKey()) as PrivateKey;
