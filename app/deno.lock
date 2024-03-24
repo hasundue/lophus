@@ -2,33 +2,15 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "jsr:@std/assert@^0.219.1": "jsr:@std/assert@0.219.1",
       "jsr:@std/assert@^0.220.1": "jsr:@std/assert@0.220.1",
-      "jsr:@std/bytes@^0.219.1": "jsr:@std/bytes@0.219.1",
       "jsr:@std/cli@^0.220.1": "jsr:@std/cli@0.220.1",
-      "jsr:@std/fmt@^0.219.1": "jsr:@std/fmt@0.219.1",
-      "jsr:@std/io@^0.219.1": "jsr:@std/io@0.219.1",
-      "jsr:@std/path@^0.219.1": "jsr:@std/path@0.219.1",
-      "jsr:@std/streams@^0.219.1": "jsr:@std/streams@0.219.1",
-      "jsr:@std/testing@^0.219.1": "jsr:@std/testing@0.219.1",
-      "npm:@noble/curves@^1.3.0": "npm:@noble/curves@1.4.0",
-      "npm:@noble/hashes@^1.3.3": "npm:@noble/hashes@1.4.0",
+      "jsr:@std/path@^0.220.1": "jsr:@std/path@0.220.1",
       "npm:hono@^4.1.3": "npm:hono@4.1.3",
-      "npm:mini-van-plate@^0.5.6": "npm:mini-van-plate@0.5.6",
-      "npm:nostr-tools@2.3.2": "npm:nostr-tools@2.3.2"
+      "npm:mini-van-plate@^0.5.6": "npm:mini-van-plate@0.5.6"
     },
     "jsr": {
-      "@std/assert@0.219.1": {
-        "integrity": "e76c2a1799a78f0f4db7de04bdc9b908a7a4b821bb65eda0285885297d4fb8af",
-        "dependencies": [
-          "jsr:@std/fmt@^0.219.1"
-        ]
-      },
       "@std/assert@0.220.1": {
         "integrity": "88710d54f3afdd7a5761e7805abba1f56cd14e4b212feffeb3e73a9f77482425"
-      },
-      "@std/bytes@0.219.1": {
-        "integrity": "693e5f3f7796b33a448fb16c448b75d7d6e62914b55e2f1f715f9a04f77853b4"
       },
       "@std/cli@0.220.1": {
         "integrity": "6c38388efc899c9d98811d38a46effe01e0d91138068483f1e6ae834caad5e82",
@@ -36,106 +18,20 @@
           "jsr:@std/assert@^0.220.1"
         ]
       },
-      "@std/fmt@0.219.1": {
-        "integrity": "2432152e927df249a207177aa048a6d9465956ea0047653ee6abd4f514db504f"
-      },
-      "@std/io@0.219.1": {
-        "integrity": "4f5073dd150fb7deff5c57449f4304edaf89a1137e0003602a22c133eb7cf93a"
-      },
-      "@std/path@0.219.1": {
-        "integrity": "e5c0ffef3a8ef2b48e9e3d88a1489320e8fb2cc7be767b17c91a1424ffb4c8ed",
+      "@std/path@0.220.1": {
+        "integrity": "cc63c1b5e5192e2f718dc2f365a3514fffb26cc0380959bab0f8fb5988a52f0c",
         "dependencies": [
-          "jsr:@std/assert@^0.219.1"
+          "jsr:@std/assert@^0.220.1"
         ]
-      },
-      "@std/streams@0.219.1": {
-        "integrity": "6f5dac5773a4fafdbe7ee612d0a0d5a2cbe465b9c9e2c85d371877dc8a52d1d3",
-        "dependencies": [
-          "jsr:@std/assert@^0.219.1",
-          "jsr:@std/bytes@^0.219.1",
-          "jsr:@std/io@^0.219.1"
-        ]
-      },
-      "@std/testing@0.219.1": {
-        "integrity": "a87945273d41853cd5afbdd4d6cea123c6126d005a645c10f487ac35e31da75b"
       }
     },
     "npm": {
-      "@noble/ciphers@0.5.1": {
-        "integrity": "sha512-aNE06lbe36ifvMbbWvmmF/8jx6EQPu2HVg70V95T+iGjOuYwPpAccwAQc2HlXO2D0aiQ3zavbMga4jjWnrpiPA==",
-        "dependencies": {}
-      },
-      "@noble/curves@1.1.0": {
-        "integrity": "sha512-091oBExgENk/kGj3AZmtBDMpxQPDtxQABR2B9lb1JbVTs6ytdzZNwvhxQ4MWasRNEzlbEH8jCWFCwhF/Obj5AA==",
-        "dependencies": {
-          "@noble/hashes": "@noble/hashes@1.3.1"
-        }
-      },
-      "@noble/curves@1.2.0": {
-        "integrity": "sha512-oYclrNgRaM9SsBUBVbb8M6DTV7ZHRTKugureoYEncY5c65HOmRzvSiTE3y5CYaPYJA/GVkrhXEoF0M3Ya9PMnw==",
-        "dependencies": {
-          "@noble/hashes": "@noble/hashes@1.3.2"
-        }
-      },
-      "@noble/curves@1.4.0": {
-        "integrity": "sha512-p+4cb332SFCrReJkCYe8Xzm0OWi4Jji5jVdIZRL/PmacmDkFNw6MrrV+gGpiPxLHbV+zKFRywUWbaseT+tZRXg==",
-        "dependencies": {
-          "@noble/hashes": "@noble/hashes@1.4.0"
-        }
-      },
-      "@noble/hashes@1.3.1": {
-        "integrity": "sha512-EbqwksQwz9xDRGfDST86whPBgM65E0OH/pCgqW0GBVzO22bNE+NuIbeTb714+IfSjU3aRk47EUvXIb5bTsenKA==",
-        "dependencies": {}
-      },
-      "@noble/hashes@1.3.2": {
-        "integrity": "sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==",
-        "dependencies": {}
-      },
-      "@noble/hashes@1.4.0": {
-        "integrity": "sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==",
-        "dependencies": {}
-      },
-      "@scure/base@1.1.1": {
-        "integrity": "sha512-ZxOhsSyxYwLJj3pLZCefNitxsj093tb2vq90mp2txoYeBqbcjDjqFhyM8eUjq/uFm6zJ+mUuqxlS2FkuSY1MTA==",
-        "dependencies": {}
-      },
-      "@scure/bip32@1.3.1": {
-        "integrity": "sha512-osvveYtyzdEVbt3OfwwXFr4P2iVBL5u1Q3q4ONBfDY/UpOuXmOlbgwc1xECEboY8wIays8Yt6onaWMUdUbfl0A==",
-        "dependencies": {
-          "@noble/curves": "@noble/curves@1.1.0",
-          "@noble/hashes": "@noble/hashes@1.3.2",
-          "@scure/base": "@scure/base@1.1.1"
-        }
-      },
-      "@scure/bip39@1.2.1": {
-        "integrity": "sha512-Z3/Fsz1yr904dduJD0NpiyRHhRYHdcnyh73FZWiV+/qhWi83wNJ3NWolYqCEN+ZWsUz2TWwajJggcRE9r1zUYg==",
-        "dependencies": {
-          "@noble/hashes": "@noble/hashes@1.3.2",
-          "@scure/base": "@scure/base@1.1.1"
-        }
-      },
       "hono@4.1.3": {
         "integrity": "sha512-V0I6qCw0gn2MA4LLtyXe6oD3/7ToeQf5Zv98o7uSuLuViQgWHJeYoYrZ4NbXhOtg4SaZjNJJm1+XuFB3LN+j6A==",
         "dependencies": {}
       },
       "mini-van-plate@0.5.6": {
         "integrity": "sha512-gAJPXBihI8EFTutUc7oj9tmnOJKgLme5SQNAwj3gN0VU95Nzptiwo1oZy5SJRBwl5ZH7KmjQ6tsqxGHfSgdcoQ==",
-        "dependencies": {}
-      },
-      "nostr-tools@2.3.2": {
-        "integrity": "sha512-8ceZ2ItkAGjR5b9+QOkkV9KWBOK0WPlpFrPPXmbWnNMcnlj9zB7rjdYPK2sV/OK4Ty9J3xL6+bvYKY77gup5EQ==",
-        "dependencies": {
-          "@noble/ciphers": "@noble/ciphers@0.5.1",
-          "@noble/curves": "@noble/curves@1.2.0",
-          "@noble/hashes": "@noble/hashes@1.3.1",
-          "@scure/base": "@scure/base@1.1.1",
-          "@scure/bip32": "@scure/bip32@1.3.1",
-          "@scure/bip39": "@scure/bip39@1.2.1",
-          "nostr-wasm": "nostr-wasm@0.1.0"
-        }
-      },
-      "nostr-wasm@0.1.0": {
-        "integrity": "sha512-78BTryCLcLYv96ONU8Ws3Q1JzjlAt+43pWQhIl86xZmWeegYCNLPml7yQ+gG3vR6V5h4XGj+TxO+SS5dsThQIA==",
         "dependencies": {}
       }
     }
@@ -183,63 +79,21 @@
     "https://deno.land/x/deno_cache@0.7.1/lib/snippets/deno_cache_dir-23cc6fb6bb1bdfa8/fs.js": "cbe3a976ed63c72c7cb34ef845c27013033a3b11f9d8d3e2c4aa5dda2c0c7af6",
     "https://deno.land/x/deno_cache@0.7.1/mod.ts": "a27b683abe029c7f99d852da9811db8ae4bc3064f00d9761611a10580a48fb10",
     "https://deno.land/x/deno_cache@0.7.1/util.ts": "f3f5a0cfc60051f09162942fb0ee87a0e27b11a12aec4c22076e3006be4cc1e2",
-    "https://deno.land/x/deno_graph@0.66.0/deno_graph_wasm.generated.js": "5d3d75f178f23eb927223bd7f493e75e68ff2ecfdf635e3be77d1862033c52e9",
-    "https://deno.land/x/deno_graph@0.66.0/loader.ts": "512a406cb4c449b45110f2b878cd09929a883a4af193060232d2d9fc76a9d4dd",
-    "https://deno.land/x/deno_graph@0.66.0/media_type.ts": "7c1c5c6654e3cf84b8daa53c0d1ffc1b7864849406f559b961eccff859b0a417",
-    "https://deno.land/x/deno_graph@0.66.0/mod.ts": "be92f206bb38138ffc1c81a0b607dc22bb3a1dd9159b05331b2b37200ba25039",
-    "https://deno.land/x/deno_graph@0.66.0/types.ts": "bde84cb2919068c07e6cf4d8bf3054e8da908f2f221623d5302380df29b96320",
     "https://deno.land/x/dir@1.5.1/data_local_dir/mod.ts": "91eb1c4bfadfbeda30171007bac6d85aadacd43224a5ed721bbe56bc64e9eb66",
     "https://deno.land/x/emit@0.38.2/_utils.ts": "98412edc7aa29e77d592b54fbad00bdec1b05d0c25eb772a5f8edc9813e08d88",
     "https://deno.land/x/emit@0.38.2/emit.generated.js": "5e0846d5faa47952e546415a570563098b93225f35bd80b14eb1da7c5932f6ca",
     "https://deno.land/x/emit@0.38.2/mod.ts": "2fa64c4d220c13b9d752933803056ce7694722367c3e9cb1ee86fe9f81c587f3",
     "https://deno.land/x/wasmbuild@0.15.1/cache.ts": "9d01b5cb24e7f2a942bbd8d14b093751fa690a6cde8e21709ddc97667e6669ed",
-    "https://deno.land/x/wasmbuild@0.15.1/loader.ts": "8c2fc10e21678e42f84c5135d8ab6ab7dc92424c3f05d2354896a29ccfd02a63",
-    "https://esm.sh/v135/vanjs-core@1.5.0/denonext/vanjs-core.mjs": "3e5f7159df8063b6e1f8bffe5fd700d3d16201c8b019193ed21f5da6a5fbac42",
-    "https://esm.sh/vanjs-core@1.5.0": "a5c603aa44f61941bb7c6510a023f12b3c3284f5fa39c57d93ab27f4ef5680f7"
+    "https://deno.land/x/wasmbuild@0.15.1/loader.ts": "8c2fc10e21678e42f84c5135d8ab6ab7dc92424c3f05d2354896a29ccfd02a63"
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/assert@^0.219.1",
+      "jsr:@lophus/nips@0.0.14",
+      "jsr:@lophus/std@0.0.14",
       "jsr:@std/cli@^0.220.1",
-      "jsr:@std/path@^0.219.1",
-      "jsr:@std/streams@^0.219.1",
-      "jsr:@std/testing@^0.219.1",
-      "npm:@noble/curves@^1.3.0",
-      "npm:@noble/hashes@^1.3.3",
+      "jsr:@std/path@^0.220.1",
       "npm:hono@^4.1.3",
-      "npm:mini-van-plate@^0.5.6",
-      "npm:nostr-tools@2.3.2"
-    ],
-    "members": {
-      "@lophus/app": {
-        "dependencies": [
-          "jsr:@lophus/nips@0.0.14",
-          "jsr:@lophus/std@0.0.14",
-          "jsr:@std/cli@^0.220.1",
-          "jsr:@std/path@^0.220.1",
-          "npm:hono@^4.1.3",
-          "npm:mini-van-plate@^0.5.6"
-        ]
-      },
-      "@lophus/core": {
-        "dependencies": [
-          "jsr:@lophus/lib@0.0.14"
-        ]
-      },
-      "@lophus/lib": {},
-      "@lophus/nips": {
-        "dependencies": [
-          "jsr:@lophus/core@0.0.14",
-          "jsr:@lophus/lib@0.0.14"
-        ]
-      },
-      "@lophus/std": {
-        "dependencies": [
-          "jsr:@lophus/core@0.0.14",
-          "jsr:@lophus/lib@0.0.14",
-          "jsr:@std/streams@^0.219.1"
-        ]
-      }
-    }
+      "npm:mini-van-plate@^0.5.6"
+    ]
   }
 }

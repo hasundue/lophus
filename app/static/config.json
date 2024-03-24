@@ -1,0 +1,12 @@
+{
+  "columns": [
+    {
+      "name": "Follows",
+      "class": "feed",
+    },
+    {
+      "name": "Relays",
+      "class": "relays",
+    },
+  ],
+}

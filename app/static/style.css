@@ -1,0 +1,14 @@
+#columns-container {
+  display: flex;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.column {
+  background: #f0f0f0;
+  flex: 1;
+  height: 100vh;
+  margin: 1rem;
+  min-width: 20rem;
+  padding: 0 1rem;
+}
