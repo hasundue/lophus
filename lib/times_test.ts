@@ -1,28 +1,26 @@
 import { assert, assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { Duration, Timestamp } from "./times.ts";
-
-const { MINUTE } = Duration;
+import { DAY, HOUR, MINUTE, SECOND, Timestamp } from "./times.ts";
 
 describe("Duration", () => {
   describe("DAY", () => {
     it("should be 86400", () => {
-      assertEquals(Duration.DAY, 86400);
+      assertEquals(DAY, 86400);
     });
   });
   describe("HOUR", () => {
     it("should be 3600", () => {
-      assertEquals(Duration.HOUR, 3600);
+      assertEquals(HOUR, 3600);
     });
   });
   describe("MINUTE", () => {
     it("should be 60", () => {
-      assertEquals(Duration.MINUTE, 60);
+      assertEquals(MINUTE, 60);
     });
   });
   describe("SECOND", () => {
     it("should be 1", () => {
-      assertEquals(Duration.SECOND, 1);
+      assertEquals(SECOND, 1);
     });
   });
 });
