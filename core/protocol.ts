@@ -124,7 +124,7 @@ export type DefaultResponsePrefix =
   | "invalid"
   | "error";
 
-export type SubscriptionFilter<
+export type EventFilter<
   K extends EventKind = EventKind,
   T extends IndexedTagType = IndexedTagType,
 > =

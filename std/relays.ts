@@ -2,10 +2,10 @@ import { mergeReadableStreams as merge } from "@std/streams";
 import { DistinctStream } from "@lophus/lib/streams";
 import type {
   ClientToRelayMessage,
+  EventFilter,
   EventKind,
   NostrEvent,
   RelayUrl,
-  SubscriptionFilter,
 } from "@lophus/core/protocol";
 import {
   Relay,
@@ -46,7 +46,7 @@ export class RelayGroup implements RelayLike {
   // ----------------------
 
   subscribe<K extends EventKind>(
-    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
+    filter: EventFilter<K> | EventFilter<K>[],
     opts: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
     const subs = this.#relays_read.map((r) => r.subscribe(filter, opts));

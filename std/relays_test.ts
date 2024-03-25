@@ -78,10 +78,7 @@ describe("RelayGroup", () => {
   // ----------------------
 
   it("should create a subscription", () => {
-    sub = group.subscribe({ kinds: [1] }, {
-      id: "test-group",
-      realtime: false,
-    });
+    sub = group.subscribe({ kinds: [1], limit: 1 }, { id: "test-group" });
     assertInstanceOf(sub, ReadableStream);
   });
 

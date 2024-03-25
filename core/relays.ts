@@ -2,13 +2,13 @@ import type { PromiseCallbackRecord } from "@lophus/lib/types";
 import { LazyWebSocket } from "@lophus/lib/websockets";
 import type {
   ClientToRelayMessage,
+  EventFilter,
   EventId,
   EventKind,
   NostrEvent,
   RelayToClientMessage,
   RelayToClientMessageType,
   RelayUrl,
-  SubscriptionFilter,
   SubscriptionId,
 } from "./protocol.ts";
 import { Node, NodeConfig } from "./nodes.ts";
@@ -37,7 +37,6 @@ export type RelayOptions = Partial<RelayConfig>;
 export interface SubscriptionOptions {
   id?: string;
   nbuffer?: number;
-  realtime?: boolean;
 }
 
 //------------------------
@@ -46,8 +45,7 @@ export interface SubscriptionOptions {
 
 export interface SubscriptionContext {
   id: SubscriptionId;
-  filters: SubscriptionFilter[];
-  realtime: boolean;
+  filters: EventFilter[];
 }
 
 export interface PublicationContext extends PromiseCallbackRecord<void> {
@@ -113,13 +111,12 @@ export class Relay extends Node<
   }
 
   subscribe<K extends EventKind>(
-    filter: SubscriptionFilter<K> | SubscriptionFilter<K>[],
+    filter: EventFilter<K> | EventFilter<K>[],
     options: Partial<SubscriptionOptions> = {},
   ): ReadableStream<NostrEvent<K>> {
     const context = {
       id: (options.id ?? crypto.randomUUID()) as SubscriptionId,
       filters: [filter].flat(),
-      realtime: options.realtime ?? true,
     };
     const resubscribe = () => this.dispatch("resubscribe", context);
     return new ReadableStream<NostrEvent<K>>(

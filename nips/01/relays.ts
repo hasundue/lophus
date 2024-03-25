@@ -1,5 +1,6 @@
 import { EventRejected, Relay, SubscriptionClosed } from "@lophus/core/relays";
 import { NIPModule } from "../nodes.ts";
+import { isLimited } from "@lophus/core/filters";
 
 export const M: NIPModule<typeof Relay> = (relay) => {
   relay.on("receive", (message) => {
@@ -14,7 +15,7 @@ export const M: NIPModule<typeof Relay> = (relay) => {
     }
   });
 
-  relay.on("subscribe", ({ id, filters, realtime, controller }) => {
+  relay.on("subscribe", ({ id, filters, controller }) => {
     relay.on(id, (message) => {
       switch (message[0]) {
         case "EVENT": {
@@ -22,10 +23,10 @@ export const M: NIPModule<typeof Relay> = (relay) => {
           return controller.enqueue(event);
         }
         case "EOSE": {
-          if (realtime) {
-            return;
+          if (isLimited(filters)) {
+            return controller.close();
           }
-          return controller.close();
+          return;
         }
         case "CLOSED": {
           return controller.error(new SubscriptionClosed(message[2]));
