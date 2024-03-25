@@ -5,6 +5,7 @@
     "./streams": "./streams.ts",
     "./testing": "./testing.ts",
     "./types": "./types.ts",
+    "./times": "./times.ts",
     "./websockets": "./websockets.ts"
   },
   "publish": {

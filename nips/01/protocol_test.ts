@@ -6,7 +6,7 @@ import type {
   SubscriptionFilter,
   Tag,
 } from "@lophus/core/protocol";
-import { Timestamp } from "@lophus/std/times";
+import { Timestamp } from "@lophus/lib/times";
 import "./protocol.ts";
 
 describe("Tag", () => {

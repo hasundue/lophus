@@ -16,7 +16,7 @@ import type {
 } from "@lophus/core/protocol";
 import "@lophus/nips/01";
 import "@lophus/nips/07";
-import { Timestamp } from "@lophus/std/times";
+import { Timestamp } from "@lophus/lib/times";
 
 export function generatePrivateKey(): PrivateKey {
   return bytesToHex(schnorr.utils.randomPrivateKey()) as PrivateKey;

@@ -6,7 +6,7 @@ Deno.bench({
   baseline: true,
   fn() {
     generatePrivateKey();
-  }
+  },
 });
 
 Deno.bench({
@@ -14,5 +14,5 @@ Deno.bench({
   group: "generation",
   fn() {
     crypto.randomUUID();
-  }
+  },
 });

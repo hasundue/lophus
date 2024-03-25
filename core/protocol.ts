@@ -9,6 +9,7 @@
  */
 
 import type { AlphabetLetter, Brand, Stringified } from "@lophus/lib/types";
+import type { Timestamp } from "@lophus/lib/times";
 
 // ----------------------
 // Events and signatures
@@ -26,7 +27,6 @@ export interface NostrEvent<K extends EventKind = EventKind> {
 
 export type EventId = Brand<string, "EventId">;
 export type PublicKey = Brand<string, "PublicKey">;
-export type Timestamp = Brand<number, "EventTimeStamp">;
 
 export type PrivateKey = Brand<string, "PrivateKey">;
 export type Signature = Brand<string, "EventSignature">;
