@@ -110,31 +110,3 @@ function serialize<K extends EventKind>(
 }
 
 type SerializedEvent<K> = string & { __kind: K };
-
-/**
- * A transform stream that signs events with a NIP-07 extention.
- */
-export class NIP07Signer extends TransformStream<EventInit, NostrEvent> {
-  constructor() {
-    // deno-lint-ignore no-window
-    if (!window.nostr) {
-      throw new Error("NIP-07 extension not installed");
-    }
-    super({
-      transform: (init, controller) => {
-        controller.enqueue(this.sign(init));
-      },
-    });
-  }
-  sign<K extends EventKind>(init: EventInit<K>): NostrEvent<K> {
-    const unsigned = {
-      tags: [],
-      ...init,
-      created_at: Timestamp.now,
-      content: JSON.stringify(init.content) as Stringified<EventContent<K>>,
-      // TODO: Can we avoid this type assertion?
-    } as UnsignedEvent<K>;
-    // deno-lint-ignore no-window
-    return window.nostr!.signEvent(unsigned);
-  }
-}

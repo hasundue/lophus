@@ -23,7 +23,7 @@
     "@lophus/nips": "./nips/mod.ts",
     "@lophus/nips/01": "./nips/01/protocol.ts",
     "@lophus/nips/02": "./nips/02/mod.ts",
-    "@lophus/nips/07": "./nips/07/protocol.ts",
+    "@lophus/nips/07": "./nips/07/mod.ts",
     "@lophus/nips/42": "./nips/42/protocol.ts",
     "@lophus/nips/clients": "./nips/clients.ts",
     "@lophus/nips/protocol": "./nips/protocol.ts",
