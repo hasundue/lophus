@@ -1,7 +1,7 @@
 import van from "mini-van-plate/van-plate";
-import { Timestamp } from "@lophus/std/times";
+import { Timestamp } from "@lophus/lib/times";
 import { Relay } from "./nostr.ts";
-import Note from "./components/note.ts";
+import Note from "./components/notes.ts";
 
 export function readable(): ReadableStream<string> {
   const relay = new Relay("wss://nos.lol");

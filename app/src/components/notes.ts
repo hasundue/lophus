@@ -10,8 +10,8 @@ export default ({ van, event }: Props) => {
   const { div } = van.tags;
   return div(
     { class: "note", id: event.id },
-    div(event.pubkey),
-    div(event.content),
-    div(new Date(event.created_at)),
+    div({ class: "note-name" }, event.pubkey),
+    div({ class: "note-content" }, event.content),
+    div({ class: "note-date" }, new Date(event.created_at)),
   );
 };

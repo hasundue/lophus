@@ -15,7 +15,7 @@ declare module "../protocol.ts" {
 declare global {
   interface Window {
     nostr?: {
-      getPublicKey(): PublicKey;
+      getPublicKey(): Promise<PublicKey>;
       signEvent<K extends EventKind>(event: UnsignedEvent<K>): NostrEvent<K>;
     };
   }

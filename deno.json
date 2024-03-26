@@ -37,18 +37,16 @@
     "@std/path": "jsr:@std/path@^0.219.1",
     "@std/streams": "jsr:@std/streams@^0.219.1",
     "@std/testing": "jsr:@std/testing@^0.219.1",
-    "hono": "npm:hono@^4.1.3",
+    "esbuild": "npm:esbuild@^0.20.2",
     "mini-van-plate": "npm:mini-van-plate@^0.5.6",
-    "nostr-tools": "npm:nostr-tools@2.3.2",
-    "vanjs-core": "https://esm.sh/vanjs-core@1.5.0"
+    "nostr-tools": "npm:nostr-tools@^2.3.2",
+    "vanjs-core": "npm:vanjs-core@^1.5.0"
   },
   "tasks": {
-    "build": "deno run -A ./app/dev.ts build",
     "cache": "deno cache ./**/*.ts --lock",
     "check": "deno check ./**/*.ts",
     "lock": "deno task cache --lock-write",
     "pre-commit": "deno fmt && deno lint && deno task -q check && deno task -q lock && deno task -q test",
-    "run": "deno run -A --config ./deno.json ./app/main.ts",
     "test": "deno test -A --no-check",
     "update": "deno run --allow-read --allow-env --allow-write --allow-net=registry.npmjs.org,jsr.io --allow-run=deno,git https://deno.land/x/molt@0.17.1/cli.ts deno.json --unstable-lock",
     "update:commit": "deno task -q update --commit --prefix 'build(deps):' --prefix-lock 'build(lock):'"

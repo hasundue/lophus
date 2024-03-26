@@ -4,10 +4,11 @@ import { basename, extname } from "@std/path";
 
 const BUILD_TARGETS = [
   "./src/client.ts",
+  "./src/client/index.ts",
 ];
 
 const BUILD_TARGETS_DEV = [
-  "./src/hydration/hmr.ts",
+  "./src/client/hmr.ts",
 ];
 
 async function _bundle(path: string, minify = false) {
@@ -22,7 +23,7 @@ async function _bundle(path: string, minify = false) {
     },
   );
   await Deno.writeTextFile(
-    new URL(`./dist/${name}.bundle${minify ? ".min" : ""}.js`, import.meta.url),
+    new URL(`./dist/${name}${minify ? ".min" : ""}.js`, import.meta.url),
     code,
   );
 }

@@ -7,7 +7,8 @@ if (window.location.hostname === "localhost") {
 const feeds = Array.from(document.getElementsByClassName("feed"));
 
 feeds.forEach((feed) => {
-  const query = new URLSearchParams({ q: feed.getAttribute("query")! }).toString();
+  const query = new URLSearchParams({ q: feed.getAttribute("query")! })
+    .toString();
   const source = new EventSource(`/api/events${query}`);
 
   const container = feed.querySelector(".feed-container")!;

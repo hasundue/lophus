@@ -3,10 +3,11 @@
     {
       "name": "Follows",
       "class": "feed",
+      "source": "@lophus/follows"
     },
     {
       "name": "Relays",
-      "class": "relays",
-    },
-  ],
+      "class": "relays"
+    }
+  ]
 }
