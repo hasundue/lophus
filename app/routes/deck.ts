@@ -15,12 +15,12 @@ const feeds = config.columns.filter((it) => it.class === "feed") as FeedSpec[];
 export default van.html(
   head(
     title("Lophus"),
-    link({ rel: "stylesheet", href: "/style.css" }),
+    link({ rel: "stylesheet", href: "styles/default.css" }),
   ),
   body(
     script({
       type: "text/javascript",
-      src: `dist/client.bundle.js`,
+      src: "scripts/deck.js",
       defer: true,
     }),
     div(

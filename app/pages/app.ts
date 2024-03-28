@@ -1,8 +1,7 @@
 import van from "mini-van-plate/van-plate";
-import head from "./head.ts";
-import header from "./header.ts";
+import head from "./components/head.ts";
+import header from "./components/header.ts";
 
-// deno-fmt-ignore
 const { h2, main, button, div, body } = van.tags;
 
 export default van.html(

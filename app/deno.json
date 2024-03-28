@@ -10,6 +10,6 @@
     "mini-van-plate": "npm:mini-van-plate@^0.5.6"
   },
   "tasks": {
-    "run": "deno run -A --unstable-hmr ./main.ts",
+    "run": "deno run -A --unstable-hmr ./main.ts"
   }
 }

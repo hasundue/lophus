@@ -42,7 +42,12 @@ for implementation of NIPs, or possibly your own Nostr-like protocols.
 General-purpose modules that are developed for Lophus, but not directly related
 to the Nostr protocol. You may use them in any TypeScript project.
 
-### [Benchmarks](https://github.com/hasundue/lophus/tree/main/bench)
+### [@lophus/app](https://github.com/hasundue/lophus/tree/main/deploy/app)
+
+A SSR-oriented Nostr client application that demonstrates how to use the
+library.
+
+### [@lophus/bench](https://github.com/hasundue/lophus/tree/main/bench)
 
 Performance tests for Lophus and other Nostr libraries. Highly experimental.
 

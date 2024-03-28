@@ -1,4 +1,4 @@
-import { FeedProps } from "../types.ts";
+import { FeedProps } from "../src/types.ts";
 import { parse } from "@lophus/nips/02";
 
 export default async ({ source, me, since }: FeedProps) => {

@@ -1,14 +1,15 @@
 /**
- * The main server of the Lophus web site.
+ * The entry point to the web resources of Lophus.
  *
  * @module
  */
-import { transform } from "esbuild";
 
-async function html(source: string) {
-  const { default: html } = await import(
-    new URL("./src/server" + source, import.meta.url).href
-  );
+interface HtmlModule {
+  default: string;
+}
+
+async function html(path: string) {
+  const { default: html } = await import(path) as HtmlModule;
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -16,10 +17,18 @@ async function html(source: string) {
   });
 }
 
-async function javascript(source: string) {
-  const ts = source.replace(".js", ".ts");
+async function css(path: string) {
+  return new Response(await Deno.readTextFile(path), {
+    headers: {
+      "Content-Type": "text/css; charset=utf-8",
+    },
+  });
+}
+
+async function javascript(path: string) {
+  const { transform } = await import("esbuild");
   const result = await transform(
-    await Deno.readTextFile(new URL("./src/client" + ts, import.meta.url)),
+    await Deno.readTextFile(path.replace(".js", ".ts")),
     { loader: "ts" },
   );
   return new Response(result.code, {
@@ -29,31 +38,45 @@ async function javascript(source: string) {
   });
 }
 
-Deno.serve(async ({ url, method }) => {
-  const { pathname } = new URL(url);
-  console.log(`${method} ${pathname}`);
+const handler: Deno.ServeHandler = (req) => {
+  const url = new URL(req.url);
 
-  if (pathname.endsWith(".js")) {
-    return javascript(pathname);
-  }
+  const pathname = url.pathname;
+  console.log(`${req.method} ${pathname}`);
 
-  if (pathname.endsWith(".css")) {
-    return new Response(
-      await Deno.readTextFile(new URL(`./static/${pathname}`, import.meta.url)),
-      {
-        headers: {
-          "Content-Type": "text/css; charset=utf-8",
-        },
-      },
-    );
-  }
+  const routes = new Map<
+    string,
+    (params: Record<string, string | undefined>) => Response | Promise<Response>
+  >();
+  routes.set(
+    "/app/scripts/:file",
+    ({ file }) => javascript("./scripts/" + file),
+  );
+  routes.set(
+    "/app/styles/:file",
+    ({ file }) => css("./styles/" + file),
+  );
+  routes.set(
+    "/app/:route",
+    ({ route }) => html(`./routes/${route}.ts`),
+  );
+  routes.set(
+    "/:page",
+    ({ page }) => html(`./pages/${page}.ts`),
+  );
+  routes.set("/", () => html("./pages/home.ts"));
 
-  if (pathname === "/") {
-    return html("/index/home.ts");
+  for (const [pattern, handle] of routes) {
+    const match = new URLPattern({ pathname: pattern }).exec(url);
+    if (match) {
+      return handle(match.pathname.groups);
+    }
   }
-  if (pathname === "/app") {
-    return html("/index/app.ts");
-  }
+  return new Response("Not Found", { status: 404 });
+};
 
-  return new Response("Not found", { status: 404 });
-});
+export default handler;
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}
