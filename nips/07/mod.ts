@@ -13,8 +13,7 @@ import "./protocol.ts";
  */
 export class Signer extends TransformStream<EventInit, NostrEvent> {
   constructor() {
-    // deno-lint-ignore no-window
-    if (!window.nostr) {
+    if (!self.nostr) {
       throw new Error("NIP-07 extension not installed");
     }
     super({
@@ -31,7 +30,6 @@ export class Signer extends TransformStream<EventInit, NostrEvent> {
       content: JSON.stringify(init.content) as Stringified<EventContent<K>>,
       // TODO: Allow empty tags in NostrEvent and remove this cast
     } as UnsignedEvent<K>;
-    // deno-lint-ignore no-window
-    return window.nostr!.signEvent(unsigned);
+    return self.nostr!.signEvent(unsigned);
   }
 }
