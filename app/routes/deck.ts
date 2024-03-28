@@ -14,19 +14,11 @@ const feeds = config.columns.filter((it) => it.class === "feed") as FeedSpec[];
 
 export default van.html(
   head(
-    title("Lophus"),
+    title("@lophus/app"),
     link({ rel: "stylesheet", href: "styles/default.css" }),
+    script({ type: "module", src: "scripts/deck.js", async: true }),
   ),
   body(
-    script({
-      type: "text/javascript",
-      src: "scripts/deck.js",
-      defer: true,
-    }),
-    div(
-      { id: "columns-container" },
-      div({ class: "column" }),
-      div({ class: "column" }),
-    ),
+    div({ class: "column" }),
   ),
 );

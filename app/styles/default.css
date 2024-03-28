@@ -7,30 +7,26 @@
 /* ----------------------------------------------
  *  Simple.css
  * -------------------------------------------- */
-:root {
+
+/* Global variables. */
+:root,
+::backdrop {
   /* Set sans-serif & mono fonts */
   --sans-font: -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
-    "Nimbus Sans L", Roboto, Noto, "Segoe UI", Arial, Helvetica,
+    "Nimbus Sans L", Roboto, "Noto Sans", "Segoe UI", Arial, Helvetica,
     "Helvetica Neue", sans-serif;
   --mono-font: Consolas, Menlo, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
-
-  /* Body font size. By default, effectively 18.4px, based on 16px as 'root em' */
-  --base-fontsize: 1.15rem;
-
-  /* Major third scale progression - see https://type-scale.com/ */
-  --header-scale: 1.25;
-
-  /* Line height is set to the "Golden ratio" for optimal legibility */
-  --line-height: 1.618;
+  --standard-border-radius: 5px;
 
   /* Default (light) theme */
   --bg: #fff;
   --accent-bg: #f5f7ff;
   --text: #212121;
   --text-light: #585858;
-  --border: #d8dae1;
+  --border: #898EA4;
   --accent: #0d47a1;
-  --accent-light: #90caf9;
+  --accent-hover: #1266e2;
+  --accent-text: var(--bg);
   --code: #d81b60;
   --preformatted: #444;
   --marked: #ffdd33;
@@ -39,54 +35,74 @@
 
 /* Dark theme */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root,
+  ::backdrop {
+    color-scheme: dark;
     --bg: #212121;
     --accent-bg: #2b2b2b;
     --text: #dcdcdc;
     --text-light: #ababab;
-    --border: #666;
     --accent: #ffb300;
-    --accent-light: #ffecb3;
+    --accent-hover: #ffe099;
+    --accent-text: var(--bg);
     --code: #f06292;
     --preformatted: #ccc;
     --disabled: #111;
   }
-
+  /* Add a bit of transparency so light media isn't so glaring in dark mode */
   img,
   video {
-    opacity: 0.6;
+    opacity: 0.8;
   }
+}
+
+/* Reset box-sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Reset default appearance */
+textarea,
+select,
+input,
+progress {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 html {
   /* Set the font globally */
   font-family: var(--sans-font);
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--text);
-  background: var(--bg);
-  font-size: var(--base-fontsize);
-  line-height: var(--line-height);
+  background-color: var(--bg);
+  font-size: 1.15rem;
+  line-height: 1.5;
   display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-  flex: 1;
+  overflow-x: auto;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Make the header bg full width, but the content inline with body */
+body > header {
+  background-color: var(--accent-bg);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  padding: 0 0.5rem 2rem 0.5rem;
 }
 
 /* ----------------------------------------------
  *  @lophus/app
  * -------------------------------------------- */
-#columns-container {
-  display: flex;
-  overflow-x: auto;
-  width: 100%;
-}
-
 .column {
   flex: 1;
   height: 100vh;
   margin: 1rem;
   min-width: 20rem;
-  padding: 0 1rem;
+  max-width: 45rem;
 }
