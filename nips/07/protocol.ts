@@ -1,7 +1,8 @@
-import {
+import type {
   EventKind,
   NostrEvent,
   PublicKey,
+  RelayUrl,
   UnsignedEvent,
 } from "@lophus/core/protocol";
 import "../protocol.ts";
@@ -17,6 +18,9 @@ declare global {
     nostr?: {
       getPublicKey(): Promise<PublicKey>;
       signEvent<K extends EventKind>(event: UnsignedEvent<K>): NostrEvent<K>;
+      getRelays?: () => Promise<
+        { [url: RelayUrl]: { read: boolean; write: boolean } }
+      >;
     };
   }
 }
