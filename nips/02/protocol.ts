@@ -5,6 +5,7 @@ declare module "../protocol.ts" {
   interface NipRecord {
     2: {
       Tag: "p";
+      EventKind: 3;
     };
   }
 }
