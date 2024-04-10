@@ -6,7 +6,7 @@ import type {
   NostrEvent,
   UnsignedEvent,
 } from "@lophus/core/protocol";
-import "./protocol.ts";
+export type * from "./protocol.ts";
 
 /**
  * A transform stream that signs events with a NIP-07 extention.
