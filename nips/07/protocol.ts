@@ -18,9 +18,11 @@ declare global {
     nostr?: {
       getPublicKey(): Promise<PublicKey>;
       signEvent<K extends EventKind>(event: UnsignedEvent<K>): NostrEvent<K>;
-      getRelays?: () => Promise<
-        { [url: RelayUrl]: { read: boolean; write: boolean } }
-      >;
+      getRelays?: () => Promise<RelayRecord>;
     };
   }
+}
+
+export interface RelayRecord {
+  [url: RelayUrl]: { read: boolean; write: boolean };
 }
