@@ -14,25 +14,16 @@ import {
 } from "@std/testing/bdd";
 import type {
   IDBDatabase,
-  IDBFactory,
   IDBIndex,
   IDBObjectStore,
   IDBOpenDBRequest,
   IDBTransaction,
 } from "./idb/mod.ts";
-import "./idb/mod.ts";
+import { createIDBFactory } from "./idb/mod.ts";
 
-declare global {
-  interface Window {
-    indexedDB: IDBFactory;
-  }
-}
-
-function ensure(target: EventTarget, event: string): Promise<Event> {
-  return new Promise((resolve) => {
-    target.addEventListener(event, resolve, { once: true });
-  });
-}
+const indexedDB = createIDBFactory(
+  await Deno.openKv(),
+);
 
 describe("IDBOpenRequest", () => {
   describe("onupgradeneeded", () => {
@@ -41,11 +32,11 @@ describe("IDBOpenRequest", () => {
 
     beforeEach(() => {
       name = crypto.randomUUID();
-      request = self.indexedDB.open(name);
+      request = indexedDB.open(name);
     });
 
     afterEach(() => {
-      self.indexedDB.deleteDatabase(name);
+      indexedDB.deleteDatabase(name);
     });
 
     it("should be called when the database is created", async () => {
@@ -82,7 +73,7 @@ describe("IDBOpenRequest", () => {
     });
 
     it("should be called when the database is opened", async () => {
-      const request = self.indexedDB.open(name);
+      const request = indexedDB.open(name);
       await ensure(request, "success");
       assertEquals(request.result.name, name);
     });
@@ -94,7 +85,7 @@ describe("IDBDatabase", () => {
   let db: IDBDatabase;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise((resolve) => {
       request.onupgradeneeded = (event) =>
         resolve(
@@ -138,7 +129,7 @@ describe("IDBObjectStore", () => {
   let store: IDBObjectStore;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise((resolve) => {
       request.onupgradeneeded = (event) =>
         resolve(
@@ -150,7 +141,7 @@ describe("IDBObjectStore", () => {
   });
 
   afterAll(async () => {
-    const request = self.indexedDB.deleteDatabase(name);
+    const request = indexedDB.deleteDatabase(name);
     await ensure(request, "success");
   });
 
@@ -172,7 +163,7 @@ describe('IDBObjectStore<"readonly">', () => {
   let store: IDBObjectStore<"readonly">;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise<void>((resolve) => {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -188,7 +179,7 @@ describe('IDBObjectStore<"readonly">', () => {
   });
 
   afterAll(async () => {
-    const request = self.indexedDB.deleteDatabase(name);
+    const request = indexedDB.deleteDatabase(name);
     await ensure(request, "success");
   });
 
@@ -230,7 +221,7 @@ describe('IDBObjectStore<"readwrite">', () => {
   let store: IDBObjectStore<"readwrite">;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise((resolve) => {
       request.onupgradeneeded = (event) =>
         resolve(
@@ -244,7 +235,7 @@ describe('IDBObjectStore<"readwrite">', () => {
   });
 
   afterAll(async () => {
-    const request = self.indexedDB.deleteDatabase(name);
+    const request = indexedDB.deleteDatabase(name);
     await ensure(request, "success");
   });
 
@@ -289,7 +280,7 @@ describe('IDBObjectStore<"versionchange">', () => {
   let store: IDBObjectStore<"versionchange">;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise<void>((resolve) => {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -301,7 +292,7 @@ describe('IDBObjectStore<"versionchange">', () => {
   });
 
   afterAll(async () => {
-    const request = self.indexedDB.deleteDatabase(name);
+    const request = indexedDB.deleteDatabase(name);
     await ensure(request, "success");
   });
 
@@ -337,7 +328,7 @@ describe("IDBTransaction", () => {
   let transaction: IDBTransaction;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise((resolve) => {
       request.onupgradeneeded = (event) =>
         resolve(
@@ -349,7 +340,7 @@ describe("IDBTransaction", () => {
   });
 
   afterAll(async () => {
-    const request = self.indexedDB.deleteDatabase(name);
+    const request = indexedDB.deleteDatabase(name);
     await ensure(request, "success");
   });
 
@@ -391,7 +382,7 @@ describe("IDBIndex", () => {
   let index: IDBIndex;
 
   beforeAll(async () => {
-    const request = self.indexedDB.open(name);
+    const request = indexedDB.open(name);
     await new Promise<void>((resolve) => {
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -420,3 +411,12 @@ describe("IDBIndex", () => {
     assertEquals(index.unique, false);
   });
 });
+
+/**
+ * A convenience function to wait for an event to be dispatched.
+ */
+function ensure(target: EventTarget, event: string): Promise<Event> {
+  return new Promise((resolve) => {
+    target.addEventListener(event, resolve, { once: true });
+  });
+}
