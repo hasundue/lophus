@@ -8,7 +8,7 @@ import { IDBObjectStore } from "./stores.ts";
 import { AnyIDBTransaction, IDBTransaction } from "./transactions.ts";
 
 export interface IDBRequest<
-  Result,
+  Result = unknown,
   Transaction extends AnyIDBTransaction | null = AnyIDBTransaction | null,
 > extends EventTarget {
   readonly error: DOMException | null;
@@ -21,7 +21,7 @@ export interface IDBRequest<
   onsuccess: EventHandler | null;
 }
 
-export class _IDBRequest<Result> extends EventTarget
+export class _IDBRequest<Result = unknown> extends EventTarget
   implements IDBRequest<Result> {
   constructor(
     readonly source: IDBRequestSource | null,
@@ -65,7 +65,7 @@ export class _IDBRequest<Result> extends EventTarget
   onsuccess: EventHandler | null = null;
 }
 
-type IDBRequestSource = IDBObjectStore | IDBIndex | IDBCursor;
+export type IDBRequestSource = IDBObjectStore | IDBIndex | IDBCursor;
 
 export interface IDBOpenDBRequest<
   Result extends IDBDatabase | undefined = IDBDatabase,
