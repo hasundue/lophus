@@ -1,14 +1,11 @@
 import { match, placeholder as _, RegularPlaceholder } from "@core/match";
 import { associateWith } from "@std/collections/associate-with";
 
+import { _IDBDatabase } from "./databases.ts";
 import { _IDBIndex, IDBIndex } from "./indexes.ts";
 import { IDBValidKey, isIDBKey, KvKeyFactoryRecord as $ } from "./keys.ts";
 import { _IDBRequest, IDBRequest } from "./requests.ts";
-import {
-  _IDBTransaction,
-  AnyIDBTransaction,
-  IDBTransaction,
-} from "./transactions.ts";
+import { _IDBTransaction, IDBTransaction } from "./transactions.ts";
 
 export interface IDBObjectStore<
   M extends IDBTransactionMode = IDBTransactionMode,
@@ -28,6 +25,8 @@ export interface IDBObjectStore<
     keyPath: string | string[],
     options?: IDBIndexParameters,
   ) => IDBIndex;
+
+  get(key: IDBValidKey): IDBRequest<unknown>;
 }
 
 /**
@@ -47,6 +46,7 @@ export function _IDBObjectStore<M extends IDBTransactionMode>(
     transaction,
     autoIncrement,
 
+    // @ts-ignore: TS doesn't understand the conditional type
     add: transaction.mode === "readonly" ? undefined : (
       value: unknown,
       key?: IDBValidKey,
@@ -59,9 +59,8 @@ export function _IDBObjectStore<M extends IDBTransactionMode>(
       }
       const result = ensureKey(options, value, key);
       const parts = Array.isArray(result) ? result : [result];
-      return new _IDBRequest<IDBValidKey>(
+      return transaction._createRequest(
         store,
-        transaction as AnyIDBTransaction,
         () => {
           (transaction as _IDBTransaction<M>)._atomic.set(
             $.value(transaction.db.name, name, ...parts),
@@ -72,6 +71,7 @@ export function _IDBObjectStore<M extends IDBTransactionMode>(
       );
     },
 
+    // @ts-ignore: TS doesn't understand the conditional type
     createIndex: transaction.mode !== "versionchange" ? undefined : (
       indexName: string,
       keyPath: string | string[],
@@ -84,6 +84,21 @@ export function _IDBObjectStore<M extends IDBTransactionMode>(
         );
       }
       return new _IDBIndex(indexName, keyPath, options);
+    },
+
+    get(key: IDBValidKey): IDBRequest<unknown> {
+      const keyArray = Array.isArray(key) ? key : [key];
+      const request = transaction._createRequest(
+        store,
+        async () => {
+          const kv = (this.transaction.db as _IDBDatabase)._kv;
+          const result = await kv.get(
+            $.value(transaction.db.name, name, ...keyArray),
+          );
+          return result.versionstamp ? result.value : undefined;
+        },
+      );
+      return request;
     },
   };
   return store;

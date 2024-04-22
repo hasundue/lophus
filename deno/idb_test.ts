@@ -13,8 +13,8 @@ import {
   it,
 } from "@std/testing/bdd";
 import type {
-  IDBFactory,
   IDBDatabase,
+  IDBFactory,
   IDBIndex,
   IDBObjectStore,
   IDBOpenDBRequest,
@@ -173,11 +173,13 @@ describe('IDBObjectStore<"readonly">', () => {
 
   beforeAll(async () => {
     const request = self.indexedDB.open(name);
-    await new Promise((resolve) => {
-      request.onupgradeneeded = (event) =>
-        resolve(
-          event.target.result.createObjectStore("events", { keyPath: "id" }),
-        );
+    await new Promise<void>((resolve) => {
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        const store = db.createObjectStore("events", { keyPath: "id" });
+        store.add({ id: 1, pubkey: "pubkey" });
+        resolve();
+      };
     });
     await ensure(request, "success");
     store = request.result.transaction("events", "readonly").objectStore(
@@ -213,6 +215,14 @@ describe('IDBObjectStore<"readonly">', () => {
       );
     });
   });
+
+  describe("get", () => {
+    it("should get an object", async () => {
+      const request = store.get(1);
+      await ensure(store.transaction, "complete");
+      assertEquals(request.result, { id: 1, pubkey: "pubkey" });
+    });
+  });
 });
 
 describe('IDBObjectStore<"readwrite">', () => {
@@ -228,9 +238,9 @@ describe('IDBObjectStore<"readwrite">', () => {
         );
     });
     await ensure(request, "success");
-    store = request.result.transaction("events", "readwrite").objectStore(
-      "events",
-    );
+    store = request.result
+      .transaction("events", "readwrite")
+      .objectStore("events");
   });
 
   afterAll(async () => {
@@ -263,6 +273,13 @@ describe('IDBObjectStore<"readwrite">', () => {
         // @ts-expect-error createIndex is not available in a normal transaction
         store.createIndex("pubkey", "pubkey")
       );
+    });
+  });
+
+  describe("get", () => {
+    it("should throw a TransactionInactiveError once the transaction is completed", async () => {
+      await ensure(store.transaction, "complete");
+      assertThrows(() => store.get(1));
     });
   });
 });

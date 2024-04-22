@@ -24,13 +24,14 @@ export interface IDBFactory {
   deleteDatabase(name: string): IDBOpenDBRequest<undefined, null>;
 }
 
+const kv = await Deno.openKv();
+
 export const indexedDB: IDBFactory = {
   open(
     name: string,
     version: number = 1,
   ): IDBOpenDBRequest<IDBDatabase, null> {
     return new _IDBOpenDBRequest(async function () {
-      using kv = await Deno.openKv();
       // Check if the database already exists and is up to date.
       const existed = await kv.get<IDBDatabaseInfo>($.database(name));
       if (existed.value?.version && existed.value.version >= version) {
@@ -68,14 +69,12 @@ export const indexedDB: IDBFactory = {
   },
 
   async databases(): Promise<IDBDatabaseInfo[]> {
-    using kv = await Deno.openKv();
     const iter = kv.list<IDBDatabaseInfo>({ prefix: $.database.prefix });
     return (await Array.fromAsync(iter)).map((it) => it.value);
   },
 
   deleteDatabase(name: string): IDBOpenDBRequest<undefined, null> {
     return new _IDBOpenDBRequest(async () => {
-      using kv = await Deno.openKv();
       await kv.delete($.database(name));
       return undefined;
     }) as IDBOpenDBRequest<undefined, null>;

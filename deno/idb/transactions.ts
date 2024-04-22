@@ -2,6 +2,7 @@ import { DOMStringList } from "@lophus/lib/legacy";
 import { EventHandler } from "./events.ts";
 import { _IDBDatabase, IDBDatabase } from "./databases.ts";
 import { _IDBObjectStore, IDBObjectStore } from "./stores.ts";
+import { _IDBRequest, IDBRequestSource } from "./requests.ts";
 
 export interface IDBTransaction<
   Mode extends IDBTransactionMode = IDBTransactionMode,
@@ -62,4 +63,37 @@ export class _IDBTransaction<Mode extends IDBTransactionMode>
     }
     return _IDBObjectStore(this, name, options);
   }
+
+  /**
+   * An internal method to add a request to the transaction.
+   * @internal
+   */
+  _createRequest<R>(
+    source: IDBRequestSource | null,
+    operation: () => Promise<R>,
+  ): _IDBRequest<R> {
+    if (this._completed) {
+      throw new DOMException(
+        "The transaction has already completed.",
+        "TransactionInactiveError",
+      );
+    }
+    const request = new _IDBRequest<R>(
+      source,
+      this as AnyIDBTransaction,
+      operation,
+    );
+    this._requests.add(request);
+    request.addEventListener("success", async () => {
+      this._requests.delete(request);
+      if (this._requests.size === 0) {
+        await this._atomic.commit();
+        this._completed = true;
+        this.dispatchEvent(new Event("complete"));
+      }
+    });
+    return request;
+  }
+  readonly _requests: Set<_IDBRequest> = new Set();
+  _completed: boolean = false;
 }
