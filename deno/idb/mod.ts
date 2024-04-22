@@ -17,14 +17,14 @@ export type { IDBOpenDBRequest, IDBRequest } from "./requests.ts";
 export type { IDBObjectStore } from "./stores.ts";
 export type { IDBTransaction } from "./transactions.ts";
 
-interface IDBFactory {
+export interface IDBFactory {
   open(name: string, version?: number): IDBOpenDBRequest<IDBDatabase, null>;
   cmp(a: unknown, b: unknown): -1 | 0 | 1;
   databases(): Promise<IDBDatabaseInfo[]>;
   deleteDatabase(name: string): IDBOpenDBRequest<undefined, null>;
 }
 
-const indexedDB: IDBFactory = {
+export const indexedDB: IDBFactory = {
   open(
     name: string,
     version: number = 1,
@@ -81,16 +81,6 @@ const indexedDB: IDBFactory = {
     }) as IDBOpenDBRequest<undefined, null>;
   },
 };
-
-// FIXME: Can we avoid writing this twice?
-declare global {
-  interface IDBFactory {
-    open(name: string, version?: number): IDBOpenDBRequest<IDBDatabase, null>;
-    cmp(a: unknown, b: unknown): -1 | 0 | 1;
-    databases(): Promise<IDBDatabaseInfo[]>;
-    deleteDatabase(name: string): IDBOpenDBRequest<undefined, null>;
-  }
-}
 
 if (self.indexedDB === undefined && self.Deno.Kv) {
   console.warn("Using an experimental IndexedDB polyfill with Deno KV");

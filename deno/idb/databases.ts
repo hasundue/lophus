@@ -39,7 +39,6 @@ type NormalTransactionMode = "readonly" | "readwrite";
 
 export class _IDBDatabase extends EventTarget
   implements IDBDatabaseInVersionChange {
-  readonly _key: string[];
   _transaction: _IDBTransaction<"versionchange"> | null = null;
 
   constructor(
@@ -57,7 +56,6 @@ export class _IDBDatabase extends EventTarget
         this.onversionchange?.(event);
       }
     });
-    this._key = ["databases", name];
   }
 
   createObjectStore(
