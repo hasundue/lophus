@@ -104,10 +104,3 @@ export class _IDBOpenDBRequest<
   onblocked: VersionChangeEventHandler | null = null;
   onupgradeneeded: VersionChangeEventHandler | null = null;
 }
-
-export interface IDBFactory {
-  open(name: string, version?: number): IDBOpenDBRequest<IDBDatabase, null>;
-  cmp(a: unknown, b: unknown): -1 | 0 | 1;
-  databases(): Promise<IDBDatabaseInfo[]>;
-  deleteDatabase(name: string): IDBOpenDBRequest<undefined, null>;
-}

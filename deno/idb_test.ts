@@ -13,6 +13,7 @@ import {
   it,
 } from "@std/testing/bdd";
 import type {
+  IDBFactory,
   IDBDatabase,
   IDBIndex,
   IDBObjectStore,
@@ -20,6 +21,12 @@ import type {
   IDBTransaction,
 } from "./idb/mod.ts";
 import "./idb/mod.ts";
+
+declare global {
+  interface Window {
+    indexedDB: IDBFactory;
+  }
+}
 
 function ensure(target: EventTarget, event: string): Promise<Event> {
   return new Promise((resolve) => {
@@ -126,9 +133,42 @@ describe("IDBDatabase", () => {
   });
 });
 
+describe("IDBObjectStore", () => {
+  const name = crypto.randomUUID();
+  let store: IDBObjectStore;
+
+  beforeAll(async () => {
+    const request = self.indexedDB.open(name);
+    await new Promise((resolve) => {
+      request.onupgradeneeded = (event) =>
+        resolve(
+          event.target.result.createObjectStore("events", { keyPath: "id" }),
+        );
+    });
+    await ensure(request, "success");
+    store = request.result.transaction("events").objectStore("events");
+  });
+
+  afterAll(async () => {
+    const request = self.indexedDB.deleteDatabase(name);
+    await ensure(request, "success");
+  });
+
+  it("should have `name` property", () => {
+    assertEquals(store.name, "events");
+  });
+
+  it("should have `keyPath` property", () => {
+    assertEquals(store.keyPath, "id");
+  });
+
+  it("should have `autoIncrement` property", () => {
+    assertEquals(store.autoIncrement, false);
+  });
+});
+
 describe('IDBObjectStore<"readonly">', () => {
   const name = crypto.randomUUID();
-  let db: IDBDatabase;
   let store: IDBObjectStore<"readonly">;
 
   beforeAll(async () => {
@@ -140,29 +180,20 @@ describe('IDBObjectStore<"readonly">', () => {
         );
     });
     await ensure(request, "success");
-    db = request.result;
-    store = db.transaction("events").objectStore("events");
+    store = request.result.transaction("events", "readonly").objectStore(
+      "events",
+    );
   });
 
   afterAll(async () => {
-    using kv = await Deno.openKv();
-    await kv.delete(["databases", name]);
+    const request = self.indexedDB.deleteDatabase(name);
+    await ensure(request, "success");
   });
 
-  it("should have a name", () => {
-    assertEquals(store.name, "events");
-  });
-
-  it("should have the keyPath property", () => {
-    assertEquals(store.keyPath, "id");
-  });
-
-  it("should have the autoIncrement property", () => {
-    assertEquals(store.autoIncrement, false);
-  });
-
-  it("should have a transaction", () => {
-    assertEquals(store.transaction.db, db);
+  describe("transaction", () => {
+    it("should be a readonly transaction", () => {
+      assertEquals(store.transaction.mode, "readonly");
+    });
   });
 
   describe("add", () => {
@@ -171,6 +202,58 @@ describe('IDBObjectStore<"readonly">', () => {
         // @ts-expect-error add is not available in a readonly transaction
         store.add({ id: 1, pubkey: "pubkey" })
       );
+    });
+  });
+
+  describe("createIndex", () => {
+    it("should throw InvalidStateError", () => {
+      assertThrows(() =>
+        // @ts-expect-error createIndex is not available in a normal transaction
+        store.createIndex("pubkey", "pubkey")
+      );
+    });
+  });
+});
+
+describe('IDBObjectStore<"readwrite">', () => {
+  const name = crypto.randomUUID();
+  let store: IDBObjectStore<"readwrite">;
+
+  beforeAll(async () => {
+    const request = self.indexedDB.open(name);
+    await new Promise((resolve) => {
+      request.onupgradeneeded = (event) =>
+        resolve(
+          event.target.result.createObjectStore("events", { keyPath: "id" }),
+        );
+    });
+    await ensure(request, "success");
+    store = request.result.transaction("events", "readwrite").objectStore(
+      "events",
+    );
+  });
+
+  afterAll(async () => {
+    const request = self.indexedDB.deleteDatabase(name);
+    await ensure(request, "success");
+  });
+
+  describe("transaction", () => {
+    it("should be a readwrite transaction", () => {
+      assertEquals(store.transaction.mode, "readwrite");
+    });
+  });
+
+  describe("add", () => {
+    it("should add an object", async () => {
+      const object = { id: 1, pubkey: "pubkey" };
+      const request = store.add(object);
+      await ensure(request, "success");
+      assertEquals(request.result, 1);
+    });
+
+    it("should throw DataError when the value does not include the key path", () => {
+      assertThrows(() => store.add({ pubkey: "" }));
     });
   });
 
@@ -205,16 +288,15 @@ describe('IDBObjectStore<"versionchange">', () => {
     await ensure(request, "success");
   });
 
-  describe("add", () => {
-    it("should add an object", async () => {
-      const object = { id: 1, pubkey: "pubkey" };
-      const request = store.add(object);
-      await ensure(request, "success");
-      assertEquals(request.result, 1);
+  describe("transaction", () => {
+    it("should be a versionchange transaction", () => {
+      assertEquals(store.transaction.mode, "versionchange");
     });
+  });
 
-    it("should throw DataError when the value does not include the key path", () => {
-      assertThrows(() => store.add({ pubkey: "" }));
+  describe("add", () => {
+    it("should be available", () => {
+      assert(typeof store.add === "function");
     });
   });
 
@@ -258,20 +340,20 @@ describe("IDBTransaction", () => {
     transaction = db.transaction("events");
   });
 
-  it("should have the `db` property", () => {
+  it("should have `db` property", () => {
     assertEquals(transaction.db, db);
   });
 
-  it("should have the `mode` property", () => {
+  it("should have `mode` property", () => {
     assertEquals(transaction.mode, "readonly");
   });
 
-  it("should have the `objectStoreNames` property", () => {
+  it("should have `objectStoreNames` property", () => {
     assertEquals(transaction.objectStoreNames.length, 1);
     assertEquals(transaction.objectStoreNames[0], "events");
   });
 
-  it("should have the `objectStore` method", () => {
+  it("should have `objectStore` method", () => {
     const store = transaction.objectStore("events");
     assertEquals(store.name, "events");
   });
