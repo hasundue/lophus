@@ -4,7 +4,7 @@ import { EventFilter, EventKind, NostrEvent } from "@lophus/nips";
 
 export class Relay extends WithPool(_Relay) implements RelayLike {}
 
-interface EventSource extends Pick<RelayLike, "config"> {
+export interface EventSource extends Pick<RelayLike, "config"> {
   list<K extends EventKind>(
     filter: EventFilter<K>,
   ): AsyncIterable<NostrEvent<K>>;
@@ -13,7 +13,7 @@ interface EventSource extends Pick<RelayLike, "config"> {
   ): Promise<NostrEvent<K> | undefined>;
 }
 
-interface EventStore extends EventSource {
+export interface EventStore extends EventSource {
   put<K extends EventKind>(event: NostrEvent<K>): Promise<void>;
 }
 
@@ -26,29 +26,11 @@ const knowns = new RelayGroup([
  */
 export const nostr: EventSource = {
   config: { name: "nostr" },
-  async get(filter) {
-    return await cache.get(filter) ?? _get(knowns, filter);
+  get(filter) {
+    return _get(knowns, filter);
   },
   list(filter) {
     return knowns.subscribe(filter);
-  },
-};
-
-export const cache: EventStore = {
-  config: { name: "cache" },
-  async get<K extends EventKind>(filter: EventFilter<K>) {
-    const kv = await Deno.openKv();
-    if (filter.ids?.length) {
-      return Promise.any(
-        filter.ids.map((id) =>
-          new Promise<NostrEvent<K>>((resolve, reject) =>
-            kv.get<NostrEvent<K>>(["events", id]).then(({ value }) =>
-              value ? resolve(value) : reject()
-            )
-          )
-        ),
-      ).catch(() => undefined);
-    }
   },
 };
 

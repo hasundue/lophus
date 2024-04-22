@@ -3,22 +3,33 @@
  * @module
  */
 
-import "@lophus/deno/idb";
+import type { IDBFactory } from "@lophus/deno/idb";
 import type { EventKind, NostrEvent } from "@lophus/core/protocol";
 
+let indexedDB: IDBFactory;
+
+if (self.indexedDB === undefined && Deno.Kv) {
+  const { createIDBFactory } = await import("@lophus/deno/idb");
+  indexedDB = createIDBFactory(
+    await Deno.openKv(),
+  );
+} else {
+  // Use improved types from @lophus/deno/idb
+  indexedDB = self.indexedDB as unknown as IDBFactory;
+}
+
 export class EventStore {
-  #request: IDBOpenDBRequest;
-
   constructor(name: string, version?: number) {
-    this.#request = self.indexedDB.open(name, version);
+    const request = indexedDB.open(name, version);
 
-    this.#request.onupgradeneeded = () => {
-      const db = this.#request.result;
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
       const events = db.createObjectStore("events", { keyPath: "id" });
       events.createIndex("kind", "kind");
     };
   }
 
-  put<K extends EventKind>(event: NostrEvent<K>): Promise<void> {
+  put<K extends EventKind>(_event: NostrEvent<K>) {
+    // TODO: Implement
   }
 }
